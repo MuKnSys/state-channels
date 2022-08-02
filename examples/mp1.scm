@@ -1,0 +1,51 @@
+;; Micropayments
+(define tmicropay (type "micropay" '(LST)
+                                   `(mdf
+                                     ,(=> (MP USER VAL)
+                                        (define LST (<: MP 'LST))
+                                        (set! USER (sy USER))
+                                        (:= LST USER VAL)) ;; Should not be used directly
+                                     transfer
+                                     ,(=> (MP USER AMOUNT)
+                                        (define LST (<: MP 'LST))
+                                        (define PR (current-proc))
+                                        (define GIVER 0)
+                                       ;(if (nil? PR)
+                                       ;  (error "micropay.transfer : no current process"))
+                                       ;(set! GIVER (sy (<: PR 'USER)))
+                                        (set! USER (sy USER))
+                                        (set! AMOUNT (string->number AMOUNT))
+                                        (:= LST USER (+ (<: LST USER) AMOUNT)))
+                                     transfer/return ;; Return from the blockchain
+                                     ,(=> (MP CALL)
+                                        (define LST (<: MP 'LST))
+                                        (let* ((PARM (<: CALL 'PARM))
+                                               (USER (sy (car PARM)))
+                                               (AMOUNT (string->number (cadr PARM))))
+                                          (:= LST USER (+ (<: LST USER) AMOUNT))))
+                                     lst
+                                     (volatile
+                                     ,(=> (MP)
+                                        (define LST (<: MP 'LST))
+                                        (define FIRST True)
+                                        (for-each (=> (A)
+                                                    (if (!= (string-get (string (car A)) 0) (char ":"))
+                                                    (begin
+                                                      (if (not FIRST) (cr))
+                                                      (set! FIRST False)
+                                                      (outraw (car A))
+                                                      (outraw " : ")
+                                                      (outraw (cadr A)))))
+                                                  LST))))))
+(define (micropay . L)
+  (let* ((LST (rexpr '@rexpr '()))
+         (MP (rexpr tmicropay `(LST ,LST))))
+    (set! L (list-group L))
+    (for-each (=> (A)
+                (:= LST (sy (car A)) (string->number (cadr A)))
+              )
+              L)
+    MP))
+
+;(out (micropay '(A B C)))
+;(cr)
