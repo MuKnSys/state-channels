@@ -15,9 +15,10 @@
   (for-each (=> (X)
               (display X))
             MSG)
-  (cr)
   (if (not ERRORCATCH)
-    (_error))
+  (begin
+    (cr)
+    (_error)))
   (exit))
 
 (define (catch-all F)
@@ -48,6 +49,12 @@
 (define True #t)
 (define False #f)
 
+;; Numbers
+(define (number O)
+  (if (number? O)
+    O
+    (string->number (string O))))
+
 ;; Symbols
 (define (sy S)
   (if (string? S)
@@ -67,7 +74,7 @@
     (_string O)
   (if (symbol? O)
     (symbol->string O)
-    S))))
+    O))))
 
 (define string-get string-ref)
 (define string-set! string-set!) ;; Does nothing
@@ -76,6 +83,20 @@
 (define string+ string-add)
 
 (define string-trim string-trim-both) ;; TODO: refine this
+
+;; Atoms
+(define (atom? O)
+  (or (unspecified? O)
+      (null? O)
+      (boolean? O)
+      (number? O)
+      (symbol? O)
+      (char? O)
+      (string? O)))
+
+(define (strsy? O)
+  (or (symbol? O)
+      (string? O)))
 
 ;; Lists & other containers
 (define (empty) ;; Empty list (a _real_ one) ;; TODO: use a special value "Void", rather than Unspec
@@ -93,6 +114,9 @@
   (if (and (not (empty? L)) (F (car L)))
     (car L)
     Unspecified))
+
+(define (list-in? X L)
+  (specified? (list-find (=> (E) (== E X)) L)))
 
 (define (list-find-prev F L)
   (define PREV Unspecified)
@@ -173,7 +197,87 @@
       (reverse (fetch P Nil READ)))))
 
 ;; Basic I/O
+(define _OUTP False)
+(define (outopen MODE)
+  (if _OUTP
+    (error "outopen"))
+  (set! _OUTP (open-output-string)))
+
+(define (outclose)
+  (if (not _OUTP)
+    (error "outclose"))
+  (set! _OUTP False))
+
+(define (outgets)
+  (if (not _OUTP)
+    (error "outgets"))
+  (get-output-string _OUTP))
+
+(define (_write X)
+  (apply write `(,X . ,(if _OUTP `(,_OUTP) '()))))
+
+(define (_display X)
+  (apply display `(,X . ,(if _OUTP `(,_OUTP) '()))))
+
+(define _TABSEP "")
+(define (tabsep SEP)
+  (set! _TABSEP SEP))
+
+(define (tabsf S)
+  (define T (map (=> (S)
+                   (string-split S (char "\t")))
+                 (string-split S (char "\n"))))
+  (define N 0)
+  (define W _)
+  (for-each (=> (L)
+              (if (> (list-length L) N)
+                (set! N (list-length L))))
+            T)
+  (set! W (make-list N 0))
+  (for-each (=> (L)
+              (define M 0)
+              (for-each (=> (C)
+                          (if (> (string-length C) ([ W M))
+                            ([:= W M (string-length C)))
+                          (set! M (+ M 1)))
+                        L))
+            T)
+  (set! T
+    (map (=> (L)
+           (define M 0)
+           (map (=> (C)
+                  (if (< (string-length C) ([ W M))
+                    (set! C (string+
+                              C (make-string (- ([ W M) (string-length C)) (char " ")))))
+                  (set! M (+ M 1))
+                  C)
+                L))
+         T))
+  (set! T
+    (map (=> (L)
+           (string-join L _TABSEP))
+         T))
+  (string-join T "\n"))
+
+(define (tabs CMD)
+  (define RES _)
+  (cond
+   ((== CMD 'Start)
+    (outopen 'String))
+   ((== CMD 'End)
+    (set! RES (tabsf (outgets)))
+    (outclose)
+    RES)
+   (else
+     (error "tabs"))))
+
+(define (tab)
+  (outraw "\t"))
+
 (define _COL0 False)
+(define (atcol0?)
+  _COL0)
+
 (define (atcol0 . B)
   (if (empty? B)
     (set! B True)
@@ -186,13 +290,13 @@
   (if _COL0
     (spc (indent)))
   (atcol0 0)
-  (write X))
+  (_write X))
 
 (define (outraw X)
   (if _COL0
     (spc (indent)))
   (atcol0 0)
-  (display X))
+  (_display X))
 
 (define _INDENT 0)
 (define (indent . N)
@@ -207,7 +311,7 @@
   (if (> N 0)
     (atcol0 0))
   (while (> N 0)
-    (display " ")
+    (_display " ")
     (set! N (- N 1))))
 
 (define (cr)

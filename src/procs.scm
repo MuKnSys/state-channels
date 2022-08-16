@@ -70,6 +70,23 @@
 (define (proc? PROC)
   (== (typeof PROC) tproc))
 
+;; Group
+(define (proc-group . L)
+  (if (not (empty? L))
+  (let* ((FROM (car L))
+         (L2 _))
+    (set! L (cdr L))
+    (set! L2 (map (=> (PR)
+                    (if (proc? PR)
+                      (<: PR 'UID)
+                      PR))
+                  L))
+    (for-each (=> (PR)
+                (:= PR 'FROM FROM)
+                (:= PR 'PEER (list-copy L2))
+              )
+              L))))
+
 ;; Current proc
 (define _CURPROC Nil)
 (define (current-proc)
@@ -107,8 +124,8 @@
             (if (string? CALL)
               (set! CALL (string->number CALL)))
             (set! CALL ([ (<: FROM 'IN!) CALL))
-            (apply ^ `(,FNAME ,SELF . (,CALL))))
-          (apply ^ `(,FNAME ,SELF . ,PARM))))))))
+            (apply ^? `(,FNAME ,SELF . (,CALL))))
+          (apply ^? `(,FNAME ,SELF . ,PARM))))))))
 
 ;; Map
 (method! tproc 'prog! (=> (PROC O) ;; Set the proc's servlet

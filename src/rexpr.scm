@@ -85,7 +85,7 @@
   (if (not (empty? METHOD))
     (set! METHOD (car METHOD)))
   (set! METHOD (list-group METHOD))
-  (set! METHODTY (map _methodty METHOD))
+  (set! METHODTY (map _methodty (if (boxed-empty? METHOD) '() METHOD)))
   (set! METHOD (map _methodval METHOD))
   (append! SLOTTY METHODTY)
   (heap-set!
@@ -223,6 +223,41 @@
 
 (define >> rexpr-serialize)
 
+;; Pretty-printing
+(define (rexpr-pretty O)
+  (if (list? O)
+    (if (empty? O)
+      (outraw "Nil")
+      (let* ((FIRST True)
+             (A (rexpr-ref O ':TYPE)) 
+            )
+        (if (specified? A)
+          (begin
+            (if (list? (typeof O))
+              (let* ((TYID (<: (typeof O) ':ID)))
+                (out (if (specified? TYID) TYID (typeof O))))
+              (outraw (typeof O)))
+            (indent+ 2)
+            (for-each (=> (ELT)
+                        (if (and (pair? ELT) (== (list-length ELT) 2)
+                                 (strsy? (car ELT)))
+                          (if (not (== (string-get (string (car ELT)) 0)
+                                       (char ":")))
+                            (begin
+                              (cr)
+                              (outraw (car ELT))
+                              (outraw " = ")
+                              (rexpr-pretty (cadr ELT))))
+                          (begin
+                            (cr)
+                            (out ELT))))
+                      O)
+            (indent+ -2))
+          (out O))))
+    (if (unspecified? O)
+      (outraw "_")
+      (out O))))
+
 ;; First-class objects API
 (define (typeof O) ;; TODO: test that it's an rexpr ; if not, return a type for predefined Scheme objs
   (if (pair? O) ;; FIXME: Crappy
@@ -232,14 +267,48 @@
 (define (method TYPE F)
   (<: (<: TYPE ':METHOD) F))
 
+(define (slotty TYPE F)
+  (<: (<: TYPE ':SLOTTY) F))
+
 (define (method! TYPE NAME F)
+  (if (not (symbol? NAME))
+    (error "method! : (symbol? NAME) expected"))
   (:= (<: TYPE ':METHOD) NAME (_valn F))
   (:= (<: TYPE ':SLOTTY) NAME (_valv F)))
 
 (define (mcall F . PARM)
   (apply (method (typeof (car PARM)) F) PARM))
 
+(define (mvparmcvt VAL TY)
+  (cond
+    ((== TY 'num)
+     (number VAL))
+    ((== TY 'sy)
+     (sy VAL))
+    ((== TY 'str)
+     (string VAL))
+    ((== TY 'var)
+     (eval (sy VAL) (interaction-environment)))
+    (else
+      VAL)))
+
+(define (mvparms F PARM)
+  (let* ((TYPE (typeof (car PARM)))
+         (PROTO (filter (=> (X)
+                          (not (list-in? X '(volatile logged)))
+                        )
+                        (slotty TYPE F))))
+    (if (> (list-length PARM) (list-length PROTO))
+      (error (<: TYPE ':NAME) "." F " : " (list-length PROTO) " arguments expected"))
+    (set! PARM (map mvparmcvt PARM (list-head PROTO (list-length PARM))))
+    PARM))
+
+(define (mcallv F . PARM)
+  (set! PARM (mvparms F PARM))
+  (apply mcall `(,F . ,PARM)))
+
 (define ^ mcall) ;; TODO: improve this ugly thing
+(define ^? mcallv)
 
 ;; Init
 (heap-set! _TYPES '@type '@type) ;; Bootstrap ; TODO: add type "type"

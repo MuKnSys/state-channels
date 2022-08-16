@@ -3,7 +3,7 @@ $MP1 ! micropay smith 10 dupont 10 durand 10
 $MP2 ! micropay smith 10 dupont 10 durand 10
 $MP3 ! micropay smith 10 dupont 10 durand 10
 
-# Displaying the images
+# Displaying the snapshots
 $MP1 ^ lst
 $MP2 ^ lst
 $MP3 ^ lst
@@ -39,3 +39,6 @@ prs PR3
 $MP1 ^ lst
 $MP2 ^ lst
 $MP3 ^ lst
+
+# Quitting
+q

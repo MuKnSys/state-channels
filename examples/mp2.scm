@@ -3,13 +3,13 @@
 ;; Micropayments (contract)
 (define tcmicropay (type "cmicropay" '(LST)
                                      `(transfer ;; We suppose it works all the time ; model wallets, later
+                                       (cmicropay sy num
                                        ,(=> (MP USER AMOUNT)
                                           (define LST (<: MP 'LST))
-                                          (set! USER (sy USER))
-                                          (set! AMOUNT (string->number AMOUNT))
-                                          (:= LST USER (+ (<: LST USER) AMOUNT)))
+                                          (:= LST USER (+ (<: LST USER) AMOUNT))))
                                        lst
                                        (volatile
+                                        cmicropay
                                        ,(=> (MP)
                                           (define LST (<: MP 'LST))
                                           (define FIRST True)

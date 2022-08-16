@@ -30,7 +30,5 @@
 
 (load PROG)
 (if SCRIPT
-  (begin
-    (set! SCRIPT (file-read SCRIPT 1))
-    (cli "> " SCRIPT))
-  (cli "> "))
+  (set! SCRIPT (file-read SCRIPT 1)))
+(^ 'run APIMON "> " SCRIPT)

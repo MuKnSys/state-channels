@@ -14,3 +14,4 @@
 (load "calls.scm")
 (load "procs.scm")
 (load "cli.scm")
+(load "apimon.scm")
