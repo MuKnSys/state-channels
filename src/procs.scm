@@ -93,9 +93,19 @@
   _CURPROC)
 
 (define (current-proc! PROC)
-  (if (not (proc? PROC))
+  (if (not (or (nil? PROC) (proc? PROC)))
     (error "current-proc! : not a proc"))
   (set! _CURPROC PROC))
+
+;; Sender proc
+(define _SENDPROC Nil)
+(define (sender-proc)
+  _SENDPROC)
+
+(define (sender-proc! PROC)
+  (if (not (or (nil? PROC) (proc? PROC)))
+    (error "sender-proc! : not a proc"))
+  (set! _SENDPROC PROC))
 
 ;; Call
 (method! tproc 'call (=> (PROC FNAME . PARM)
@@ -158,7 +168,37 @@
     (:= PROC 'INPTR (cdr (<: PROC 'INPTR)))))
   RES))
 
-(define (proc-send PROC MULTI FNAME . PARM)
+(define (proc-resolve L)
+  (if (strsy? L)
+    (set! L `(,L)))
+  (map (=> (P)
+           (define PR (net-resolve P))
+           (if (not PR)
+             (error "proc-resolve : unresolveable target => " P))
+           PR)
+       L))
+
+(define (proc-queue CALL)
+  (define FROM (<: (current-proc) 'UID))
+  (define TO (<: CALL 'TO))
+  (define L _)
+  (if (or (unspecified? FROM) (empty? FROM) (boxed-empty? FROM))
+    (error "proc-queue : no FROM => " FROM))
+  (if (not (or (unspecified? TO) (empty? TO) (boxed-empty? TO)))
+  (begin
+    (if (unspecified? (<: CALL 'INNB))
+      (set! L `(,FROM))
+      (set! L TO))
+    (set! L (proc-resolve L))
+    (if (specified? (<: CALL 'INNB))
+      (set! L (filter (=> (PR)
+                          (!= (<: PR 'UID) FROM))
+                      L)))
+    (for-each (=> (P)
+      (^ 'in+ P (copy-tree CALL))) ;; FIXME: hmm (tree-copy) risks breaking, at some point (the copy belongs to another heap, in fact)
+      L))))
+
+(define (proc-send PROC MULTI FNAME . PARM) ;; NOTE: PROC is the _target_ (i.e., the TO)
   (define PR (current-proc))
   (define L '())
   (define TO Nil)
@@ -171,7 +211,7 @@
                      (if (not PR)
                        (error "proc-send::MULTI : unresolveable target => " P))
                      PR)
-                 (<: PROC 'PEER)))
+                 (<: PR 'PEER)))
     (if (not (net-resolve PROC))
       (error "proc-send : unresolveable target => " (<: PROC 'UID))))
   (set! TO
@@ -186,11 +226,7 @@
                    'PARM PARM))
   (sign CALL (<: PR 'USER) 'SIGN_B)
   (^ 'out+ PR CALL)
-  (if (not MULTI)
-    (set! L `(,PROC)))
-  (for-each (=> (P)
-    (^ 'in+ P (copy-tree CALL))) ;; FIXME: hmm (tree-copy) risks breaking, at some point (the copy belongs to another heap, in fact)
-    L))
+  (proc-queue CALL))
 
 (method! tproc 'send (=> (PROC FNAME . PARM)
   (apply proc-send `(,PROC ,False ,FNAME . ,PARM))))
@@ -213,6 +249,7 @@
            (SELF (<: PROC 'SELF))
            (SLOTTY _)
            (DESCR _)
+           (SPROC _)
           )
       (if (unspecified? SELF)
         (error "proc<" (<: PROC 'UID) ">::step : no SELF"))
@@ -222,20 +259,38 @@
       (set! DESCR (<: SLOTTY FUNC))
       (if (and (specified? DESCR) (not (empty? DESCR)))
         (set! ISVOLATILE (eq? (car DESCR) 'volatile))) ;; FIXME: make something more general than this !!!
-      (if (or (not ISPEER) ISVOLATILE (pair? (<: MSG 'TO))) ;; FIXME: do better than (pair? (<: MSG 'TO))
-        (begin
-          (set! RES (apply ^ `(call ,PROC ,FUNC . ,(<: MSG 'PARM))))
-          (if (not ISVOLATILE) ;; So, (not ISPEER), too
-          (begin
-            (:= MSG 'INNB (list-length (<: PROC 'IN!)))
-            (:+ PROC 'IN! MSG)))
+      (cond
+        ((<: MSG 'ACK)
+         (if (not (specified? (<: MSG 'INNB)))
+           (error "proc<" (<: PROC 'UID) ">::step : ACKed MSG without INNB"))
+         (let* ((MSG0 ([ (<: PROC 'IN!) (<: MSG 'INNB)))
+               )
+           (sign:+ MSG0 MSG)
+           (:= MSG0 'ACK* (signed-all? MSG0)))
         )
-        (begin
-          (apply ^ `(send* ,PROC ,FUNC . ,(<: MSG 'PARM)))
-        ;;(error "step::call PEER !Yet")))
-        )))
-    (current-proc! OCURPROC)
-    (sign MSG (<: PROC 'USER) 'SIGN_E)))
+        (else
+         (set! SPROC (net-resolve (<: MSG 'FROM)))
+         (if (not SPROC)
+           (error "proc<" (<: MSG 'FROM) ">::step : no sender proc"))
+         (sender-proc! SPROC)
+         (set! RES (apply ^ `(call ,PROC ,FUNC . ,(<: MSG 'PARM))))
+         (sender-proc! Nil)
+         (if (not ISVOLATILE)
+           (let* ((INNB (<: MSG 'INNB))
+                  (INNB2 (list-length (<: PROC 'IN!)))
+                 )
+             (if (and (specified? INNB) (!= INNB INNB2))
+               (error "proc<" (<: PROC 'UID) ">::step : wrong INNB"))
+             (:= MSG 'INNB INNB2)
+             (set! MSG (copy-tree MSG)) ;; NOTE : keep this ?
+             (sign MSG (<: PROC 'USER) 'SIGN_E)
+             (if (specified? INNB)
+               (:= MSG 'ACK True))
+             (:+ PROC 'IN! MSG)
+             (proc-queue MSG)
+             (:= MSG 'ACK False)))
+      )))
+    (current-proc! OCURPROC)))
   RES))
 
 ;; Start

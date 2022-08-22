@@ -1,21 +1,77 @@
 # Creating the proc snapshots
-$MP1 ! micropay smith 10 dupont 10 durand 10
-$MP2 ! micropay smith 10 dupont 10 durand 10
-$MP3 ! micropay smith 10 dupont 10 durand 10
+$MP1 ! micropay bob 10 carol 10 dave 10
+$MP2 ! micropay bob 10 carol 10 dave 10
+$MP3 ! micropay bob 10 carol 10 dave 10
 
-lso2 MP1
+# Printing & dumping snapshots
+dump MP1
 
-proc smith PR1 $MP1
-proc dupont PR2 $MP2
-proc durand PR3 $MP3
-lsp2
+print MP1
 
-_sc _ PR1 PR2 PR3
-lsp2
+# Creating the procs
+proc bob SC1 $MP1
+proc carol SC2 $MP2
+proc dave SC3 $MP3
 
-cpr PR1
-PR1 ^ transfer dupont 5
-lsp
+netlist
+
+# Joining the state channel
+join _ SC1 SC2 SC3
+netlist
+
+# Setting the current process
+whoami
+
+iam SC1
+whoami
+
+# Expansion of a replicated call
+netlist SC1
+
+* ^ transfer carol 5
+netlist SC1
+print MP1
+
+# Initial broadcast
+step SC1
+netlist SC1
+print MP1
+
+netlist SC2
+netlist SC3
+
+# Replicated eval & ack (1)
+print MP2
+step SC2
+netlist SC1
+
+netlist SC2
+print MP2
+netlist SC3
+
+# Replicated eval & ack (2)
+print MP3
+step SC3
+netlist SC1
+
+netlist SC2
+netlist SC3
+print MP3
+
+# Validation of the local consensus
+netlist SC1
+step SC1
+netlist SC1
+step SC1
+netlist SC1
+
+netlist SC2
+step SC2
+netlist SC2
+
+netlist SC3
+step SC3
+netlist SC3
 
 # Quitting
-#q
+q

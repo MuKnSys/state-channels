@@ -30,6 +30,10 @@
       ;;(display E)(display " ")(display OPT)
         False))))
 
+(define (errlog O)
+  (outraw "==============>\n")
+  (out O)(cr))
+
 ;; No operation
 (define (noop)
   _)
@@ -106,7 +110,7 @@
   (null? L))
 
 (define (boxed-empty? L)
-  (and (not (empty? L)) (== (car L) Unspecified) (empty? (cdr L))))
+  (and (not (empty? L)) (pair? L) (== (car L) Unspecified) (empty? (cdr L))))
 
 (define (list-find F L)
   (while (and (not (empty? L)) (not (F (car L))))
@@ -153,9 +157,19 @@
 (define (list-flatten L)
   (cond ((null? L) Nil)
     ((list? (car L))
-      (append (flatten (car L)) (flatten (cdr L))))
+      (append (list-flatten (car L)) (list-flatten (cdr L))))
     (else
-      (cons (car L) (flatten (cdr L))))))
+      (cons (car L) (list-flatten (cdr L))))))
+
+(define (list-rmdup L)
+  (define H (make-hash-table))
+  (define RES '())
+  (for-each (lambda (E)
+              (if (not (hash-ref H E))
+                (set! RES (cons E RES)))
+              (hash-set! H E 1))
+            L)
+  (reverse RES))
 
 ;; RLists
 (define (list-group L . BYN) ;; TODO: enable BYN ; as a default, BYN==2

@@ -28,7 +28,7 @@ lsp
 
 # Doing a micropayment
 cpr PR1
-PR1 ^ transfer dupont 5
+* ^ transfer dupont 5
 lsp
 prs PR1
 lsp

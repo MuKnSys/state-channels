@@ -1,49 +1,51 @@
 ;; Micropayments
-(define tmicropay (type "micropay" '(STATE LST)
-                                   `(mdf
-                                     ,(=> (MP USER VAL)
-                                        (define LST (<: MP 'LST))
-                                        (set! USER (sy USER))
-                                        (:= LST USER VAL)) ;; Should not be used directly
-                                     transfer
-                                     (tmicropay sy num
-                                     ,(=> (MP USER AMOUNT)
-                                        (define LST (<: MP 'LST))
-                                        (define PR (current-proc))
-                                        (define GIVER 0)
-                                       ;(if (nil? PR)
-                                       ;  (error "micropay.transfer : no current process"))
-                                       ;(set! GIVER (<: PR 'USER))
-                                        (:= LST USER (+ (<: LST USER) AMOUNT))))
-                                     transfer/return ;; Return from the blockchain
-                                     (tmicropay lst
-                                     ,(=> (MP CALL)
-                                        (define LST (<: MP 'LST))
-                                        (let* ((PARM (<: CALL 'PARM))
-                                               (USER (sy (car PARM)))
-                                               (AMOUNT (number (cadr PARM)))) ;; FIXME: DON'T do it like that ; methods should have typed parameters (2)
-                                          (:= LST USER (+ (<: LST USER) AMOUNT)))))
-                                     lst
-                                     (volatile
-                                      tmicropay
-                                     ,(=> (MP)
-                                        (define LST (<: MP 'LST))
-                                        (define FIRST True)
-                                        (for-each (=> (A)
-                                                    (if (!= (string-get (string (car A)) 0) (char ":"))
-                                                    (begin
-                                                      (if (not FIRST) (cr))
-                                                      (set! FIRST False)
-                                                      (outraw (car A))
-                                                      (outraw " : ")
-                                                      (outraw (cadr A)))))
-                                                  LST))))))
+(define
+  tmicropay
+  (type "micropay" '(STATE ACCOUNT) `(
+
+    transfer
+    (tmicropay sy num
+    ,(=> (MP USER AMOUNT)
+       (define ACCOUNT (<: MP 'ACCOUNT))
+       (define PR (sender-proc))
+       (define GIVER _)
+       (if (nil? PR)
+         (error "micropay.transfer : no sender"))
+       (set! GIVER (sy (<: PR 'USER)))
+       (:= ACCOUNT USER (+ (<: ACCOUNT USER) AMOUNT))
+       (:= ACCOUNT GIVER (- (<: ACCOUNT GIVER) AMOUNT))))
+
+    transfer/return ;; Return from the blockchain
+    (tmicropay lst
+    ,(=> (MP CALL)
+       (define ACCOUNT (<: MP 'ACCOUNT))
+       (let* ((PARM (<: CALL 'PARM))
+              (USER (sy (car PARM)))
+              (AMOUNT (number (cadr PARM)))) ;; FIXME: DON'T do it like that ; methods should have typed parameters (2)
+         (:= ACCOUNT USER (+ (<: ACCOUNT USER) AMOUNT)))))
+
+    lst
+    (volatile
+     tmicropay
+    ,(=> (MP)
+       (define ACCOUNT (<: MP 'ACCOUNT))
+       (define FIRST True)
+       (for-each (=> (A)
+                   (if (!= (string-get (string (car A)) 0) (char ":"))
+                   (begin
+                     (if (not FIRST) (cr))
+                     (set! FIRST False)
+                     (outraw (car A))
+                     (outraw " : ")
+                     (outraw (cadr A)))))
+                 ACCOUNT))))))
+
 (define (micropay . L)
-  (let* ((LST (rexpr '@rexpr '()))
-         (MP (rexpr tmicropay `(STATE Started LST ,LST))))
+  (let* ((ACCOUNT (rexpr '@rexpr '()))
+         (MP (rexpr tmicropay `(STATE Started ACCOUNT ,ACCOUNT))))
     (set! L (list-group L))
     (for-each (=> (A)
-                (:= LST (sy (car A)) (number (cadr A)))
+                (:= ACCOUNT (sy (car A)) (number (cadr A)))
               )
               L)
     MP))

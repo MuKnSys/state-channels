@@ -2,7 +2,7 @@
 ;
 ;  Copyright (C) 2022, MUKN
 ;
-;  Authors: Henri Lesourd (July 2022)
+;  Authors: Henri Lesourd (August 2022)
 ;
 ;    This is free software: you can redistribute it and/or modify it under
 ;    the terms of the Apache 2.0 License or (at your option) any later version.
@@ -20,6 +20,8 @@
           (PARM (<: C 'PARM))
           (SIGN_B (<: C 'SIGN_B))
           (SIGN_E (<: C 'SIGN_E))
+          (ACK (<: C 'ACK))
+          (ACK* (<: C 'ACK*))
          )
     (outraw (if OPT "*" " "))
     (outraw "<")
@@ -34,10 +36,14 @@
     (outraw TO)
     (outraw " ")
     (>> PARM)
+  ;;(outraw " ")
+  ;;(>> SIGN_B)
     (outraw " ")
-    (>> SIGN_B)
-    (outraw " ")
-    (>> SIGN_E)))
+    (>> SIGN_E)
+    (if ACK*
+      (outraw " !*")
+    (if ACK
+      (outraw " !!")))))
 
 (define (lstcalls L . PTR)
   (set! PTR (if (empty? PTR) Nil (car PTR)))
@@ -81,7 +87,7 @@
   (lstcalls (<: PR 'IN) (<: PR 'INPTR))
   (indent+ (- 0 INDENT))
   (cr)
-  (outraw "in!:")
+  (outraw "rl:")
   (indent+ INDENT)
   (lstcalls (<: PR 'IN!))
   (indent+ (- 0 INDENT))
@@ -149,9 +155,13 @@
 ;; APIMON
 (define APIMON (make-cli '()))
 
-(define (apimon NAME FUNC TYPES . OPT)
+(define (apimon LNAME FUNC TYPES . OPT)
   (define RES (apply clif `(,FUNC ,TYPES . ,OPT)))
-  (^ 'method! APIMON NAME RES)
+  (if (not (pair? LNAME))
+    (set! LNAME `(,LNAME)))
+  (for-each (=> (NAME)
+              (^ 'method! APIMON NAME RES))
+            LNAME)
   RES)
 
 ;; CLI commands
@@ -280,6 +290,8 @@
   (define PRETTY (if (and (pair? L) (> (list-length L) 1)) True False))
   (if VAR
     (let* ((O (hash-ref OBJS VAR)))
+      (if (not O)
+        (set! O (hash-ref _NET VAR)))
       (if O
         ((if PRETTY rexpr-pretty >>) O)
         (begin
@@ -323,12 +335,13 @@
         (outraw VAR)
         (outraw " not found"))))
   (begin ;; Message to proc
-    (let* ((PR (net-resolve VAR)))
+    (let* ((MULTI (== VAR "*"))
+           (PR (if MULTI (current-proc) (net-resolve VAR))))
       (if PR
         (begin
           (set! PARM (cons FUNC PARM))
           (set! PARM (cons PR PARM))
-          (set! PARM (cons 'send PARM))
+          (set! PARM (cons (if MULTI 'send* 'send) PARM))
          ;(out PARM)
           (apply ^ PARM)
         )
@@ -355,15 +368,15 @@
 (apimon "npr" _npr '(num))
 (apimon "npr-" _npr- '(num))
 (apimon "proc" _proc '(str str str))
-(apimon "cpr" _cpr '(str) 'VARGS True)
+(apimon '("cpr" "iam" "whoami") _cpr '(str) 'VARGS True)
 
-(apimon "_sc" _sc '(str str str str) 'VARGS True)
-(apimon "prs" _prs '(str))
+(apimon '("_sc" "join") _sc '(str str str str) 'VARGS True)
+(apimon '("prs" "step") _prs '(str))
 
 (apimon "lsp" _lsp '())
-(apimon "lsp2" _lsp2 '(str) 'VARGS True)
-(apimon "lso" _lso '(str) 'VARGS True)
-(apimon "lso2" _lso2 '(str) 'VARGS True)
+(apimon '("lsp2" "netlist") _lsp2 '(str) 'VARGS True)
+(apimon '("lso" "dump") _lso '(str) 'VARGS True)
+(apimon '("lso2" "print") _lso2 '(str) 'VARGS True)
 
 (apimon "^" _mesg '(str sy any any any any any any any) 'OP True 'VARGS True)
 (apimon "!" _cobj '(str var any any any any any any any) 'OP True 'VARGS True)
