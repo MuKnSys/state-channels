@@ -20,9 +20,27 @@
     ,(=> (MP CALL)
        (define ACCOUNT (<: MP 'ACCOUNT))
        (let* ((PARM (<: CALL 'PARM))
-              (USER (sy (car PARM)))
-              (AMOUNT (number (cadr PARM)))) ;; FIXME: DON'T do it like that ; methods should have typed parameters (2)
+              (USER (car PARM))
+              (AMOUNT (cadr PARM)))
          (:= ACCOUNT USER (+ (<: ACCOUNT USER) AMOUNT)))))
+
+    start ;; Start
+    (tmicropay
+    ,(=> (MP)
+       (define ACCOUNT (<: MP 'ACCOUNT))
+       (define RES True)
+       (if (== (<: MP 'STATE) 'Init)
+         (begin
+           (for-each (=> (A)
+                       (if (!= (string-get (string (car A)) 0) (char ":"))
+                       (begin
+                         (if (not (> (cadr A) 0))
+                           (set! RES False)))))
+                     ACCOUNT))
+         (set! RES False))
+       (if RES
+         (:= MP 'STATE 'Started))
+       RES))
 
     lst
     (volatile
@@ -42,12 +60,13 @@
 
 (define (micropay . L)
   (let* ((ACCOUNT (rexpr '@rexpr '()))
-         (MP (rexpr tmicropay `(STATE Started ACCOUNT ,ACCOUNT))))
+         (MP (rexpr tmicropay `(STATE Init ACCOUNT ,ACCOUNT))))
     (set! L (list-group L))
     (for-each (=> (A)
                 (:= ACCOUNT (sy (car A)) (number (cadr A)))
               )
               L)
+    (^ 'start MP)
     MP))
 
 ;(out (micropay '(A B C)))

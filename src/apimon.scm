@@ -22,6 +22,7 @@
           (SIGN_E (<: C 'SIGN_E))
           (ACK (<: C 'ACK))
           (ACK* (<: C 'ACK*))
+          (RESULT (<: C 'RESULT))
          )
     (outraw (if OPT "*" " "))
     (outraw "<")
@@ -40,10 +41,12 @@
   ;;(>> SIGN_B)
     (outraw " ")
     (>> SIGN_E)
+    (if (not RESULT)
+      (outraw " FAIL")
     (if ACK*
       (outraw " !*")
     (if ACK
-      (outraw " !!")))))
+      (outraw " !!"))))))
 
 (define (lstcalls L . PTR)
   (set! PTR (if (empty? PTR) Nil (car PTR)))
@@ -319,6 +322,13 @@
               (_lso O 1))
             L))
 
+(define (_cobj VAR FUNC . L) ;; Create obj
+  (define O _)
+  (if (== "$" (string (string-get VAR 0)))
+    (set! VAR (substring VAR 1 (string-length VAR))))
+  (set! O (apply FUNC L))
+  (hash-set! OBJS VAR O))
+
 (define (_mesg VAR FUNC . PARM) ;; Message
   (if (== "$" (string (string-get VAR 0))) ;; Message to obj
   (let* ((OBJ _))
@@ -348,12 +358,11 @@
         (outraw (string+ "Proc " VAR " is not on the net")))
     ))))
 
-(define (_cobj VAR FUNC . L) ;; Create obj
-  (define O _)
-  (if (== "$" (string (string-get VAR 0)))
-    (set! VAR (substring VAR 1 (string-length VAR))))
-  (set! O (apply FUNC L))
-  (hash-set! OBJS VAR O))
+(define (_sync UID)
+  (let* ((PR (net-resolve UID)))
+    (if PR
+      (^ 'sync PR)
+      (outraw (string+ "Proc " UID " is not on the net")))))
 
 ;; CLI commands (declarations)
 (apimon "h" _help '())
@@ -378,5 +387,6 @@
 (apimon '("lso" "dump") _lso '(str) 'VARGS True)
 (apimon '("lso2" "print") _lso2 '(str) 'VARGS True)
 
-(apimon "^" _mesg '(str sy any any any any any any any) 'OP True 'VARGS True)
 (apimon "!" _cobj '(str var any any any any any any any) 'OP True 'VARGS True)
+(apimon "^" _mesg '(str sy any any any any any any any) 'OP True 'VARGS True)
+(apimon "sync" _sync '(str))

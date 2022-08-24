@@ -108,13 +108,14 @@
   (set! _SENDPROC PROC))
 
 ;; Call
+(define (fname-isret? F)
+  (set! F (string F))
+  (let* ((LF (string-length F))
+         (LP (string-length "/return")))
+    (and (> LF LP)
+         (== (substring F (- LF LP) LF) "/return"))))
+
 (method! tproc 'call (=> (PROC FNAME . PARM)
-  (define (isret F)
-    (set! F (string F))
-    (let* ((LF (string-length F))
-           (LP (string-length "/return")))
-      (and (> LF LP)
-           (== (substring F (- LF LP) LF) "/return"))))
   (cond
     ((^ 'remote? PROC)
      _ ;; TODO: send (cons FNAME PARM) thru the socket
@@ -126,16 +127,39 @@
         _ ;; TODO: log the call in SELF.LOG
         (if (unspecified? SELF)
           (error "proc<" (<: PROC 'UID) ">::call : no SELF"))
-        (if (isret FNAME)
+        (if (fname-isret? FNAME)
           (let* ((FROM (<: PROC 'FROM))
                  (CALL (car PARM))) ;; FIXME: should ensure the same return is not evaluated 2 times
             (if (unspecified? FROM)
               (error "proc.call : return without FROM"))
             (if (string? CALL)
               (set! CALL (string->number CALL)))
-            (set! CALL ([ (<: FROM 'IN!) CALL))
+            (set! CALL (copy-tree ([ (<: FROM 'IN!) CALL)))
+            (:= CALL 'PARM (cdr (mvparms (<: CALL 'FUNC)
+                                         (cons (<: (net-resolve (<: CALL 'TO)) 'SELF)
+                                               (<: CALL 'PARM)))))
             (apply ^? `(,FNAME ,SELF . (,CALL))))
           (apply ^? `(,FNAME ,SELF . ,PARM))))))))
+
+(method! tproc 'sync (=> (PROC)
+  (define RETS (map (=> (CALL)
+                      (number (car (<: CALL 'PARM))))
+                    (filter (=> (CALL)
+                              (and (fname-isret? (<: CALL 'FUNC))
+                                   (not (<: CALL 'ACK))))
+                            (<: PROC 'IN))))
+  (define RL0 _)
+  (define MASTER (<: PROC 'FROM))
+  (if (and (specified? MASTER) (not (boxed-empty? (<: MASTER 'IN!))))
+  (begin
+    (set! RL0 (filter (=> (CALL)
+                        (not (list-in? (cadr CALL) RETS)))
+                      (map (=> (CALL)
+                             `(,(<: CALL 'FUNC) ,(<: CALL 'INNB)))
+                           (<: MASTER 'IN!))))
+    (for-each (=> (CALL)
+                (^ 'send* PROC (sy (string+ (string (car CALL)) "/return")) (cadr CALL)))
+              RL0)))))
 
 ;; Map
 (method! tproc 'prog! (=> (PROC O) ;; Set the proc's servlet
@@ -182,11 +206,12 @@
   (define FROM (<: (current-proc) 'UID))
   (define TO (<: CALL 'TO))
   (define L _)
+  (define MASTER (<: (current-proc) 'FROM))
   (if (or (unspecified? FROM) (empty? FROM) (boxed-empty? FROM))
     (error "proc-queue : no FROM => " FROM))
   (if (not (or (unspecified? TO) (empty? TO) (boxed-empty? TO)))
   (begin
-    (if (unspecified? (<: CALL 'INNB))
+    (if (and (unspecified? (<: CALL 'INNB)) (or (unspecified? MASTER) (!= TO (<: MASTER 'UID))))
       (set! L `(,FROM))
       (set! L TO))
     (set! L (proc-resolve L))
@@ -274,8 +299,9 @@
            (error "proc<" (<: MSG 'FROM) ">::step : no sender proc"))
          (sender-proc! SPROC)
          (set! RES (apply ^ `(call ,PROC ,FUNC . ,(<: MSG 'PARM))))
+         (:= MSG 'RESULT RES)
          (sender-proc! Nil)
-         (if (not ISVOLATILE)
+         (if (and RES (not ISVOLATILE)) ;; TODO: when (not RES), rollback changes
            (let* ((INNB (<: MSG 'INNB))
                   (INNB2 (list-length (<: PROC 'IN!)))
                  )

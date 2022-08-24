@@ -1,0 +1,93 @@
+# Creating the proc snapshots
+$MP0 ! cmicropay smith dupont durand
+
+$MP1 ! micropay smith 0 dupont 0 durand 0
+$MP2 ! micropay smith 0 dupont 0 durand 0
+$MP3 ! micropay smith 0 dupont 0 durand 0
+
+# Displaying the snapshots
+$MP0 ^ lst
+print MP0
+
+$MP1 ^ lst
+$MP2 ^ lst
+$MP3 ^ lst
+
+# Creating the procs
+proc blockchain PR0 $MP0
+proc smith PR1 $MP1
+proc dupont PR2 $MP2
+proc durand PR3 $MP3
+
+netlist
+
+# Joining the state channel
+join PR0 PR1 PR2 PR3
+netlist
+
+# Test the obj micropayment
+#$MP1 ^ transfer smith 5
+#$MP1 ^ lst
+
+# Initializing the players' balances in the contract
+iam PR1
+PR0 ^ transfer smith 10
+iam PR2
+PR0 ^ transfer dupont 10
+iam PR3
+PR0 ^ transfer durand 10
+step PR0
+step PR0
+step PR0
+
+PR0 ^ lst
+step PR0
+
+netlist PR0
+
+netlist PR1
+netlist PR2
+netlist PR3
+
+# Downloading the players' balances in the state channel
+iam PR1
+* ^ transfer/return 0
+#PR1 ^ transfer/return 1
+#PR1 ^ transfer/return 2
+netlist PR1
+step PR1
+
+netlist PR1
+
+netlist PR2
+netlist PR3
+
+step PR2
+netlist PR2
+
+$MP1 ^ lst
+$MP2 ^ lst
+$MP3 ^ lst
+
+netlist PR1
+sync PR1
+netlist PR1
+
+sync PR1
+netlist PR1
+
+step PR1
+step PR1
+step PR1
+netlist PR1
+
+* ^ start
+lso2 MP1
+step PR1
+netlist PR1
+lso2 MP1
+
+netlist PR2
+
+# Quitting
+#q
