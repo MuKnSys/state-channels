@@ -74,7 +74,7 @@
 (define (proc-group . L)
   (if (not (empty? L))
   (let* ((FROM (car L))
-         (L2 _))
+         (L2 Void))
     (set! L (cdr L))
     (set! L2 (map (=> (PR)
                     (if (proc? PR)
@@ -118,13 +118,13 @@
 (method! tproc 'call (=> (PROC FNAME . PARM)
   (cond
     ((^ 'remote? PROC)
-     _ ;; TODO: send (cons FNAME PARM) thru the socket
+     Void ;; TODO: send (cons FNAME PARM) thru the socket
     )
     (else
       (let* ((SELF (<: PROC 'SELF)) ;; TODO: add what to do if HANDLER is set (is HANDLER necessary ?)
             )
-        _ ;; TODO: context-switch to SELF.HEAP
-        _ ;; TODO: log the call in SELF.LOG
+        Void ;; TODO: context-switch to SELF.HEAP
+        Void ;; TODO: log the call in SELF.LOG
         (if (unspecified? SELF)
           (error "proc<" (<: PROC 'UID) ">::call : no SELF"))
         (if (fname-isret? FNAME)
@@ -134,7 +134,7 @@
               (error "proc.call : return without FROM"))
             (if (string? CALL)
               (set! CALL (string->number CALL)))
-            (set! CALL (copy-tree ([ (<: FROM 'IN!) CALL)))
+            (set! CALL (copy-tree (list-get (<: FROM 'IN!) CALL)))
             (:= CALL 'PARM (cdr (mvparms (<: CALL 'FUNC)
                                          (cons (<: (net-resolve (<: CALL 'TO)) 'SELF)
                                                (<: CALL 'PARM)))))
@@ -148,7 +148,7 @@
                               (and (fname-isret? (<: CALL 'FUNC))
                                    (not (<: CALL 'ACK))))
                             (<: PROC 'IN))))
-  (define RL0 _)
+  (define RL0 Void)
   (define MASTER (<: PROC 'FROM))
   (if (and (specified? MASTER) (not (boxed-empty? (<: MASTER 'IN!))))
   (begin
@@ -166,7 +166,7 @@
   (:= PROC 'SELF O)))
 
 (method! tproc 'map (=> (PROC ADDR) ;; Map the proc's heap ;; ADDR is a distributed resource UID
-  _))
+  Void))
 
 ;; Send ;; TODO: only for (inmem?)s at the moment
 (method! tproc 'outnb (=> (PROC)
@@ -205,7 +205,7 @@
 (define (proc-queue CALL)
   (define FROM (<: (current-proc) 'UID))
   (define TO (<: CALL 'TO))
-  (define L _)
+  (define L Void)
   (define MASTER (<: (current-proc) 'FROM))
   (if (or (unspecified? FROM) (empty? FROM) (boxed-empty? FROM))
     (error "proc-queue : no FROM => " FROM))
@@ -262,9 +262,9 @@
 (method! tproc 'step (=> (PROC)
   (define OCURPROC (current-proc)) ;; Not absolutely necessary ; (current-proc) should be Nil, in fact
   (define MSG (^ 'in++ PROC))
-  (define RES _)
+  (define RES Void)
   (define PEER (<: PROC 'PEER))
-  (define ISPEER _)
+  (define ISPEER Void)
   (define ISVOLATILE False)
   (set! ISPEER (not (or (empty? PEER) (boxed-empty? PEER))))
   (if (not (nil? MSG))
@@ -272,9 +272,9 @@
     (current-proc! PROC)
     (let* ((FUNC (<: MSG 'FUNC))
            (SELF (<: PROC 'SELF))
-           (SLOTTY _)
-           (DESCR _)
-           (SPROC _)
+           (SLOTTY Void)
+           (DESCR Void)
+           (SPROC Void)
           )
       (if (unspecified? SELF)
         (error "proc<" (<: PROC 'UID) ">::step : no SELF"))
@@ -288,7 +288,7 @@
         ((<: MSG 'ACK)
          (if (not (specified? (<: MSG 'INNB)))
            (error "proc<" (<: PROC 'UID) ">::step : ACKed MSG without INNB"))
-         (let* ((MSG0 ([ (<: PROC 'IN!) (<: MSG 'INNB)))
+         (let* ((MSG0 (list-get (<: PROC 'IN!) (<: MSG 'INNB)))
                )
            (sign:+ MSG0 MSG)
            (:= MSG0 'ACK* (signed-all? MSG0)))
@@ -327,5 +327,5 @@
     ((^ 'inmem? PROC)
      (noop))
     ((^ 'ssock? PROC)
-     _ ;; TODO: start the server socket
+     Void ;; TODO: start the server socket
     ))))

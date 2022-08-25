@@ -9,3 +9,7 @@
 ;
 
 (use-modules (ice-9 rdelim))
+
+;; =>
+(define-macro (=> LST . CODE)
+  `(lambda ,LST . ,CODE))

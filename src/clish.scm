@@ -16,11 +16,11 @@
   (error "clish [PROG] [SCRIPT] expected"))
 
 (define CWD (getcwd))
-(define PROG (string+ CWD "/examples/" ([ L 1) ".scm"))
+(define PROG (string+ CWD "/examples/" (list-ref L 1) ".scm"))
 
 (define SCRIPT False)
 (if (> (list-length L) 2)
-  (set! SCRIPT (string+ CWD "/examples/" ([ L 2) ".scsh")))
+  (set! SCRIPT (string+ CWD "/examples/" (list-ref L 2) ".scsh")))
 
 (if (not (file-exists? PROG))
   (error "File " PROG " not found"))

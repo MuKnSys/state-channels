@@ -28,7 +28,7 @@ whoami
 # Expansion of a replicated call
 netlist SC1
 
-* ^ transfer carol 5
+* ^ transfer carol 2
 netlist SC1
 print MP1
 
@@ -72,6 +72,16 @@ netlist SC2
 netlist SC3
 step SC3
 netlist SC3
+
+# Second transfer
+iam SC2
+* ^ transfer dave 7
+step* SC2
+step* SC1
+step* SC3
+step* SC2
+netlist SC2
+print MP2
 
 # Quitting
 q

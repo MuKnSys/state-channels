@@ -210,7 +210,7 @@
 (define (_prog! PID P1)
   (let* ((PR (hash-ref (allprocs) PID)))
     (if (proc? PR)
-      (let* ((OBJ _))
+      (let* ((OBJ Void))
          (set! P1 (substring P1 1 (string-length P1)))
          (set! OBJ (hash-ref OBJS P1))
          (if OBJ
@@ -228,7 +228,7 @@
 
 (define (_proc USER UID SELF)
   (define PR (proc 'USER USER 'UID UID))
-  (define OBJ _)
+  (define OBJ Void)
   (if (== (char "$") (string-get SELF 0))
     (set! SELF (substring SELF 1 (string-length SELF))))
   (set! OBJ (hash-ref OBJS SELF))
@@ -242,7 +242,7 @@
 
 (define (_cpr . UID)
   (set! UID (if (empty? UID)
-              _
+              Void
               (car UID)))
   (if (specified? UID)
     (let* ((PR (net-resolve UID)))
@@ -259,7 +259,7 @@
   (let* ((LP (map (=> (NAME)
                       (if (specified? NAME)
                         (if (== NAME "_")
-                          _
+                          Void
                           (let* ((P (net-resolve NAME)))
                             (if P
                               P
@@ -274,6 +274,13 @@
   (define PR (net-resolve UID))
   (if PR
     (^ 'step PR)
+    (outraw (string+ "Proc " UID " is not on the net"))))
+
+(define (_prs* UID)
+  (define PR (net-resolve UID))
+  (if PR
+    (while (not (nil? (<: PR 'INPTR)))
+      (^ 'step PR))
     (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_lsp)
@@ -323,7 +330,7 @@
             L))
 
 (define (_cobj VAR FUNC . L) ;; Create obj
-  (define O _)
+  (define O Void)
   (if (== "$" (string (string-get VAR 0)))
     (set! VAR (substring VAR 1 (string-length VAR))))
   (set! O (apply FUNC L))
@@ -331,7 +338,7 @@
 
 (define (_mesg VAR FUNC . PARM) ;; Message
   (if (== "$" (string (string-get VAR 0))) ;; Message to obj
-  (let* ((OBJ _))
+  (let* ((OBJ Void))
     (set! VAR (substring VAR 1 (string-length VAR)))
     (set! OBJ (hash-ref OBJS VAR))
     (if OBJ
@@ -381,6 +388,7 @@
 
 (apimon '("_sc" "join") _sc '(str str str str) 'VARGS True)
 (apimon '("prs" "step") _prs '(str))
+(apimon '("prs*" "step*") _prs* '(str))
 
 (apimon "lsp" _lsp '())
 (apimon '("lsp2" "netlist") _lsp2 '(str) 'VARGS True)

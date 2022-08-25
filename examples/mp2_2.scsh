@@ -1,9 +1,9 @@
 # Creating the proc snapshots
-$MP0 ! cmicropay smith dupont durand
+$MP0 ! cmicropay bob carol dave
 
-$MP1 ! micropay smith 0 dupont 0 durand 0
-$MP2 ! micropay smith 0 dupont 0 durand 0
-$MP3 ! micropay smith 0 dupont 0 durand 0
+$MP1 ! micropay bob 0 carol 0 dave 0
+$MP2 ! micropay bob 0 carol 0 dave 0
+$MP3 ! micropay bob 0 carol 0 dave 0
 
 # Displaying the snapshots
 $MP0 ^ lst
@@ -14,80 +14,80 @@ $MP2 ^ lst
 $MP3 ^ lst
 
 # Creating the procs
-proc blockchain PR0 $MP0
-proc smith PR1 $MP1
-proc dupont PR2 $MP2
-proc durand PR3 $MP3
+proc blockchain SC0 $MP0
+proc bob SC1 $MP1
+proc carol SC2 $MP2
+proc dave SC3 $MP3
 
 netlist
 
 # Joining the state channel
-join PR0 PR1 PR2 PR3
+join SC0 SC1 SC2 SC3
 netlist
 
 # Test the obj micropayment
-#$MP1 ^ transfer smith 5
+#$MP1 ^ transfer bob 5
 #$MP1 ^ lst
 
 # Initializing the players' balances in the contract
-iam PR1
-PR0 ^ transfer smith 10
-iam PR2
-PR0 ^ transfer dupont 10
-iam PR3
-PR0 ^ transfer durand 10
-step PR0
-step PR0
-step PR0
+iam SC1
+SC0 ^ transfer bob 10
+iam SC2
+SC0 ^ transfer carol 10
+iam SC3
+SC0 ^ transfer dave 10
+step SC0
+step SC0
+step SC0
 
-PR0 ^ lst
-step PR0
+SC0 ^ lst
+step SC0
 
-netlist PR0
+netlist SC0
 
-netlist PR1
-netlist PR2
-netlist PR3
+netlist SC1
+netlist SC2
+netlist SC3
 
 # Downloading the players' balances in the state channel
-iam PR1
+iam SC1
 * ^ transfer/return 0
-#PR1 ^ transfer/return 1
-#PR1 ^ transfer/return 2
-netlist PR1
-step PR1
+#SC1 ^ transfer/return 1
+#SC1 ^ transfer/return 2
+netlist SC1
+step SC1
 
-netlist PR1
+netlist SC1
 
-netlist PR2
-netlist PR3
+netlist SC2
+netlist SC3
 
-step PR2
-netlist PR2
+step SC2
+netlist SC2
 
 $MP1 ^ lst
 $MP2 ^ lst
 $MP3 ^ lst
 
-netlist PR1
-sync PR1
-netlist PR1
+netlist SC1
+sync SC1
+netlist SC1
 
-sync PR1
-netlist PR1
+sync SC1
+netlist SC1
 
-step PR1
-step PR1
-step PR1
-netlist PR1
+step SC1
+step SC1
+step SC1
+netlist SC1
 
 * ^ start
-lso2 MP1
-step PR1
-netlist PR1
-lso2 MP1
+print MP1
+step SC1
+netlist SC1
+print MP1
 
-netlist PR2
+netlist SC2
 
 # Quitting
 #q

@@ -36,12 +36,12 @@
 
 ;; No operation
 (define (noop)
-  _)
+  Void)
 
 ;; Nil & Unspecified
 (define Nil '())
 (define Unspecified ((lambda () (if #f 1234))))
-(define _ Unspecified)
+(define Void Unspecified)
 
 (define (specified? X)
   (not (unspecified? X)))
@@ -104,7 +104,7 @@
 
 ;; Lists & other containers
 (define (empty) ;; Empty list (a _real_ one) ;; TODO: use a special value "Void", rather than Unspec
-  `(,_))
+  `(,Void))
 
 (define (empty? L)
   (null? L))
@@ -140,8 +140,8 @@
 (define list-get list-ref)
 (define list-set list-set!)
 
-(define [ list-ref)
-(define [:= list-set)
+;(define [ list-ref)
+;(define [:= list-set)
 
 (define (push L VAL)
   (if (not (pair? L))
@@ -188,7 +188,7 @@
       (reverse RES))))
 
 ;; Basic tests & symbols
-(define => lambda)
+;(define => lambda)
 
 (define == equal?) ;; FIXME: equal? works with only one parm ; == should NOT do that !!!
 (define != (=> (X Y) (not (== X Y))))
@@ -242,7 +242,7 @@
                    (string-split S (char "\t")))
                  (string-split S (char "\n"))))
   (define N 0)
-  (define W _)
+  (define W Void)
   (for-each (=> (L)
               (if (> (list-length L) N)
                 (set! N (list-length L))))
@@ -251,8 +251,8 @@
   (for-each (=> (L)
               (define M 0)
               (for-each (=> (C)
-                          (if (> (string-length C) ([ W M))
-                            ([:= W M (string-length C)))
+                          (if (> (string-length C) (list-get W M))
+                            (list-set! W M (string-length C)))
                           (set! M (+ M 1)))
                         L))
             T)
@@ -260,9 +260,9 @@
     (map (=> (L)
            (define M 0)
            (map (=> (C)
-                  (if (< (string-length C) ([ W M))
+                  (if (< (string-length C) (list-get W M))
                     (set! C (string+
-                              C (make-string (- ([ W M) (string-length C)) (char " ")))))
+                              C (make-string (- (list-get W M) (string-length C)) (char " ")))))
                   (set! M (+ M 1))
                   C)
                 L))
@@ -274,7 +274,7 @@
   (string-join T "\n"))
 
 (define (tabs CMD)
-  (define RES _)
+  (define RES Void)
   (cond
    ((== CMD 'Start)
     (outopen 'String))

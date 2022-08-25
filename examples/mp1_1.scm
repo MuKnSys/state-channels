@@ -24,7 +24,7 @@
 (net-enter PR1)
 (net-enter PR2)
 (net-enter PR3)
-(proc-group _ PR1 PR2 PR3)
+(proc-group Void PR1 PR2 PR3)
 (netlist)(cr)
 
 ;; Doing a micropayment

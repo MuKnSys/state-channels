@@ -8,7 +8,7 @@
     ,(=> (MP USER AMOUNT)
        (define ACCOUNT (<: MP 'ACCOUNT))
        (define PR (sender-proc))
-       (define GIVER _)
+       (define GIVER Void)
        (if (nil? PR)
          (error "micropay.transfer : no sender"))
        (set! GIVER (sy (<: PR 'USER)))

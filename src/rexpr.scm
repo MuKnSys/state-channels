@@ -262,7 +262,7 @@
 (define (typeof O) ;; TODO: test that it's an rexpr ; if not, return a type for predefined Scheme objs
   (if (pair? O) ;; FIXME: Crappy
     (<: O ':TYPE)
-    _))
+    Void))
 
 (define (method TYPE F)
   (<: (<: TYPE ':METHOD) F))
