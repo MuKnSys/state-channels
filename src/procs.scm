@@ -211,9 +211,16 @@
     (error "proc-queue : no FROM => " FROM))
   (if (not (or (unspecified? TO) (empty? TO) (boxed-empty? TO)))
   (begin
-    (if (and (unspecified? (<: CALL 'INNB)) (or (unspecified? MASTER) (!= TO (<: MASTER 'UID))))
+    (if (and (unspecified? (<: CALL 'INNB))
+             (or (unspecified? MASTER) (!= TO (<: MASTER 'UID)))
+             (not (and (string? TO) (!= TO FROM)))) ;; TODO: beware with these half-baked conditions everywhere ; summarize all that fully & set all straight, at some point.
       (set! L `(,FROM))
-      (set! L TO))
+      (begin
+        (set! L TO)
+        (if (string? TO)
+        (begin
+          (set! CALL (copy-tree CALL)) ;; NOTE : keep this ?
+          (sign CALL (<: (current-proc) 'USER) 'SIGN_E)))))
     (set! L (proc-resolve L))
     (if (specified? (<: CALL 'INNB))
       (set! L (filter (=> (PR)
@@ -275,6 +282,7 @@
            (SLOTTY Void)
            (DESCR Void)
            (SPROC Void)
+           (TO Void)
           )
       (if (unspecified? SELF)
         (error "proc<" (<: PROC 'UID) ">::step : no SELF"))
@@ -294,28 +302,37 @@
            (:= MSG0 'ACK* (signed-all? MSG0)))
         )
         (else
-         (set! SPROC (net-resolve (<: MSG 'FROM)))
-         (if (not SPROC)
-           (error "proc<" (<: MSG 'FROM) ">::step : no sender proc"))
-         (sender-proc! SPROC)
-         (set! RES (apply ^ `(call ,PROC ,FUNC . ,(<: MSG 'PARM))))
-         (:= MSG 'RESULT RES)
-         (sender-proc! Nil)
-         (if (and RES (not ISVOLATILE)) ;; TODO: when (not RES), rollback changes
-           (let* ((INNB (<: MSG 'INNB))
-                  (INNB2 (list-length (<: PROC 'IN!)))
-                 )
-             (if (and (specified? INNB) (!= INNB INNB2))
-               (error "proc<" (<: PROC 'UID) ">::step : wrong INNB"))
-             (:= MSG 'INNB INNB2)
+         (set! TO (<: MSG 'TO))
+         (if (or (pair? TO) (== TO (<: PROC 'UID))) ;; FIXME: improve this test ; and optionally, treat OUT just like IN, rather than putting every outcoming message inside IN for redispatching, as we currently do ;; no use for this, at the moment (1) ...
+           (begin
+             (set! SPROC (net-resolve (<: MSG 'FROM)))
+             (if (not SPROC)
+               (error "proc<" (<: MSG 'FROM) ">::step : no sender proc"))
+             (sender-proc! SPROC)
+             (set! RES (apply ^ `(call ,PROC ,FUNC . ,(<: MSG 'PARM))))
+             (:= MSG 'RESULT RES)
+             (sender-proc! Nil)
+             (if (and RES (not ISVOLATILE)) ;; TODO: when (not RES), rollback changes
+               (let* ((INNB (<: MSG 'INNB))
+                      (INNB2 (list-length (<: PROC 'IN!)))
+                     )
+                 (if (and (specified? INNB) (!= INNB INNB2))
+                   (error "proc<" (<: PROC 'UID) ">::step : wrong INNB"))
+                 (:= MSG 'INNB INNB2)
+                 (set! MSG (copy-tree MSG)) ;; NOTE : keep this ?
+                 (sign MSG (<: PROC 'USER) 'SIGN_E)
+                 (if (specified? INNB)
+                   (:= MSG 'ACK True))
+                 (:+ PROC 'IN! MSG)
+                 (proc-queue MSG)
+                 (:= MSG 'ACK False))))
+           (let* ((MSG0 MSG)) ;; no use for this, at the moment (2)
              (set! MSG (copy-tree MSG)) ;; NOTE : keep this ?
+             (:= MSG0 'REDIR True)
              (sign MSG (<: PROC 'USER) 'SIGN_E)
-             (if (specified? INNB)
-               (:= MSG 'ACK True))
-             (:+ PROC 'IN! MSG)
-             (proc-queue MSG)
-             (:= MSG 'ACK False)))
-      )))
+             (current-proc! (net-resolve TO)) ;; FIXME: test this !!!
+             (proc-queue MSG)))
+        )))
     (current-proc! OCURPROC)))
   RES))
 

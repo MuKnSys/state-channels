@@ -49,8 +49,16 @@ netlist SC1
 netlist SC2
 netlist SC3
 
-# Downloading the players' balances in the state channel
+# Trying a start action on SC1
 iam SC1
+* ^ start
+netlist SC1
+print MP1
+step SC1
+netlist SC1
+print MP1
+
+# Downloading the players' balances in the state channel
 * ^ transfer/return 0
 #SC1 ^ transfer/return 1
 #SC1 ^ transfer/return 2
@@ -90,4 +98,4 @@ print MP1
 netlist SC2
 
 # Quitting
-#q
+q

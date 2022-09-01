@@ -192,6 +192,7 @@
 
 ;; Parse/serialize
 (define (rexpr-serialize O . OPT) ;; either to the level of the 1st rexprs having IDs, or full
+  (define RAW (and (pair? OPT) (== (car OPT) 'Raw)))
   (if (list? O)
     (if (empty? O)
       (outraw "Nil")
@@ -216,7 +217,7 @@
         (outraw ")")))
     (if (unspecified? O)
       (outraw "_")
-      (out O)))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
+      ((if RAW outraw out) O)))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
 
 (define (rexpr-parse S . OPT) ;; links to when they exists, or creates folded entries for IDed rexprs
   O)

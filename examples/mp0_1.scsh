@@ -1,0 +1,41 @@
+
+# Initializing everything
+$W1 ! wallet bob 15
+$W2 ! wallet carol 14
+proc bob WALLET1 $W1
+proc carol WALLET2 $W2
+
+# We start with 2 procs/wallets, containing $15 and $14,
+#                                         [ respectively
+netlist
+
+state WALLET1
+
+state WALLET2
+
+# Bob sends a transfer() message to his wallet, to tell it to
+#                                          [ send $2 to Carol
+iam WALLET1
+WALLET1 ^ transfer 2 WALLET2
+
+netlist WALLET1
+
+# Processing the transfer() message on Bob's wallet : decrease
+#       [ Bob's wallet's balance, and then, send a receive($2)
+#       [ message to Carol's wallet
+step WALLET1
+netlist WALLET1
+
+netlist WALLET2
+
+state WALLET1
+
+# Processing the receive() message on Carol's wallet : increase
+#                                                 [ its balance
+step WALLET2
+netlist WALLET2
+
+state WALLET2
+
+# Quitting
+q

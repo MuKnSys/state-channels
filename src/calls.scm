@@ -21,6 +21,7 @@
                      PATCH  ;; Side effects
                      ACK    ;; Ack sending a signature
                      ACK*   ;; All procs ack-ed the call
+                     REDIR  ;; Redirected message ;; no use for this, at the moment (0)
                      SIGN_B ;; Signature at begin (creation)
                      SIGN_E ;; Signature at end (end of local processing ; reemitting)
                     )
@@ -31,6 +32,7 @@
   (define RES (rexpr tcall (list-group PARM))) ;; NOTE : perhaps call are values
   (:= RES 'ACK False)
   (:= RES 'ACK* False)
+  (:= RES 'REDIR False)
   RES)
 
 ;; Encryption & identities

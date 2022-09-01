@@ -1,0 +1,119 @@
+
+# Initializing everything
+$MP0 ! cmicropay bob carol dave
+$MP1 ! micropay bob 0 carol 0 dave 0
+$MP2 ! micropay bob 0 carol 0 dave 0
+$MP3 ! micropay bob 0 carol 0 dave 0
+proc blockchain SC0 $MP0
+proc bob SC1 $MP1
+proc carol SC2 $MP2
+proc dave SC3 $MP3
+
+# We start with 3 procs/ledgers, each empty, joined in a state
+#           [ channel, with a master process in the blockchain,
+#           [ containing the validated balances (also empty at
+#                                                      [ start)
+join SC0 SC1 SC2 SC3
+netlist
+
+state SC0
+
+state SC1
+
+state SC2
+
+state SC3
+
+# Initializing the players' balances in the master/contract
+iam SC1
+SC0 ^ transfer bob 10
+iam SC2
+SC0 ^ transfer carol 10
+iam SC3
+SC0 ^ transfer dave 10
+step SC0
+step SC0
+step SC0
+
+netlist SC1
+
+netlist SC2
+
+netlist SC3
+
+netlist SC0
+
+state SC0
+
+# Trying a start action on SC1
+iam SC1
+* ^ start
+netlist SC1
+
+state SC1
+
+step SC1
+netlist SC1
+
+state SC1
+
+# Downloading the players' balances in the state channel (1)
+* ^ transfer/return 0
+netlist SC1
+
+step SC1
+netlist SC1
+
+netlist SC2
+
+netlist SC3
+
+step SC2
+netlist SC2
+
+state SC1
+
+state SC2
+
+state SC3
+
+# Downloading the players' balances in the state channel (2)
+netlist SC1
+
+sync SC1
+netlist SC1
+
+sync SC1
+netlist SC1
+
+# Updating all the balances in SC1
+step SC1
+step SC1
+step SC1
+netlist SC1
+
+# We can now start
+* ^ start
+state SC1
+
+step SC1
+netlist SC1
+
+state SC1
+
+netlist SC2
+
+# Finishing validating the signatures of transfer/return(0)
+netlist SC3
+
+step SC3
+step SC3
+netlist SC3
+
+netlist SC1
+
+step SC1
+netlist SC1
+
+# Quitting
+q

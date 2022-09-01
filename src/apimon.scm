@@ -9,6 +9,20 @@
 ;
 
 ;; Calls
+(define (lstsign S)
+  (if (unspecified? S)
+    (outraw "_")
+    (begin
+      (outraw "(")
+      (color-red)
+      (outraw "S")
+      (color-white)
+      (for-each (=> (U)
+                  (outraw " ")
+                  (outraw U))
+                (cdr S))
+      (outraw ")"))))
+
 (define (lstcall C . OPT)
   (set! OPT (and (not (nil? OPT)) (car OPT)))
   (let * ((USER (<: C 'USER))
@@ -36,17 +50,21 @@
     (outraw "=>")
     (outraw TO)
     (outraw " ")
-    (>> PARM)
+    (>> PARM 'Raw)
   ;;(outraw " ")
   ;;(>> SIGN_B)
     (outraw " ")
-    (>> SIGN_E)
+    (lstsign SIGN_E) ;;(>> SIGN_E 'Raw)
+    (color-red)
     (if (not RESULT)
       (outraw " FAIL")
     (if ACK*
-      (outraw " !*")
+      (outraw "!*")
     (if ACK
-      (outraw " !!"))))))
+      (outraw "!!")
+    (if (<: C 'REDIR)
+      (outraw "!>>")))))
+    (color-white)))
 
 (define (lstcalls L . PTR)
   (set! PTR (if (empty? PTR) Nil (car PTR)))
@@ -229,11 +247,14 @@
 (define (_proc USER UID SELF)
   (define PR (proc 'USER USER 'UID UID))
   (define OBJ Void)
-  (if (== (char "$") (string-get SELF 0))
-    (set! SELF (substring SELF 1 (string-length SELF))))
-  (set! OBJ (hash-ref OBJS SELF))
-  (if OBJ
-    (^ 'prog! PR OBJ)
+  (if (!= SELF "_")
+  (begin
+    (if (== (char "$") (string-get SELF 0))
+      (set! SELF (substring SELF 1 (string-length SELF))))
+    (set! OBJ (hash-ref OBJS SELF))))
+  (if (or OBJ (== SELF "_"))
+    (if OBJ
+      (^ 'prog! PR OBJ))
     (begin
       (outraw "Object ")
       (outraw SELF)
@@ -322,11 +343,23 @@
 
 (define (_lso2 . L)
   (define FIRST True)
-  (for-each (=> (O)
+  (for-each (=> (VAR)
               (if FIRST
                 (set! FIRST False)
                 (cr))
-              (_lso O 1))
+              (_lso VAR 1))
+            L))
+
+(define (_state . L)
+  (define FIRST True)
+  (for-each (=> (VAR)
+              (if FIRST
+                (set! FIRST False)
+                (cr))
+              (let* ((PR (hash-ref _NET VAR)))
+                (if PR
+                  (rexpr-pretty (<: PR 'SELF))
+                  (outraw (string+ "Proc " VAR " is not on the net")))))
             L))
 
 (define (_cobj VAR FUNC . L) ;; Create obj
@@ -394,6 +427,7 @@
 (apimon '("lsp2" "netlist") _lsp2 '(str) 'VARGS True)
 (apimon '("lso" "dump") _lso '(str) 'VARGS True)
 (apimon '("lso2" "print") _lso2 '(str) 'VARGS True)
+(apimon "state" _state '(str))
 
 (apimon "!" _cobj '(str var any any any any any any any) 'OP True 'VARGS True)
 (apimon "^" _mesg '(str sy any any any any any any any) 'OP True 'VARGS True)
