@@ -66,7 +66,7 @@
     (set! _PROCNO (+ _PROCNO 1))
     (:? RES 'PEER (empty))
     (:? RES 'IN (empty))
-    (:? RES 'INPTR (<: RES 'IN))
+    (:? RES 'INPTR Nil)
     (:? RES 'IN! (empty))
     (:? RES 'OUT (empty))
     (:? RES 'OUTPTR Nil)
@@ -353,3 +353,32 @@
     ((^ 'ssock? PROC)
      Void ;; TODO: start the server socket
     ))))
+
+(method! tproc 'stop (=> (PROC . B)
+  (set! B (if (or (empty? B) (== (car B) True) (== (car B) 1)) True False))
+  (cond
+    ((^ 'inmem? PROC)
+    ;(outraw (string+ (if B "Stopping" "Restarting") " process " (<: PROC 'UID)))
+     (:= PROC 'STOPPED B))
+    (else
+     (error "proc<" (<: PROC 'UID) ">::stop : can't stop proc"))
+    )))
+
+(method! tproc 'idle? (=> (PROC)
+  (if (^ 'inmem? PROC)
+    (nil? (<: PROC 'INPTR))
+    Unspecified)))
+
+(define (step . PROC)
+  (if (not (empty? PROC))
+    (^ 'step (car PROC))
+    (let* ((DOIT True)
+           (FIRST True))
+      (while DOIT
+        (set! DOIT False)
+        (hash-for-each (=> (UID PR)
+                   (if (and (not (<: PR 'STOPPED)) (not (^ 'idle? PR)))
+                   (begin
+                     (^ 'step PR)
+                     (set! DOIT True))))
+                 (allprocs))))))

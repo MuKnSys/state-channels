@@ -225,7 +225,9 @@
         (outraw ")")))
     (if (unspecified? O)
       (outraw "_")
-      ((if RAW outraw out) O)))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
+    (if (boolean? O)
+      (outraw (if O "True" "False"))
+      ((if RAW outraw out) O))))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
 
 (define (rexpr-parse S . OPT) ;; links to when they exists, or creates folded entries for IDed rexprs
   O)
@@ -265,7 +267,9 @@
           (out O))))
     (if (unspecified? O)
       (outraw "_")
-      (out O))))
+    (if (boolean? O)
+      (outraw (if O "True" "False"))
+      (out O)))))
 
 ;; First-class objects API
 (define (typeof O) ;; TODO: test that it's an rexpr ; if not, return a type for predefined Scheme objs

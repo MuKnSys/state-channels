@@ -1,0 +1,34 @@
+
+# Initializing everything
+$W1 ! wallet bob 15
+$W2 ! wallet carol 14
+proc bob WALLET1 $W1
+proc carol WALLET2 $W2
+
+# We start with 2 procs/wallets, containing $15 and $14,
+#                                         [ respectively
+netlist
+
+state WALLET1
+
+state WALLET2
+
+# Bob sends a transfer() message to his wallet, to tell it to
+#                                          [ send $2 to Carol
+iam WALLET1
+WALLET1 ^ transfer 2 WALLET2
+
+netlist WALLET1
+
+# Run all
+run
+netlist WALLET1
+
+netlist WALLET2
+
+state WALLET1
+
+state WALLET2
+
+# Quitting
+q

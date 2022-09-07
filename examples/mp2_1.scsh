@@ -28,7 +28,7 @@ npr 1
 npr 2
 npr 3
 lsp
-_sc PR0 PR1 PR2 PR3
+_sc! PR0 PR1 PR2 PR3
 lsp
 
 # Test the obj micropayment

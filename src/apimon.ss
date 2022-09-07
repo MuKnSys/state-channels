@@ -95,6 +95,8 @@
   (outraw (if (specified? UID) UID "_"))
   (outraw " ")
   (outraw (<: PR 'USER))
+  (outraw " ")
+  (outraw (if (<: PR 'STOPPED) "_" "^"))
   (if (not SHORT)
   (begin
     (outraw " ")
@@ -202,10 +204,13 @@
   (outraw "npr PID        : net proc enter")(cr)
   (outraw "npr- PID       : net proc leave")(cr)
   (outraw "cpr [UID]      : current proc")(cr)
-  (outraw "_sc! [UID*]    : sc <= procs having the UIDs UID(i)")(cr) ;; FIXME: "_sc" is used
+  (outraw "join [UID*]    : sc <= procs having the UIDs UID(i)")(cr) ;; FIXME: "_sc" is used
   (outraw "UID ^ MSG      : send MSG to proc named UID")(cr)
+  (outraw "stop UID       : stop proc named UID")(cr)
+  (outraw "unstop UID     : restart proc named UID")(cr)
   (outraw "prs UID        : proc step")(cr)
   (outraw "pr* [UID]      : all steps")(cr)
+  (outraw "run            : run until saturation")(cr)
   (outraw "lsp            : list procs")(cr)
   (outraw "$VAR ! CONS    : CONS obj & store it in $VAR")(cr)
   (outraw "$VAR ^ MSG     : send MSG to obj stored in $VAR")(cr)
@@ -295,6 +300,22 @@
            (:= PR 'FROM (car LP))
            (:= PR 'PEER (list-copy (cdr UID))))
          (cdr LP))))
+
+(define (_prstop UID)
+  (define PR (net-resolve UID))
+  (if PR
+    (begin
+     ;(outraw (string+ "Stopping process " (<: PR 'UID)))
+      (^ 'stop PR))
+    (outraw (string+ "Proc " UID " is not on the net"))))
+
+(define (_prunstop UID)
+  (define PR (net-resolve UID))
+  (if PR
+    (begin
+     ;(outraw (string+ "Restarting process " (<: PR 'UID)))
+      (^ 'stop PR 0))
+    (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_prs UID)
   (define PR (net-resolve UID))
@@ -424,9 +445,12 @@
 (apimon "proc" _proc '(str str str))
 (apimon '("cpr" "iam" "whoami") _cpr '(str) 'VARGS True)
 
-(apimon '("_sc" "join") _sc '(str str str str) 'VARGS True)
+(apimon '("_sc!" "join") _sc '(str str str str) 'VARGS True)
+(apimon "stop" _prstop '(str))
+(apimon "unstop" _prunstop '(str))
 (apimon '("prs" "step") _prs '(str))
 (apimon '("prs*" "step*") _prs* '(str))
+(apimon "run" step '())
 
 (apimon "lsp" _lsp '())
 (apimon '("lsp2" "netlist") _lsp2 '(str) 'VARGS True)
