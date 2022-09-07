@@ -1,4 +1,4 @@
-; rexpr.scm
+; rexpr.ss
 ;
 ;  Copyright (C) 2022, MUKN
 ;
@@ -7,6 +7,14 @@
 ;    This is free software: you can redistribute it and/or modify it under
 ;    the terms of the Apache 2.0 License or (at your option) any later version.
 ;
+
+(export #t)
+(import ./llruntime)
+(import ./basics)
+
+(export
+   (import: ./llruntime)
+   (import: ./basics))
 
 ;; Heaps
 (define (heap)
@@ -180,7 +188,7 @@
       (error "rexpr-add! :: list expected"))
     (begin
       (if (not (empty? LV0))
-        (set! L (rcons (copy-tree (car LV0)) V)) ;; TODO: put aka. (copy-tree) & (list-copy) in basics.scm
+        (set! L (rcons (copy-tree (car LV0)) V)) ;; TODO: put aka. (copy-tree) & (list-copy) in basics.ss
         (set! L `(,V)))
       (rexpr-set! O K L))))
 

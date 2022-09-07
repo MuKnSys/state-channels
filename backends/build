@@ -1,0 +1,29 @@
+#!/bin/guile
+!#
+
+(define L (command-line))
+(if (< (length L) 2)
+  (error "build <ENV> expected"))
+
+(define CWD (getcwd))
+(define CMD (list-ref L 0))
+(define BACKENDS #f)
+(if (not (equal? (string-ref CMD 0) #\.))
+  (set! BACKENDS (string-append CWD "/" CMD))
+  (error "Calc full path !Yet"))
+(set! BACKENDS (string-join (reverse (cdr (reverse (string-split BACKENDS #\/)))) "/"))
+
+(define DIR (string-append BACKENDS "/" (list-ref L 1)))
+(if (not (access? DIR F_OK))
+  (error (string-append "Directory " DIR " not found")))
+
+(define (cp FNAME)
+  (let* ((SRC (string-append DIR "/" FNAME))
+         (DEST (string-append "../src/" FNAME))
+        )
+   ;(display (string-append "Copying " SRC " => " DEST "\n"))
+    (copy-file SRC DEST)))
+             
+(chdir BACKENDS)
+(cp "llruntime.scm") ;; TODO: read that directly from DIR's contents
+(cp "clish.scm")     ;; TODO: for commands, have the launcher automatically generated

@@ -1,4 +1,4 @@
-; clish.scm
+; clish_prg.ss
 ;
 ;  Copyright (C) 2022, MUKN
 ;
@@ -8,15 +8,15 @@
 ;    the terms of the Apache 2.0 License or (at your option) any later version.
 ;
 
-(load "runtime.scm")
+(import ./runtime)
 
 (define L (command-line))
 
 (if (< (list-length L) 2)
-  (error "clish [PROG] [SCRIPT] expected"))
+  (error "clish <PROG> [SCRIPT] expected"))
 
 (define CWD (getcwd))
-(define PROG (string+ CWD "/examples/" (list-ref L 1) ".scm"))
+(define PROG (string+ CWD "/examples/" (list-ref L 1) ".ss"))
 
 (define SCRIPT False)
 (if (> (list-length L) 2)

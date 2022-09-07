@@ -1,4 +1,4 @@
-; llruntime[Gerbil].scm
+; llruntime[Gerbil].ss
 ;
 ;  Copyright (C) 2022, MUKN
 ;

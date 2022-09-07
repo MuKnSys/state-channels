@@ -1,4 +1,5 @@
-(load "mp1.scm")
+(export #t)
+(import ./mp1)
 
 ;; Micropayments (contract)
 (define

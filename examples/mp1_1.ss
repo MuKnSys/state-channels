@@ -1,5 +1,5 @@
-(load "../src/runtime.scm")
-(load "mp1.scm")
+(import ../src/runtime)
+(import ./mp1)
 
 ;; Creating the proc snapshots
 (define MP1 (micropay 'smith 10 'dupont 10 'durand 10))
