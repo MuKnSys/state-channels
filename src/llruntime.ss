@@ -1,4 +1,4 @@
-; llruntime[Gerbil].ss
+; llruntime[Guile].ss
 ;
 ;  Copyright (C) 2022, MUKN
 ;
@@ -8,55 +8,70 @@
 ;    the terms of the Apache 2.0 License or (at your option) any later version.
 ;
 
-(export #t)
-(import :std/srfi/13)
-(export
-  (import: :std/srfi/13))
+(use-modules (ice-9 rdelim))
 
 ;; Lang
-(defsyntax (=> LS)
-  (let ((L (syntax->list LS)))
-    `(lambda ,(cadr L) . ,(cddr L))))
-
-(defsyntax (while LS)
-  (let ((L (syntax->list LS)))
-    `(do ()
-         ((not ,(cadr L)))
-         .
-         ,(cddr L))))
+(define-macro (=> LST . CODE)
+  `(lambda ,LST . ,CODE))
 
 ;; Exceptions & error
-(define (catch X Y)
-  #f)
-
-(define (_error)
-  #f)
-
-;; Atoms
-(define (unspecified? X)
-  (eq? X ((lambda () (if #f 1234)))))
+(define _error error)
 
 ;; Strings
-(define (_string X) (string X))
+(define _string string) ;; FIXME: find why, in Gerbil, that says that string is unspecified
 
-;(define (string-trim-both X Y) ;; TODO: perhaps move that in llruntime[guile].ss
-;  #f)
+;; Modules
+(define _MODS (make-hash-table))
 
-;; Lists
-(define (append! X Y)
-  #f)
+(define (_mod-resolve NAME)
+  (hash-ref _MODS NAME))
 
-;; Hash tables
-(define (make-hash-table)
-  #f)
+(define (_mod-store NAME)
+  (if (string? NAME)
+  (begin
+   ;(display "storing=> ")
+   ;(display NAME)
+   ;(display "\n")
+    (hash-set! _MODS NAME #t))))
 
-(define (hash-ref X Y)
-  #f)
+(define _CURFILE '())
+(define (_pushcf FNAME)
+  (set! _CURFILE (cons FNAME _CURFILE)))
+(define (_popcf)
+  (set! _CURFILE (cdr _CURFILE)))
+(define (_getcf)
+  (if (pair? _CURFILE)
+    (car _CURFILE)
+    #f))
 
-(define (hash-set! X Y Z)
-  #f)
+(define (_mod-load DIR MODS)
+  (if (pair? MODS)
+    (for-each (=> (MOD)
+                (set! MOD (symbol->string MOD))
+                (let* ((NAME (car (reverse (string-split MOD #\/)))))
+                  (if (not (_mod-resolve NAME)) ;; FIXME: doesn't resolves the problem of modules that load themselves
+                  (begin
+                    (_mod-store NAME)
+		    (if (not (eq? (string-ref MOD 0) #\/))
+                      (set! MOD (string-append DIR MOD)))
+                    (_pushcf (string-append MOD ".ss"))
+                    (load (string-append MOD ".ss"))
+                    (_popcf)
+                   ;(display (string-append " " NAME " loaded ...\n"))
+                  ))))
+              MODS)))
 
-;; Files
-(define F_OK (gensym))
-(define (access? FNAME MODE)
-  #f)
+(define-macro (export . X)
+  #t)
+
+(define-macro (import . MODS)
+  `(_mod-load (string-append (dirname (_getcf)) "/") (quote ,MODS)))
+
+(define (loadi FNAME)
+  (set! FNAME (string->symbol (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))) ;; TODO: manage the case when the extension is given (in _mod-load, probably)
+  (eval `(import ,FNAME) (interaction-environment)))
+
+(_mod-store "llruntime") ;; Because it can be loaded directly, by means of (load)
+
+(if (pair? (command-line))
+  (_pushcf (string-append (getcwd) "/" (car (command-line)))))
