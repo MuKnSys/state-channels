@@ -28,7 +28,17 @@
    ;(display "\n")
     (hash-set! _MODS NAME #t))))
 
-(define (_mod-load . MODS)
+(define _CURFILE '())
+(define (_pushcf FNAME)
+  (set! _CURFILE (cons FNAME _CURFILE)))
+(define (_popcf)
+  (set! _CURFILE (cdr _CURFILE)))
+(define (_getcf)
+  (if (pair? _CURFILE)
+    (car _CURFILE)
+    #f))
+
+(define (_mod-load DIR MODS)
   (if (pair? MODS)
     (for-each (=> (MOD)
                 (set! MOD (symbol->string MOD))
@@ -36,15 +46,26 @@
                   (if (not (_mod-resolve NAME)) ;; FIXME: doesn't resolves the problem of modules that load themselves
                   (begin
                     (_mod-store NAME)
+		    (if (not (eq? (string-ref MOD 0) #\/))
+                      (set! MOD (string-append DIR MOD)))
+                    (_pushcf (string-append MOD ".ss"))
                     (load (string-append MOD ".ss"))
+		    (_popcf)
                    ;(display (string-append " " NAME " loaded ...\n"))
                   ))))
-              (car MODS))))
+              MODS)))
 
 (define-macro (export . X)
   #t)
 
 (define-macro (import . MODS)
-  (_mod-load MODS))
+  `(_mod-load (string-append (dirname (_getcf)) "/") (quote ,MODS)))
+
+(define (loadi FNAME)
+  (set! FNAME (string->symbol (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))) ;; TODO: manage the case when the extension is given (in _mod-load, probably)
+  (eval `(import ,FNAME) (interaction-environment)))
 
 (_mod-store "llruntime") ;; Because it can be loaded directly, by means of (load)
+
+(if (pair? (command-line))
+  (_pushcf (string-append (getcwd) "/" (car (command-line)))))

@@ -339,7 +339,7 @@
 (define _HASCOLORS True) ;; Seems Guile always has ANSI emulation ; in case some Scheme has not, disable printing escape codes in the functions below
 
 (define (color-red)
-  (outraw (string-append (string #\esc) "[31;40m"))) ;; TODO: temporary s$%t ; fix this having a parm for the color, with names for these ...
+  (outraw (string-append (string #\esc) "[31;49m"))) ;; TODO: temporary s$%t ; fix this having a parm for the color, with names for these ...
 
 (define (color-white)
-  (outraw (string-append (string #\esc) "[39;40m")))
+  (outraw (string-append (string #\esc) "[39;49m")))

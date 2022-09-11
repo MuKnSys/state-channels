@@ -2,4 +2,4 @@
 !#
 (load "./llruntime.ss")
 
-(import ./clish_prg)
+(loadi "./clish_prg.ss")
