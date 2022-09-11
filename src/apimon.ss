@@ -148,7 +148,7 @@
 )
 
 ;; Net
-(define (netlist . SHORT)
+(define (netlist . SHORT) ;; FIXME: doesn't always lists the procs ordered by their PIDs
   (define N 0)
   (define FIRST True)
   (define INDENT (if (> (list-length SHORT) 1) (cadr SHORT) 0))

@@ -10,9 +10,15 @@
 
 (use-modules (ice-9 rdelim))
 
-;; =>
+;; Lang
 (define-macro (=> LST . CODE)
   `(lambda ,LST . ,CODE))
+
+;; Exceptions & error
+(define _error error)
+
+;; Strings
+(define _string string) ;; FIXME: find why, in Gerbil, that says that string is unspecified
 
 ;; Modules
 (define _MODS (make-hash-table))
@@ -50,7 +56,7 @@
                       (set! MOD (string-append DIR MOD)))
                     (_pushcf (string-append MOD ".ss"))
                     (load (string-append MOD ".ss"))
-		    (_popcf)
+                    (_popcf)
                    ;(display (string-append " " NAME " loaded ...\n"))
                   ))))
               MODS)))

@@ -1,5 +1,4 @@
-#!/bin/guile -s
+#!/bin/gerbil
 !#
-(load "./llruntime.ss")
 
-(loadi "./clish_prg.ss")
+(import ./clish_prg)

@@ -1,4 +1,4 @@
-#!/bin/guile -s
+#!/usr/bin/guile -s
 !#
 (load "./llruntime.ss")
 

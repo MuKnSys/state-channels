@@ -12,7 +12,6 @@
 (import ./llruntime)
 
 ;; Error
-(define _error error)
 (define ERRORCATCH #t)
 (define (error . MSG)
   (for-each (=> (X)
@@ -73,7 +72,6 @@
   (string-ref S 0))
 
 ;; Strings
-(define _string string)
 (define (string O)
   (if (number? O)
     (number->string O)
@@ -84,7 +82,7 @@
     O))))
 
 (define string-get string-ref)
-(define string-set! string-set!) ;; Does nothing
+;(define string-set! string-set!) ;; Does nothing ; FIXME: find why, in Gerbil, that says that string-set! is unspecified
 
 (define string-add string-append)
 (define string+ string-add)

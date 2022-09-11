@@ -1,4 +1,4 @@
-#!/bin/guile
+#!/usr/bin/guile
 !#
 
 (define L (command-line))
@@ -21,9 +21,9 @@
   (let* ((SRC (string-append DIR "/" FNAME))
          (DEST (string-append "../src/" FNAME))
         )
-   ;(display (string-append "Copying " SRC " => " DEST "\n"))
+    (display (string-append "Copying " SRC " => " DEST "\n"))
     (copy-file SRC DEST)))
              
 (chdir BACKENDS)
-(cp "llruntime.scm") ;; TODO: read that directly from DIR's contents
-(cp "clish.scm")     ;; TODO: for commands, have the launcher automatically generated
+(cp "llruntime.ss") ;; TODO: read that directly from DIR's contents
+(cp "clish.ss")     ;; TODO: for commands, have the launcher automatically generated
