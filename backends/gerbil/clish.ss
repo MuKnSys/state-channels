@@ -1,4 +1,3 @@
-#!/bin/gerbil
-!#
+#!/usr/bin/env gxi
 
-(import ./clish_prg)
+(import :mukn/state-channels/src/clish_prg)

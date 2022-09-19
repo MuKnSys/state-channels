@@ -19,7 +19,7 @@
 ;; Heaps
 (define (heap)
   `((:TYPE @heap)
-    (:OBJS ,(make-hash-table))
+    (:OBJS ,(make-hashq-table))
     (:FILE "")
     (:SRV Nil)))
 
@@ -121,9 +121,9 @@
   (if (symbol? TYPE)
     (set! RES (cons `(:TYPE ,TYPE) L))
     (begin
-      (set! SLOT (<: TYPE ':SLOT))
+      (set! SLOT (: TYPE ':SLOT))
       (set! RES (map (=> (VAR) `(,VAR ,Unspecified))
-                     (<: TYPE ':SLOT)))
+                     (: TYPE ':SLOT)))
       (:= RES ':TYPE TYPE)
       (for-each (=> (A)
         (:= RES (car A) (cadr A)))
@@ -192,7 +192,7 @@
         (set! L `(,V)))
       (rexpr-set! O K L))))
 
-(define <: rexpr-get)
+(define : rexpr-get)
 (define <- rexpr-remove!)
 (define := rexpr-set!) ;; TODO: turn that to a macro, to also cover the case of "set!"
 (define :? rexpr-set-init!)
@@ -209,7 +209,7 @@
             )
         (outraw "(")
         (if (and (specified? A) (list? (typeof O)))
-        (let* ((TYID (<: (typeof O) ':ID)))
+        (let* ((TYID (: (typeof O) ':ID)))
           (outraw "(:TYPE ")
           (out (if (specified? TYID) TYID (typeof O))) ;; FIXME: hack for lists which syntactically, look like the beginning of an rexpr, e.g. in :SLOTTY => (:SLOTTY ((:TYPE (type)) (:ID (int)) ...))
           (outraw ")")))
@@ -230,7 +230,7 @@
       ((if RAW outraw out) O))))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
 
 (define (rexpr-parse S . OPT) ;; links to when they exists, or creates folded entries for IDed rexprs
-  O)
+  Nil)
 
 (define >> rexpr-serialize)
 
@@ -245,7 +245,7 @@
         (if (specified? A)
           (begin
             (if (list? (typeof O))
-              (let* ((TYID (<: (typeof O) ':ID)))
+              (let* ((TYID (: (typeof O) ':ID)))
                 (out (if (specified? TYID) TYID (typeof O))))
               (outraw (typeof O)))
             (indent+ 2)
@@ -274,20 +274,20 @@
 ;; First-class objects API
 (define (typeof O) ;; TODO: test that it's an rexpr ; if not, return a type for predefined Scheme objs
   (if (pair? O) ;; FIXME: Crappy
-    (<: O ':TYPE)
+    (: O ':TYPE)
     Void))
 
 (define (method TYPE F)
-  (<: (<: TYPE ':METHOD) F))
+  (: (: TYPE ':METHOD) F))
 
 (define (slotty TYPE F)
-  (<: (<: TYPE ':SLOTTY) F))
+  (: (: TYPE ':SLOTTY) F))
 
 (define (method! TYPE NAME F)
   (if (not (symbol? NAME))
     (error "method! : (symbol? NAME) expected"))
-  (:= (<: TYPE ':METHOD) NAME (_valn F))
-  (:= (<: TYPE ':SLOTTY) NAME (_valv F)))
+  (:= (: TYPE ':METHOD) NAME (_valn F))
+  (:= (: TYPE ':SLOTTY) NAME (_valv F)))
 
 (define (mcall F . PARM)
   (apply (method (typeof (car PARM)) F) PARM))
@@ -312,7 +312,7 @@
                         )
                         (slotty TYPE F))))
     (if (> (list-length PARM) (list-length PROTO))
-      (error (<: TYPE ':NAME) "." F " : " (list-length PROTO) " arguments expected"))
+      (error (: TYPE ':NAME) "." F " : " (list-length PROTO) " arguments expected"))
     (set! PARM (map mvparmcvt PARM (list-head PROTO (list-length PARM))))
     PARM))
 

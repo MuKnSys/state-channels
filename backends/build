@@ -17,7 +17,7 @@
 (if (not (access? DIR F_OK))
   (error (string-append "Directory " DIR " not found")))
 
-(define (cp FNAME)
+(define (cp FNAME) ;; TODO: keep file attributes (?)
   (let* ((SRC (string-append DIR "/" FNAME))
          (DEST (string-append "../src/" FNAME))
         )

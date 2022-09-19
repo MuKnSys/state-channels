@@ -45,14 +45,14 @@
 (define (sign:+ . L) ;; TODO: clean all that
   (define RES (car L))
   (define SIGN (list-flatten (map (=> (O)
-                                      (cdr (<: O 'SIGN_E)))
+                                      (cdr (: O 'SIGN_E)))
                                   L)))
   (:= RES 'SIGN_E `(sign . ,(list-rmdup SIGN)))
   RES)
 
 (define (signed-all? CALL)
-  (define SIGN (<: CALL 'SIGN_E))
-  (define TO (<: CALL 'TO))
+  (define SIGN (: CALL 'SIGN_E))
+  (define TO (: CALL 'TO))
   (define RES True)
   (if (not (pair? SIGN))
     False
@@ -60,11 +60,11 @@
       (set! SIGN (cdr SIGN))
       (if (not (pair? TO))
         (set! TO `(,TO)))
-      (set! TO (map (=> (PR)
-                      (set! PR (net-resolve PR))
+      (set! TO (map (=> (UID)
+                      (define PR (net-resolve UID))
                       (if (not PR)
-                        (error "signed-all? : unresolveable target => " P))
-                      (<: PR 'USER))
+                        (error "signed-all? : unresolveable target => " UID))
+                      (: PR 'USER))
                     TO))
       (for-each (=> (USER)
                   (if (not (list-in? USER SIGN))
@@ -72,29 +72,34 @@
                 TO)
       RES)))
 
+;; Procs(0) ;; FIXME: shitty wart, due to impossibility to create cyclic modules
+(define tproc Void)
+(define (proc? PROC)
+  (== (typeof PROC) tproc))
+
 ;; Net
-(define _NET (make-hash-table))
+(define _NET (make-hashv-table))
 (define (current-network)
   _NET)
 
 (define (net-enter PROC)
-  (define UID (<: PROC 'UID))
+  (define UID (: PROC 'UID))
   (if (string? UID)
   (begin
    ;(outraw "nenter=> ") ;; TODO: turn that to debug logs
-   ;(out (<: PROC 'ID))
+   ;(out (: PROC 'ID))
    ;(outraw " as ")
    ;(outraw UID)
     (hash-set! _NET UID PROC))))
 
 (define (net-leave PROC)
-  (define UID (<: PROC 'UID))
+  (define UID (: PROC 'UID))
   (if (string? UID)
     (hash-remove! _NET UID)))
 
 (define (net-resolve NAME)
   (if (proc? NAME)
-    (set! NAME (<: NAME 'UID)))
+    (set! NAME (: NAME 'UID)))
   (hash-ref _NET NAME))
 
 (define (net-next)

@@ -29,7 +29,7 @@
 
 ;; Doing a micropayment
 (current-proc! PR1)
-(^ 'send PR1 'transfer 'dupont 5)
+(^ 'send* PR1 'transfer 'dupont 5)
 (netlist)(cr)
 (^ 'step PR1)
 (netlist)(cr)

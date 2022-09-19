@@ -1,4 +1,4 @@
-; llruntime[Guile].ss
+; llruntime[Gerbil].ss
 ;
 ;  Copyright (C) 2022, MUKN
 ;
@@ -8,70 +8,119 @@
 ;    the terms of the Apache 2.0 License or (at your option) any later version.
 ;
 
-(use-modules (ice-9 rdelim))
+(export #t)
+(import :gerbil/gambit/os
+        :std/srfi/1
+        :std/srfi/13
+        :std/srfi/125
+        :std/srfi/132)
+(export
+  (import: :gerbil/gambit/os)
+  (import: :std/srfi/1)
+  (import: :std/srfi/13)
+  (import: :std/srfi/125)
+  (import: :std/srfi/132))
 
 ;; Lang
-(define-macro (=> LST . CODE)
-  `(lambda ,LST . ,CODE))
+(defsyntax (=> LS)
+  (let ((L (syntax->list LS)))
+    `(lambda ,(cadr L) . ,(cddr L))))
+
+(defsyntax (while LS)
+  (let ((L (syntax->list LS)))
+    `(do ()
+         ((not ,(cadr L)))
+         .
+         ,(cddr L))))
 
 ;; Exceptions & error
-(define _error error)
+(define (exit2)
+  (display "\n")
+  (exit))
+
+(define (catch FLAG FUNC ERR)
+  (FUNC))
+
+(define (_error)
+  (exit 1))
+
+;; Atoms
+(define (unspecified? X)
+  (eq? X ((lambda () (if #f 1234)))))
+
+;(defsyntax (_ X) Unspecified) Unused at the moment
 
 ;; Strings
-(define _string string) ;; FIXME: find why, in Gerbil, that says that string is unspecified
+(define (_string X) (string X))
+
+;(define (string-trim-both X Y) ;; TODO: perhaps move that in llruntime[guile].ss
+;  #f)
+
+;; Lists
+(define (list-head L I)
+  (take L I))
+
+;(define (list-copy L) ;; SRFI-1
+;  #f)
+
+(define (copy-tree L)
+  (if (pair? L)
+      (cons (copy-tree (car L)) (copy-tree (cdr L)))
+      L))
+
+;(define (append! X Y) ;; SRFI-1
+;  #f)
+
+(define (sort LST CMP)
+  (list-sort CMP LST))
+
+;; Hash tables
+(define (make-hashq-table)
+  (make-hash-table eq?))
+
+(define (make-hashv-table)
+  (make-hash-table equal?))
+
+(define (hash-ref HT KEY)
+  (hash-table-ref/default HT KEY #f))
+
+(define (hash-set! HT KEY VAL)
+  (hash-table-set! HT KEY VAL))
+
+(define (hashq-ref HT KEY NOVAL)
+  (hash-table-ref/default HT KEY NOVAL))
+
+(define (hashq-set! HT KEY VAL)
+  (hash-set! HT KEY VAL))
+
+(define (hash-remove! HT KEY)
+  (hash-table-delete! HT KEY))
+
+(define (hash-map->list FUNC HT)
+  (hash-table-map->list FUNC HT))
+
+;; Files
+(define (getcwd)
+  (current-directory))
 
 ;; Modules
-(define _MODS (make-hash-table))
-
-(define (_mod-resolve NAME)
-  (hash-ref _MODS NAME))
-
-(define (_mod-store NAME)
-  (if (string? NAME)
+(define (loadi FNAME . PRGPATH)
+  (set! FNAME (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))
+  (set! PRGPATH (if (not (null? PRGPATH)) (car PRGPATH) #f))
+  (if PRGPATH
   (begin
-   ;(display "storing=> ")
-   ;(display NAME)
-   ;(display "\n")
-    (hash-set! _MODS NAME #t))))
-
-(define _CURFILE '())
-(define (_pushcf FNAME)
-  (set! _CURFILE (cons FNAME _CURFILE)))
-(define (_popcf)
-  (set! _CURFILE (cdr _CURFILE)))
-(define (_getcf)
-  (if (pair? _CURFILE)
-    (car _CURFILE)
-    #f))
-
-(define (_mod-load DIR MODS)
-  (if (pair? MODS)
-    (for-each (=> (MOD)
-                (set! MOD (symbol->string MOD))
-                (let* ((NAME (car (reverse (string-split MOD #\/)))))
-                  (if (not (_mod-resolve NAME)) ;; FIXME: doesn't resolves the problem of modules that load themselves
-                  (begin
-                    (_mod-store NAME)
-		    (if (not (eq? (string-ref MOD 0) #\/))
-                      (set! MOD (string-append DIR MOD)))
-                    (_pushcf (string-append MOD ".ss"))
-                    (load (string-append MOD ".ss"))
-                    (_popcf)
-                   ;(display (string-append " " NAME " loaded ...\n"))
-                  ))))
-              MODS)))
-
-(define-macro (export . X)
-  #t)
-
-(define-macro (import . MODS)
-  `(_mod-load (string-append (dirname (_getcf)) "/") (quote ,MODS)))
-
-(define (loadi FNAME)
-  (set! FNAME (string->symbol (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))) ;; TODO: manage the case when the extension is given (in _mod-load, probably)
+     (set! FNAME (path-normalize FNAME))
+     (set! PRGPATH (path-normalize PRGPATH))
+     (set! FNAME (string-split FNAME #\/))
+     (set! PRGPATH (string-split PRGPATH #\/))
+     (while (equal? (car FNAME) (car PRGPATH))
+     (begin
+       (set! FNAME (cdr FNAME))
+       (set! PRGPATH (cdr PRGPATH))))
+     (while (> (length PRGPATH) 1)
+     (begin
+       (set! FNAME (cons ".." FNAME))
+       (set! PRGPATH (cdr PRGPATH))))
+     (set! FNAME (string-join FNAME "/"))))
+  (set! FNAME (string->symbol FNAME))
   (eval `(import ,FNAME) (interaction-environment)))
-
-(_mod-store "llruntime") ;; Because it can be loaded directly, by means of (load)
-
-(if (pair? (command-line))
-  (_pushcf (string-append (getcwd) "/" (car (command-line)))))

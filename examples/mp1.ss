@@ -1,4 +1,5 @@
 (export #t)
+(import ../src/runtime)
 
 ;; Micropayments
 (define
@@ -8,30 +9,30 @@
     transfer
     (tmicropay sy num
     ,(=> (MP USER AMOUNT)
-       (define ACCOUNT (<: MP 'ACCOUNT))
+       (define ACCOUNT (: MP 'ACCOUNT))
        (define PR (sender-proc))
        (define GIVER Void)
        (if (nil? PR)
          (error "micropay.transfer : no sender"))
-       (set! GIVER (sy (<: PR 'USER)))
-       (:= ACCOUNT USER (+ (<: ACCOUNT USER) AMOUNT))
-       (:= ACCOUNT GIVER (- (<: ACCOUNT GIVER) AMOUNT))))
+       (set! GIVER (sy (: PR 'USER)))
+       (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT))
+       (:= ACCOUNT GIVER (- (: ACCOUNT GIVER) AMOUNT))))
 
     transfer/return ;; Return from the blockchain
     (tmicropay lst
     ,(=> (MP CALL)
-       (define ACCOUNT (<: MP 'ACCOUNT))
-       (let* ((PARM (<: CALL 'PARM))
+       (define ACCOUNT (: MP 'ACCOUNT))
+       (let* ((PARM (: CALL 'PARM))
               (USER (car PARM))
               (AMOUNT (cadr PARM)))
-         (:= ACCOUNT USER (+ (<: ACCOUNT USER) AMOUNT)))))
+         (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT)))))
 
     start ;; Start
     (tmicropay
     ,(=> (MP)
-       (define ACCOUNT (<: MP 'ACCOUNT))
+       (define ACCOUNT (: MP 'ACCOUNT))
        (define RES True)
-       (if (== (<: MP 'STATE) 'Init)
+       (if (== (: MP 'STATE) 'Init)
          (begin
            (for-each (=> (A)
                        (if (!= (string-get (string (car A)) 0) (char ":"))
@@ -48,7 +49,7 @@
     (volatile
      tmicropay
     ,(=> (MP)
-       (define ACCOUNT (<: MP 'ACCOUNT))
+       (define ACCOUNT (: MP 'ACCOUNT))
        (define FIRST True)
        (for-each (=> (A)
                    (if (!= (string-get (string (car A)) 0) (char ":"))

@@ -1,5 +1,3 @@
-#!/usr/bin/guile -s
-!#
-(load "./llruntime.ss")
+#!/usr/bin/env gxi
 
-(loadi "./clish_prg.ss")
+(import :mukn/state-channels/src/clish_prg)

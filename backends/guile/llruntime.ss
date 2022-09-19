@@ -15,10 +15,21 @@
   `(lambda ,LST . ,CODE))
 
 ;; Exceptions & error
+(define (exit2)
+  (exit))
+
 (define _error error)
 
 ;; Strings
 (define _string string) ;; FIXME: find why, in Gerbil, that says that string is unspecified
+
+;; Hash tables
+(define make-hashq-table make-hash-table)
+(define make-hashv-table make-hash-table)
+
+;; Files
+(define (file-exists? FNAME)
+  (access? FNAME F_OK))
 
 ;; Modules
 (define _MODS (make-hash-table))
@@ -67,7 +78,7 @@
 (define-macro (import . MODS)
   `(_mod-load (string-append (dirname (_getcf)) "/") (quote ,MODS)))
 
-(define (loadi FNAME)
+(define (loadi FNAME . UNUSED)
   (set! FNAME (string->symbol (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))) ;; TODO: manage the case when the extension is given (in _mod-load, probably)
   (eval `(import ,FNAME) (interaction-environment)))
 

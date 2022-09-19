@@ -35,10 +35,10 @@
   (== (typeof CLIF) tclif))
 
 (method! tcli 'method (=> (CLI NAME)
-  (<: (<: CLI 'API) NAME)))
+  (: (: CLI 'API) NAME)))
 
 (method! tcli 'method! (=> (CLI NAME CLIF)
-  (:= (<: CLI 'API) NAME CLIF)))
+  (:= (: CLI 'API) NAME CLIF)))
 
 ;; CLI
 (method! tcli 'run (=> (CLI PROMPT . SCRIPT)
@@ -73,9 +73,9 @@
       (define F F0)
       (if (clif? F0)
       (begin
-        (set! TYPES (<: F 'TYPES))
-        (set! VARGS (<: F 'VARGS))
-        (set! F (<: F 'FUNC))))
+        (set! TYPES (: F 'TYPES))
+        (set! VARGS (: F 'VARGS))
+        (set! F (: F 'FUNC))))
       (if (boxed-empty? PARM)
         (set! PARM '()))
       (set! PARM (if TYPES (if (or (and VARGS (> (list-length PARM) (list-length TYPES)))
@@ -87,12 +87,12 @@
                            PARM)) ;; TODO: implement repeat in TYPES for VARGS (clif)s
       (apply F PARM))
     (define FUNC (^ 'method CLI CMD))
-    (if (and (specified? FUNC) (<: FUNC 'OP))
+    (if (and (specified? FUNC) (: FUNC 'OP))
       (set! FUNC Void))
     (if (and (unspecified? FUNC) (> (list-length PARM) 0))
     (begin
       (set! FUNC (^ 'method CLI (car PARM)))
-      (if (and (specified? FUNC) (<: FUNC 'OP))
+      (if (and (specified? FUNC) (: FUNC 'OP))
         (let* ((CMD0 CMD))
           (set! CMD (car PARM))
           (set-car! PARM CMD0))
@@ -100,7 +100,7 @@
     (if (specified? FUNC)
       (begin
         (exec FUNC PARM)
-        (if (<: FUNC 'QUIT)
+        (if (: FUNC 'QUIT)
           (set! FINISHED True)))
       (outraw "Unknown command")))
   (define CMD Void)

@@ -1,5 +1,8 @@
 (export #t)
+(import ../src/runtime)
 (import ./mp1)
+(export
+  (import: ./mp1))
 
 ;; Micropayments (contract)
 (define
@@ -9,14 +12,14 @@
     transfer ;; We suppose it works all the time ; model wallets, later
     (cmicropay sy num
     ,(=> (MP USER AMOUNT)
-       (define ACCOUNT (<: MP 'ACCOUNT))
-       (:= ACCOUNT USER (+ (<: ACCOUNT USER) AMOUNT))))
+       (define ACCOUNT (: MP 'ACCOUNT))
+       (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT))))
 
     lst
     (volatile
      cmicropay
     ,(=> (MP)
-       (define ACCOUNT (<: MP 'ACCOUNT))
+       (define ACCOUNT (: MP 'ACCOUNT))
        (define FIRST True)
        (for-each (=> (A)
                    (if (!= (string-get (string (car A)) 0) (char ":"))

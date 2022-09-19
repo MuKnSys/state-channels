@@ -1,4 +1,5 @@
 (export #t)
+(import ../src/runtime)
 
 ;; Micropayments
 (define
@@ -8,14 +9,14 @@
     receive
     (twallet num
     ,(=> (W AMOUNT)
-       (define BALANCE (<: W 'BALANCE))
+       (define BALANCE (: W 'BALANCE))
        (:= W 'BALANCE (+ BALANCE AMOUNT))
     ))
 
     transfer
     (twallet num str
     ,(=> (W AMOUNT UID)
-       (define BALANCE (<: W 'BALANCE))
+       (define BALANCE (: W 'BALANCE))
        (define PR (sender-proc))
        (define TO (net-resolve UID))
        (define GIVER Void)
@@ -23,8 +24,8 @@
          (error "wallet.transfer : no sender"))
        (if (not TO)
          (error "wallet.transfer : no receiver"))
-       (set! GIVER (sy (<: PR 'USER)))
-       (if (!= GIVER (<: W 'USER))
+       (set! GIVER (sy (: PR 'USER)))
+       (if (!= GIVER (: W 'USER))
          (error "wallet.transfer : sender should be owner"))
        (:= W 'BALANCE (- BALANCE AMOUNT))
        (^ 'send TO 'receive AMOUNT)

@@ -21,7 +21,7 @@
   (begin
     (cr)
     (_error)))
-  (exit))
+  (exit2))
 
 (define (catch-all F)
   (if (not ERRORCATCH)
@@ -163,7 +163,7 @@
       (cons (car L) (list-flatten (cdr L))))))
 
 (define (list-rmdup L)
-  (define H (make-hash-table))
+  (define H (make-hashv-table))
   (define RES '())
   (for-each (lambda (E)
               (if (not (hash-ref H E))
@@ -188,6 +188,13 @@
                 L)
       (reverse RES))))
 
+;; Hash tables
+(define (hash-for-each-in-order FUNC HT)
+  (set! HT (sort (hash-map->list cons HT)
+                 (=> (ELT1 ELT2) (< (car ELT1) (car ELT2)))))
+  (for-each (=> (ELT) (FUNC (car ELT) (cdr ELT)))
+            HT))
+
 ;; Basic tests & symbols
 ;(define => lambda)
 
@@ -195,9 +202,6 @@
 (define != (=> (X Y) (not (== X Y))))
 
 ;; Files
-(define (file-exists? FNAME)
-  (access? FNAME F_OK))
-
 (define (file-read FNAME . TXT)
   (define (fetch P L0 READ) ;; Fetch data from file
     (let ((L (READ P))

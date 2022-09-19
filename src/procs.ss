@@ -16,43 +16,43 @@
   (import: ./calls))
 
 ;; Procs
-(define tproc (type "proc" 
-                   '(IP PORT  ;; Address : IP/Filesocket [Remote];; Serversocket/Mem [Local]
-                     ID       ;; PID
-                     UID      ;; Proc's name (unique identity in the network)
-                     USER     ;; User's identity
-                     FROM     ;; Upstream server
-                     PEER     ;; Peers
-                     HEAP     ;; Persisteable heap
-                     IN IN!   ;; Incoming messages
-                     INPTR    ;; Cons of the current message
-                     OUT      ;; Outcoming (asynchronous) messages
-                     OUTPTR   ;; Cons of the last message
-                     HANDLER  ;; Proc handler => usually calls SELF's methods
-                     SELF     ;; Server's own servlet (1st object in the heap)
-                     STOPPED  ;; Stopped
-                     VERBOSE  ;; Verbosity level
-                    )
-                    (empty)
-              ))
+(set! tproc (type "proc" 
+                 '(IP PORT  ;; Address : IP/Filesocket [Remote];; Serversocket/Mem [Local]
+                   ID       ;; PID
+                   UID      ;; Proc's name (unique identity in the network)
+                   USER     ;; User's identity
+                   FROM     ;; Upstream server
+                   PEER     ;; Peers
+                   HEAP     ;; Persisteable heap
+                   IN IN!   ;; Incoming messages
+                   INPTR    ;; Cons of the current message
+                   OUT      ;; Outcoming (asynchronous) messages
+                   OUTPTR   ;; Cons of the last message
+                   HANDLER  ;; Proc handler => usually calls SELF's methods
+                   SELF     ;; Server's own servlet (1st object in the heap)
+                   STOPPED  ;; Stopped
+                   VERBOSE  ;; Verbosity level
+                  )
+                  (empty)
+            ))
 
 ;; Procs (kinds of proc)
 (method! tproc 'local? (=> (PROC)
-  (unspecified? (<: PROC 'IP))))
+  (unspecified? (: PROC 'IP))))
 
 (method! tproc 'remote? (=> (PROC)
   (not (^ 'local? PROC))))
 
 (method! tproc 'inmem? (=> (PROC)
   (and (^ 'local? PROC)
-       (unspecified? (<: PROC 'PORT)))))
+       (unspecified? (: PROC 'PORT)))))
 
 (method! tproc 'ssock? (=> (PROC)
   (and (^ 'local? PROC)
-       (specified? (<: PROC 'PORT)))))
+       (specified? (: PROC 'PORT)))))
 
 ;; Constructor
-(define _PROC (make-hash-table))
+(define _PROC (make-hashv-table))
 (define _PROCNO 0)
 (define (allprocs)
   _PROC)
@@ -74,8 +74,8 @@
     (:? RES 'VERBOSE 'Short)
     RES))
 
-(define (proc? PROC)
-  (== (typeof PROC) tproc))
+;(define (proc? PROC) ;; FIXME: shitty wart(0)
+;  (== (typeof PROC) tproc))
 
 ;; Group
 (define (proc-group . L)
@@ -85,7 +85,7 @@
     (set! L (cdr L))
     (set! L2 (map (=> (PR)
                     (if (proc? PR)
-                      (<: PR 'UID)
+                      (: PR 'UID)
                       PR))
                   L))
     (for-each (=> (PR)
@@ -128,42 +128,42 @@
      Void ;; TODO: send (cons FNAME PARM) thru the socket
     )
     (else
-      (let* ((SELF (<: PROC 'SELF)) ;; TODO: add what to do if HANDLER is set (is HANDLER necessary ?)
+      (let* ((SELF (: PROC 'SELF)) ;; TODO: add what to do if HANDLER is set (is HANDLER necessary ?)
             )
         Void ;; TODO: context-switch to SELF.HEAP
         Void ;; TODO: log the call in SELF.LOG
         (if (unspecified? SELF)
-          (error "proc<" (<: PROC 'UID) ">::call : no SELF"))
+          (error "proc<" (: PROC 'UID) ">::call : no SELF"))
         (if (fname-isret? FNAME)
-          (let* ((FROM (<: PROC 'FROM))
+          (let* ((FROM (: PROC 'FROM))
                  (CALL (car PARM))) ;; FIXME: should ensure the same return is not evaluated 2 times
             (if (unspecified? FROM)
               (error "proc.call : return without FROM"))
             (if (string? CALL)
               (set! CALL (string->number CALL)))
-            (set! CALL (copy-tree (list-get (<: FROM 'IN!) CALL)))
-            (:= CALL 'PARM (cdr (mvparms (<: CALL 'FUNC)
-                                         (cons (<: (net-resolve (<: CALL 'TO)) 'SELF)
-                                               (<: CALL 'PARM)))))
+            (set! CALL (copy-tree (list-get (: FROM 'IN!) CALL)))
+            (:= CALL 'PARM (cdr (mvparms (: CALL 'FUNC)
+                                         (cons (: (net-resolve (: CALL 'TO)) 'SELF)
+                                               (: CALL 'PARM)))))
             (apply ^? `(,FNAME ,SELF . (,CALL))))
           (apply ^? `(,FNAME ,SELF . ,PARM))))))))
 
 (method! tproc 'sync (=> (PROC)
   (define RETS (map (=> (CALL)
-                      (number (car (<: CALL 'PARM))))
+                      (number (car (: CALL 'PARM))))
                     (filter (=> (CALL)
-                              (and (fname-isret? (<: CALL 'FUNC))
-                                   (not (<: CALL 'ACK))))
-                            (<: PROC 'IN))))
+                              (and (fname-isret? (: CALL 'FUNC))
+                                   (not (: CALL 'ACK))))
+                            (: PROC 'IN))))
   (define RL0 Void)
-  (define MASTER (<: PROC 'FROM))
-  (if (and (specified? MASTER) (not (boxed-empty? (<: MASTER 'IN!))))
+  (define MASTER (: PROC 'FROM))
+  (if (and (specified? MASTER) (not (boxed-empty? (: MASTER 'IN!))))
   (begin
     (set! RL0 (filter (=> (CALL)
                         (not (list-in? (cadr CALL) RETS)))
                       (map (=> (CALL)
-                             `(,(<: CALL 'FUNC) ,(<: CALL 'INNB)))
-                           (<: MASTER 'IN!))))
+                             `(,(: CALL 'FUNC) ,(: CALL 'INNB)))
+                           (: MASTER 'IN!))))
     (for-each (=> (CALL)
                 (^ 'send* PROC (sy (string+ (string (car CALL)) "/return")) (cadr CALL)))
               RL0)))))
@@ -177,26 +177,26 @@
 
 ;; Send ;; TODO: only for (inmem?)s at the moment
 (method! tproc 'outnb (=> (PROC)
-  (define PTR (<: PROC 'OUTPTR))
+  (define PTR (: PROC 'OUTPTR))
   (if (nil? PTR)
     0
-    (+ (<: (car PTR) 'OUTNB) 1))))
+    (+ (: (car PTR) 'OUTNB) 1))))
 
 (method! tproc 'out+ (=> (PROC CALL)
   (:+ PROC 'OUT CALL)
-  (:= PROC 'OUTPTR (list-last (<: PROC 'OUT)))))
+  (:= PROC 'OUTPTR (list-last (: PROC 'OUT)))))
 
 (method! tproc 'in+ (=> (PROC CALL)
   (:+ PROC 'IN CALL)
-  (if (nil? (<: PROC 'INPTR))
-    (:= PROC 'INPTR (list-last (<: PROC 'IN))))))
+  (if (nil? (: PROC 'INPTR))
+    (:= PROC 'INPTR (list-last (: PROC 'IN))))))
 
 (method! tproc 'in++ (=> (PROC)
   (define RES Nil)
-  (if (not (nil? (<: PROC 'INPTR)))
+  (if (not (nil? (: PROC 'INPTR)))
   (begin
-    (set! RES (car (<: PROC 'INPTR)))
-    (:= PROC 'INPTR (cdr (<: PROC 'INPTR)))))
+    (set! RES (car (: PROC 'INPTR)))
+    (:= PROC 'INPTR (cdr (: PROC 'INPTR)))))
   RES))
 
 (define (proc-resolve L)
@@ -210,16 +210,16 @@
        L))
 
 (define (proc-queue CALL)
-  (define FROM (<: (current-proc) 'UID))
-  (define TO (<: CALL 'TO))
+  (define FROM (: (current-proc) 'UID))
+  (define TO (: CALL 'TO))
   (define L Void)
-  (define MASTER (<: (current-proc) 'FROM))
+  (define MASTER (: (current-proc) 'FROM))
   (if (or (unspecified? FROM) (empty? FROM) (boxed-empty? FROM))
     (error "proc-queue : no FROM => " FROM))
   (if (not (or (unspecified? TO) (empty? TO) (boxed-empty? TO)))
   (begin
-    (if (and (unspecified? (<: CALL 'INNB))
-             (or (unspecified? MASTER) (!= TO (<: MASTER 'UID)))
+    (if (and (unspecified? (: CALL 'INNB))
+             (or (unspecified? MASTER) (!= TO (: MASTER 'UID)))
              (not (and (string? TO) (!= TO FROM)))) ;; TODO: beware with these half-baked conditions everywhere ; summarize all that fully & set all straight, at some point.
       (set! L `(,FROM))
       (begin
@@ -227,11 +227,11 @@
         (if (string? TO)
         (begin
           (set! CALL (copy-tree CALL)) ;; NOTE : keep this ?
-          (sign CALL (<: (current-proc) 'USER) 'SIGN_E)))))
+          (sign CALL (: (current-proc) 'USER) 'SIGN_E)))))
     (set! L (proc-resolve L))
-    (if (specified? (<: CALL 'INNB))
+    (if (specified? (: CALL 'INNB))
       (set! L (filter (=> (PR)
-                          (!= (<: PR 'UID) FROM))
+                          (!= (: PR 'UID) FROM))
                       L)))
     (for-each (=> (P)
       (^ 'in+ P (copy-tree CALL))) ;; FIXME: hmm (tree-copy) risks breaking, at some point (the copy belongs to another heap, in fact)
@@ -250,20 +250,20 @@
                      (if (not PR)
                        (error "proc-send::MULTI : unresolveable target => " P))
                      PR)
-                 (<: PR 'PEER)))
+                 (: PR 'PEER)))
     (if (not (net-resolve PROC))
-      (error "proc-send : unresolveable target => " (<: PROC 'UID))))
+      (error "proc-send : unresolveable target => " (: PROC 'UID))))
   (set! TO
-        (if MULTI (map (=> (P) (<: P 'UID))
+        (if MULTI (map (=> (P) (: P 'UID))
                        L)
-                  (<: PROC 'UID)))
-  (set! CALL (call 'USER (<: PR 'USER)
-                   'FROM (<: PR 'UID)
+                  (: PROC 'UID)))
+  (set! CALL (call 'USER (: PR 'USER)
+                   'FROM (: PR 'UID)
                    'OUTNB (^ 'outnb PR)
                    'TO TO
                    'FUNC FNAME
                    'PARM PARM))
-  (sign CALL (<: PR 'USER) 'SIGN_B)
+  (sign CALL (: PR 'USER) 'SIGN_B)
   (^ 'out+ PR CALL)
   (proc-queue CALL))
 
@@ -277,57 +277,57 @@
   (define OCURPROC (current-proc)) ;; Not absolutely necessary ; (current-proc) should be Nil, in fact
   (define MSG (^ 'in++ PROC))
   (define RES Void)
-  (define PEER (<: PROC 'PEER))
+  (define PEER (: PROC 'PEER))
   (define ISPEER Void)
   (define ISVOLATILE False)
   (set! ISPEER (not (or (empty? PEER) (boxed-empty? PEER))))
   (if (not (nil? MSG))
   (begin
     (current-proc! PROC)
-    (let* ((FUNC (<: MSG 'FUNC))
-           (SELF (<: PROC 'SELF))
+    (let* ((FUNC (: MSG 'FUNC))
+           (SELF (: PROC 'SELF))
            (SLOTTY Void)
            (DESCR Void)
            (SPROC Void)
            (TO Void)
           )
       (if (unspecified? SELF)
-        (error "proc<" (<: PROC 'UID) ">::step : no SELF"))
+        (error "proc<" (: PROC 'UID) ">::step : no SELF"))
       (if (unspecified? (method (typeof SELF) (sy FUNC)))
-        (error "proc<" (<: PROC 'UID) ">::step : no method " FUNC))
-      (set! SLOTTY (<: (typeof SELF) ':SLOTTY))
-      (set! DESCR (<: SLOTTY FUNC))
+        (error "proc<" (: PROC 'UID) ">::step : no method " FUNC))
+      (set! SLOTTY (: (typeof SELF) ':SLOTTY))
+      (set! DESCR (: SLOTTY FUNC))
       (if (and (specified? DESCR) (not (empty? DESCR)))
         (set! ISVOLATILE (eq? (car DESCR) 'volatile))) ;; FIXME: make something more general than this !!!
       (cond
-        ((<: MSG 'ACK)
-         (if (not (specified? (<: MSG 'INNB)))
-           (error "proc<" (<: PROC 'UID) ">::step : ACKed MSG without INNB"))
-         (let* ((MSG0 (list-get (<: PROC 'IN!) (<: MSG 'INNB)))
+        ((: MSG 'ACK)
+         (if (not (specified? (: MSG 'INNB)))
+           (error "proc<" (: PROC 'UID) ">::step : ACKed MSG without INNB"))
+         (let* ((MSG0 (list-get (: PROC 'IN!) (: MSG 'INNB)))
                )
            (sign:+ MSG0 MSG)
            (:= MSG0 'ACK* (signed-all? MSG0)))
         )
         (else
-         (set! TO (<: MSG 'TO))
-         (if (or (pair? TO) (== TO (<: PROC 'UID))) ;; FIXME: improve this test ; and optionally, treat OUT just like IN, rather than putting every outcoming message inside IN for redispatching, as we currently do ;; no use for this, at the moment (1) ...
+         (set! TO (: MSG 'TO))
+         (if (or (pair? TO) (== TO (: PROC 'UID))) ;; FIXME: improve this test ; and optionally, treat OUT just like IN, rather than putting every outcoming message inside IN for redispatching, as we currently do ;; no use for this, at the moment (1) ...
            (begin
-             (set! SPROC (net-resolve (<: MSG 'FROM)))
+             (set! SPROC (net-resolve (: MSG 'FROM)))
              (if (not SPROC)
-               (error "proc<" (<: MSG 'FROM) ">::step : no sender proc"))
+               (error "proc<" (: MSG 'FROM) ">::step : no sender proc"))
              (sender-proc! SPROC)
-             (set! RES (apply ^ `(call ,PROC ,FUNC . ,(<: MSG 'PARM))))
+             (set! RES (apply ^ `(call ,PROC ,FUNC . ,(: MSG 'PARM))))
              (:= MSG 'RESULT RES)
              (sender-proc! Nil)
              (if (and RES (not ISVOLATILE)) ;; TODO: when (not RES), rollback changes
-               (let* ((INNB (<: MSG 'INNB))
-                      (INNB2 (list-length (<: PROC 'IN!)))
+               (let* ((INNB (: MSG 'INNB))
+                      (INNB2 (list-length (: PROC 'IN!)))
                      )
                  (if (and (specified? INNB) (!= INNB INNB2))
-                   (error "proc<" (<: PROC 'UID) ">::step : wrong INNB"))
+                   (error "proc<" (: PROC 'UID) ">::step : wrong INNB"))
                  (:= MSG 'INNB INNB2)
                  (set! MSG (copy-tree MSG)) ;; NOTE : keep this ?
-                 (sign MSG (<: PROC 'USER) 'SIGN_E)
+                 (sign MSG (: PROC 'USER) 'SIGN_E)
                  (if (specified? INNB)
                    (:= MSG 'ACK True))
                  (:+ PROC 'IN! MSG)
@@ -336,7 +336,7 @@
            (let* ((MSG0 MSG)) ;; no use for this, at the moment (2)
              (set! MSG (copy-tree MSG)) ;; NOTE : keep this ?
              (:= MSG0 'REDIR True)
-             (sign MSG (<: PROC 'USER) 'SIGN_E)
+             (sign MSG (: PROC 'USER) 'SIGN_E)
              (current-proc! (net-resolve TO)) ;; FIXME: test this !!!
              (proc-queue MSG)))
         )))
@@ -358,15 +358,15 @@
   (set! B (if (or (empty? B) (== (car B) True) (== (car B) 1)) True False))
   (cond
     ((^ 'inmem? PROC)
-    ;(outraw (string+ (if B "Stopping" "Restarting") " process " (<: PROC 'UID)))
+    ;(outraw (string+ (if B "Stopping" "Restarting") " process " (: PROC 'UID)))
      (:= PROC 'STOPPED B))
     (else
-     (error "proc<" (<: PROC 'UID) ">::stop : can't stop proc"))
+     (error "proc<" (: PROC 'UID) ">::stop : can't stop proc"))
     )))
 
 (method! tproc 'idle? (=> (PROC)
   (if (^ 'inmem? PROC)
-    (nil? (<: PROC 'INPTR))
+    (nil? (: PROC 'INPTR))
     Unspecified)))
 
 (define (step . PROC)
@@ -376,8 +376,8 @@
            (FIRST True))
       (while DOIT
         (set! DOIT False)
-        (hash-for-each (=> (UID PR)
-                   (if (and (not (<: PR 'STOPPED)) (not (^ 'idle? PR)))
+        (hash-for-each (=> (UID PR) ;; TODO: replace that by hash-for-each-in-order
+                   (if (and (not (: PR 'STOPPED)) (not (^ 'idle? PR)))
                    (begin
                      (^ 'step PR)
                      (set! DOIT True))))

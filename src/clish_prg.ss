@@ -28,7 +28,7 @@
 (if (and SCRIPT (not (file-exists? SCRIPT)))
   (error "File " SCRIPT " not found"))
 
-(loadi PROG)
+(loadi PROG (car L))
 (if SCRIPT
   (set! SCRIPT (file-read SCRIPT 1)))
 (^ 'run APIMON "> " SCRIPT)
