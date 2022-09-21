@@ -8,7 +8,8 @@
 ;    the terms of the Apache 2.0 License or (at your option) any later version.
 ;
 
-(use-modules (ice-9 rdelim))
+(use-modules (ice-9 popen)
+             (ice-9 rdelim))
 
 ;; Lang
 (define-macro (=> LST . CODE)
