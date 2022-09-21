@@ -82,7 +82,7 @@
 (define (type NAME SLOT . METHOD)
   (define SLOTTY '())
   (define METHODTY '())
-  (set! SLOT (list-add '((type :TYPE) (int :ID)) SLOT))
+  (set! SLOT (list-add '((type :TYPE) (int :ID)) (map attr SLOT)))
   (set! SLOTTY (map (=> (A)
                       `(,(_valn A)
                         ,(_valv A)))
@@ -92,7 +92,11 @@
                   SLOT))
   (if (not (empty? METHOD))
     (set! METHOD (car METHOD)))
-  (set! METHOD (list-group METHOD))
+  (set! METHOD (map (=> (A)
+                 (if (pair? A) ;; FIXME: f$%&/(g problem of the (boxed-empty?) ; get rid of that
+                   (set-car! A (attr (car A))))
+                 A)
+               (list-group METHOD)))
   (set! METHODTY (map _methodty (if (boxed-empty? METHOD) '() METHOD)))
   (set! METHOD (map _methodval METHOD))
   (append! SLOTTY METHODTY)
@@ -117,7 +121,10 @@
   (if (or (symbol? TYPE) (string? TYPE))
     (set! TYPE (type-by-name TYPE)))
   (if (and (list? L) (not (empty? L)) (symbol? (car L)))
-    (set! L (list-group L)))
+    (set! L (map (=> (A)
+                   (set-car! A (attr (car A)))
+                   A)
+                 (list-group L))))
   (if (symbol? TYPE)
     (set! RES (cons `(:TYPE ,TYPE) L))
     (begin
@@ -142,6 +149,7 @@
   (heap-exists? (heap-current) K))
 
 (define (rexpr-ref O K)
+  (set! K (attr K))
   (list-find (=> (X) (and (pair? X) (== (car X) K))) O))
 
 (define (rexpr-get O K)
@@ -151,11 +159,13 @@
     (cadr A)))
 
 (define (rexpr-prev-ref O K)
+  (set! K (attr K))
   (list-find-prev (=> (X) (and (pair? X) (== (car X) K))) O))
 
 (define (rexpr-remove! O K)
   (define A (rexpr-prev-ref O K))
   (define RES Unspecified)
+  (set! K (attr K))
   (if (specified? A)
   (begin
     (set! RES (cadr (cadr A)))
@@ -170,6 +180,7 @@
 
 (define (rexpr-set! O K V . OPT) ;; default with (rcons), otherwise (cons)-ing a pair after the 1st
   (define A (rexpr-ref O K))
+  (set! K (attr K))
   (if (specified? A)
     (set-car! (cdr A) V)
     (if (not (empty? O)) ;; FIXME: should not have an (null? O) at that stage
@@ -252,11 +263,11 @@
             (for-each (=> (ELT)
                         (if (and (pair? ELT) (== (list-length ELT) 2)
                                  (strsy? (car ELT)))
-                          (if (not (== (string-get (string (car ELT)) 0)
-                                       (char ":")))
+                          (if (and (!= (car ELT) ':TYPE)
+                                   (!= (car ELT) ':ID))
                             (begin
                               (cr)
-                              (outraw (car ELT))
+                              (outraw (unattr (car ELT)))
                               (outraw " = ")
                               (rexpr-pretty (cadr ELT))))
                           (begin

@@ -35,7 +35,8 @@
        (if (== (: MP 'STATE) 'Init)
          (begin
            (for-each (=> (A)
-                       (if (!= (string-get (string (car A)) 0) (char ":"))
+                       (if (and (!= (car A) ':TYPE)
+                                (!= (car A) ':ID))
                        (begin
                          (if (not (> (cadr A) 0))
                            (set! RES False)))))
@@ -52,11 +53,12 @@
        (define ACCOUNT (: MP 'ACCOUNT))
        (define FIRST True)
        (for-each (=> (A)
-                   (if (!= (string-get (string (car A)) 0) (char ":"))
+                   (if (and (!= (car A) ':TYPE)
+                            (!= (car A) ':ID))
                    (begin
                      (if (not FIRST) (cr))
                      (set! FIRST False)
-                     (outraw (car A))
+                     (outraw (unattr (car A)))
                      (outraw " : ")
                      (outraw (cadr A)))))
                  ACCOUNT))))))

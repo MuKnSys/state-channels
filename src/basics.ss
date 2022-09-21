@@ -62,7 +62,7 @@
     (string->number (string O))))
 
 ;; Symbols
-(define (sy S)
+(define (sy S) ;; TODO: perhaps return (string->symbol (string S))
   (if (string? S)
     (string->symbol S)
     S))
@@ -89,6 +89,22 @@
 
 (define string-trim string-trim-both) ;; TODO: refine this
 
+(define (string-replace S SS NEW) ;; TODO: seems ok (with SRFI-13) ; verify this
+  (let ((SSL (string-length SS)))
+    (with-output-to-string
+      (lambda ()
+        (let LP ((START 0))
+	  (let* ((END (string-contains S SS START)))
+          (cond
+           ((number? END)
+            ((lambda (END)
+               (display (substring/shared S START END))
+               (display NEW)
+               (LP (+ END SSL)))
+	     END))
+           (else
+            (display (substring/shared S START))))))))))
+
 ;; Atoms
 (define (atom? O)
   (or (unspecified? O)
@@ -102,6 +118,30 @@
 (define (strsy? O)
   (or (symbol? O)
       (string? O)))
+
+;; Attributes
+(define (attr? S)
+  (if (not (strsy? S))
+    (error "attr? : " S " is not an strsy"))
+  (set! S (if (symbol? S) (symbol->string S) S))
+  (and (> (string-length S) 0) (== (string-get S 0) #\:)))
+
+(define (attr S)
+  (define ISSY (symbol? S))
+  (if (attr? S)
+    S
+    (begin
+      (set! S (string+ ":" (if ISSY (symbol->string S) S)))
+      (if ISSY (sy S) S))))
+
+(define (unattr S)
+  (define ISSY (symbol? S))
+  (if (not (attr? S))
+    S
+    (begin
+      (set! S (if ISSY (symbol->string S) S))
+      (set! S (substring/shared S 1 (string-length S)))
+      (if ISSY (sy S) S))))
 
 ;; Lists & other containers
 (define (empty) ;; Empty list (a _real_ one) ;; TODO: use a special value "Void", rather than Unspec
@@ -214,6 +254,13 @@
   (call-with-input-file FNAME
     (lambda (P)
       (reverse (fetch P Nil READ)))))
+
+;; Paths
+(define (path-normalize PATH)
+  (define HOME (getenv "HOME"))
+  (if HOME
+    (set! PATH (string-replace PATH "~" HOME)))
+  (canonicalize-path PATH))
 
 ;; Basic I/O
 (define _OUTP False)
@@ -345,3 +392,20 @@
 
 (define (color-white)
   (outraw (string-append (string #\esc) "[39;49m")))
+
+;; Shell
+(define (sh-cmd CMD)
+  (let* ((PORT (open-input-pipe CMD)) ;; FIXME: seems (open-input-pipe) doesn't exists in Gerbil ; find a way
+         (S  (read-line PORT))
+         (RES '()))
+    (while (not (eof-object? S))
+      (set! RES (cons S RES))
+      (set! S (read-line PORT)))
+    (close-pipe PORT)
+    (reverse RES)))
+
+(define (sh-display L)
+  (for-each (lambda (S)
+              (display S)
+              (display "\n"))
+            L))
