@@ -295,7 +295,7 @@
         (error "proc<" (: PROC 'UID) ">::step : no SELF"))
       (if (unspecified? (method (typeof SELF) (sy FUNC)))
         (error "proc<" (: PROC 'UID) ">::step : no method " FUNC))
-      (set! SLOTTY (: (typeof SELF) ':SLOTTY))
+      (set! SLOTTY (: (typeof SELF) 'SLOTTY))
       (set! DESCR (: SLOTTY FUNC))
       (if (and (specified? DESCR) (not (empty? DESCR)))
         (set! ISVOLATILE (eq? (car DESCR) 'volatile))) ;; FIXME: make something more general than this !!!

@@ -27,10 +27,10 @@
   (eq? (heap-get H K) Unspecified))
 
 (define (heap-get H K)
-  (hashq-ref (rexpr-get H ':OBJS) K Unspecified))
+  (hashq-ref (rexpr-get H 'OBJS) K Unspecified))
 
 (define (heap-set! H K O)
-  (hashq-set! (rexpr-get H ':OBJS) K O)
+  (hashq-set! (rexpr-get H 'OBJS) K O)
   O) ;; TODO: set O's ID to K if there is no ID
 
 ;; Current heap
@@ -128,21 +128,21 @@
   (if (symbol? TYPE)
     (set! RES (cons `(:TYPE ,TYPE) L))
     (begin
-      (set! SLOT (: TYPE ':SLOT))
+      (set! SLOT (: TYPE 'SLOT))
       (set! RES (map (=> (VAR) `(,VAR ,Unspecified))
-                     (: TYPE ':SLOT)))
-      (:= RES ':TYPE TYPE)
+                     (: TYPE 'SLOT)))
+      (:= RES 'TYPE TYPE)
       (for-each (=> (A)
         (:= RES (car A) (cadr A)))
         L)))
         
   (if (pair? TYPE) ;; FIXME: test (== (typeof TYPE) <<type type>>) ;; or (type? TYPE)
   (begin
-    (set! INSTNO (rexpr-get TYPE ':INSTNO))
-    (rexpr-set! TYPE ':INSTNO (+ INSTNO 1)))) ;; TODO: combine that with (make-id)
+    (set! INSTNO (rexpr-get TYPE 'INSTNO))
+    (rexpr-set! TYPE 'INSTNO (+ INSTNO 1)))) ;; TODO: combine that with (make-id)
   (if (and (not (nil? INSTNO))
            (unspecified? (rexpr-get RES 'ID)))
-    (rexpr-set! RES ':ID (sy (string+ (string (rexpr-get TYPE ':ID)) "@" (string INSTNO)))))
+    (rexpr-set! RES 'ID (sy (string+ (string (rexpr-get TYPE 'ID)) "@" (string INSTNO)))))
   RES)
 
 (define (rexpr-exists? O K)
@@ -216,11 +216,11 @@
     (if (empty? O)
       (outraw "Nil")
       (let* ((FIRST True)
-             (A (rexpr-ref O ':TYPE)) 
+             (A (rexpr-ref O 'TYPE)) 
             )
         (outraw "(")
         (if (and (specified? A) (list? (typeof O)))
-        (let* ((TYID (: (typeof O) ':ID)))
+        (let* ((TYID (: (typeof O) 'ID)))
           (outraw "(:TYPE ")
           (out (if (specified? TYID) TYID (typeof O))) ;; FIXME: hack for lists which syntactically, look like the beginning of an rexpr, e.g. in :SLOTTY => (:SLOTTY ((:TYPE (type)) (:ID (int)) ...))
           (outraw ")")))
@@ -238,7 +238,9 @@
       (outraw "_")
     (if (boolean? O)
       (outraw (if O "True" "False"))
-      ((if RAW outraw out) O))))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
+    (if (procedure? O)
+      (outraw "proc<>") ;(string+ "proc<" (procedure-name O) ">"))
+      ((if RAW outraw out) O)))))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
 
 (define (rexpr-parse S . OPT) ;; links to when they exists, or creates folded entries for IDed rexprs
   Nil)
@@ -251,12 +253,12 @@
     (if (empty? O)
       (outraw "Nil")
       (let* ((FIRST True)
-             (A (rexpr-ref O ':TYPE)) 
+             (A (rexpr-ref O 'TYPE)) 
             )
         (if (specified? A)
           (begin
             (if (list? (typeof O))
-              (let* ((TYID (: (typeof O) ':ID)))
+              (let* ((TYID (: (typeof O) 'ID)))
                 (out (if (specified? TYID) TYID (typeof O))))
               (outraw (typeof O)))
             (indent+ 2)
@@ -285,20 +287,20 @@
 ;; First-class objects API
 (define (typeof O) ;; TODO: test that it's an rexpr ; if not, return a type for predefined Scheme objs
   (if (pair? O) ;; FIXME: Crappy
-    (: O ':TYPE)
+    (: O 'TYPE)
     Void))
 
 (define (method TYPE F)
-  (: (: TYPE ':METHOD) F))
+  (: (: TYPE 'METHOD) F))
 
 (define (slotty TYPE F)
-  (: (: TYPE ':SLOTTY) F))
+  (: (: TYPE 'SLOTTY) F))
 
 (define (method! TYPE NAME F)
   (if (not (symbol? NAME))
     (error "method! : (symbol? NAME) expected"))
-  (:= (: TYPE ':METHOD) NAME (_valn F))
-  (:= (: TYPE ':SLOTTY) NAME (_valv F)))
+  (:= (: TYPE 'METHOD) NAME (_valn F))
+  (:= (: TYPE 'SLOTTY) NAME (_valv F)))
 
 (define (mcall F . PARM)
   (apply (method (typeof (car PARM)) F) PARM))
@@ -323,7 +325,7 @@
                         )
                         (slotty TYPE F))))
     (if (> (list-length PARM) (list-length PROTO))
-      (error (: TYPE ':NAME) "." F " : " (list-length PROTO) " arguments expected"))
+      (error (: TYPE 'NAME) "." F " : " (list-length PROTO) " arguments expected"))
     (set! PARM (map mvparmcvt PARM (list-head PROTO (list-length PARM))))
     PARM))
 

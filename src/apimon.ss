@@ -107,7 +107,7 @@
       (outraw (: (: PR 'FROM) 'UID))))
     (outraw " ")
     (>> (if (pair? SELF)
-          (: SELF ':ID)
+          (: SELF 'ID)
           SELF))))
   (cr)
   (outraw "in:")
@@ -143,7 +143,7 @@
     (outraw (: (: PR 'FROM) 'UID))))
   (tab)
   (>> (if (pair? SELF)
-        (: SELF ':ID)
+        (: SELF 'ID)
         SELF))
 )
 
