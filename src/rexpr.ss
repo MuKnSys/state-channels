@@ -112,7 +112,7 @@
 
 ;; Rexprs (Record expressions)
 (define (rexpr TYPE L) ;; Creates an rexpr having the type TYPE
-  (define TYPE0 TYPE)
+  (define TYPE0 TYPE)  ;; TODO: make :TYPE attribute virtual, i.e., ((:A 1)(:B 2)) is an rexpr
   (define RES Nil)
   (define SLOT Nil)
   (define INSTNO Nil)
@@ -144,6 +144,9 @@
            (unspecified? (rexpr-get RES 'ID)))
     (rexpr-set! RES 'ID (sy (string+ (string (rexpr-get TYPE 'ID)) "@" (string INSTNO)))))
   RES)
+
+(define (rexpr? O)
+  (and (pair? O) (pair? (car O)) (== (caar O) ':TYPE)))
 
 (define (rexpr-exists? O K)
   (heap-exists? (heap-current) K))

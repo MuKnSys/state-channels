@@ -9,15 +9,20 @@
 ;
 
 (import ./llruntime
-        ./basics ./rexpr
+        ./basics
+        ./rexpr ./json
         ./calls ./procs
+        ./eth ;; ./ethprocs
         ./cli ./apimon)
 
 (export
   (import: ./llruntime)
   (import: ./basics)
   (import: ./rexpr)
+  (import: ./json)
   (import: ./calls)
   (import: ./procs)
+  (import: ./eth)
+ ;(import: ./ethprocs)
   (import: ./cli)
   (import: ./apimon))

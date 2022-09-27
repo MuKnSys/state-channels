@@ -17,6 +17,7 @@
 
 ;; Exceptions & error
 (define (exit2)
+  (display "\n")
   (exit))
 
 (define _error error)
@@ -31,6 +32,19 @@
 ;; Files
 (define (file-exists? FNAME)
   (access? FNAME F_OK))
+
+;; Paths
+(define (path-normalize PATH)
+  (define HOME (getenv "HOME"))
+  (if HOME
+    (set! PATH (string-replace PATH "~" HOME)))
+  (canonicalize-path PATH))
+
+;; Procedures
+(define (procedure-name F) ;; FIXME: doesn't work for anonymous procedures
+  (if (not (procedure? F))
+    (error "procedure-name"))
+  (cadr (string-split (with-output-to-string (lambda () (write F))) #\space)))
 
 ;; Modules
 (define _MODS (make-hash-table))
@@ -87,3 +101,24 @@
 
 (if (pair? (command-line))
   (_pushcf (string-append (getcwd) "/" (car (command-line)))))
+
+;; Shell
+(define (sh-cmd CMD)
+  (if _SH_CMD_LOG
+  (begin
+    (outraw ":> ")
+    (outraw CMD)
+    (cr)))
+  (let* ((PORT (open-input-pipe CMD)) ;; FIXME: seems (open-input-pipe) doesn't exists in Gerbil ; find a way
+         (S  (read-line PORT))
+         (RES '()))
+    (while (not (eof-object? S))
+      (set! RES (cons S RES))
+      (set! S (read-line PORT)))
+    (close-pipe PORT)
+    (if _SH_CMD_LOG
+    (begin
+      (outraw "=> ")
+      (outraw (reverse RES))
+      (cr)))
+    (reverse RES)))

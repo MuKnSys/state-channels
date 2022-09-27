@@ -10,12 +10,14 @@
 
 (export #t)
 (import :gerbil/gambit/os
+        :gerbil/gambit/threads
         :std/srfi/1
         :std/srfi/13
         :std/srfi/125
         :std/srfi/132)
 (export
   (import: :gerbil/gambit/os)
+  (import: :gerbil/gambit/threads)
   (import: :std/srfi/1)
   (import: :std/srfi/13)
   (import: :std/srfi/125)
@@ -38,7 +40,7 @@
   (display "\n")
   (exit))
 
-(define (catch FLAG FUNC ERR)
+(define (catch FLAG FUNC ERR) ;; TODO: implement it
   (FUNC))
 
 (define (_error)
@@ -53,7 +55,7 @@
 ;; Strings
 (define (_string X) (string X))
 
-;(define (string-trim-both X Y) ;; TODO: perhaps move that in llruntime[guile].ss
+;(define (string-trim-both X Y) ;; SRFI-13
 ;  #f)
 
 ;; Lists
@@ -101,7 +103,25 @@
 
 ;; Files
 (define (getcwd)
-  (current-directory))
+  (string-trim-right (current-directory) #\/))
+
+(define (open-input-pipe CMD)
+  (error "open-input-pipe: !Yet"))
+
+(define (close-pipe)
+  (error "close-pipe: !Yet"))
+
+;; Paths
+(define (path-normalize PATH)
+  (path-expand PATH))
+
+;; Procedures
+(define (procedure-name F)
+  (error "procedure-name: !Yet"))
+
+;; Threads
+(define (sleep SECS)
+  (thread-sleep! (seconds->time (+ (time->seconds (current-time)) SECS))))
 
 ;; Modules
 (define (loadi FNAME . PRGPATH)
@@ -124,3 +144,20 @@
      (set! FNAME (string-join FNAME "/"))))
   (set! FNAME (string->symbol FNAME))
   (eval `(import ,FNAME) (interaction-environment)))
+
+;; Shell
+(define _SH_CMD_LOG #f)
+(define (sh-cmd CMD)
+  (if _SH_CMD_LOG
+  (begin
+    (display ":> ")
+    (display CMD)
+    (display "\n")))
+  (let* ((RES (shell-command CMD #t)))
+    (set! RES (string-split (cdr RES) (string-ref "\n" 0)))
+    (if _SH_CMD_LOG
+    (begin
+      (display "=> ")
+      (display RES)
+      (display "\n")))
+    RES))

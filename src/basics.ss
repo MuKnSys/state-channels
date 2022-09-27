@@ -71,6 +71,10 @@
 (define (char S)
   (string-ref S 0))
 
+(define (char-digit? C)
+  (or (eq? C #\0) (eq? C #\1) (eq? C #\2) (eq? C #\3) (eq? C #\4)
+      (eq? C #\5) (eq? C #\6) (eq? C #\7) (eq? C #\8) (eq? C #\9)))
+
 ;; Strings
 (define (string O)
   (if (number? O)
@@ -255,13 +259,6 @@
     (lambda (P)
       (reverse (fetch P Nil READ)))))
 
-;; Paths
-(define (path-normalize PATH)
-  (define HOME (getenv "HOME"))
-  (if HOME
-    (set! PATH (string-replace PATH "~" HOME)))
-  (canonicalize-path PATH))
-
 ;; Basic I/O
 (define _OUTP False)
 (define (outopen MODE)
@@ -394,15 +391,8 @@
   (outraw (string-append (string #\esc) "[39;49m")))
 
 ;; Shell
-(define (sh-cmd CMD)
-  (let* ((PORT (open-input-pipe CMD)) ;; FIXME: seems (open-input-pipe) doesn't exists in Gerbil ; find a way
-         (S  (read-line PORT))
-         (RES '()))
-    (while (not (eof-object? S))
-      (set! RES (cons S RES))
-      (set! S (read-line PORT)))
-    (close-pipe PORT)
-    (reverse RES)))
+(define (sh-cmd-log B)
+  (set! _SH_CMD_LOG B)) ;; FIXME: _SH_CMD_LOG has to be defined inside llruntime
 
 (define (sh-display L)
   (for-each (lambda (S)
