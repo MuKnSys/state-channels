@@ -11,6 +11,7 @@
 (import ./llruntime
         ./basics
         ./rexpr ./json
+        ./aliases
         ./calls ./procs
         ./eth ;; ./ethprocs
         ./cli ./apimon)
@@ -20,6 +21,7 @@
   (import: ./basics)
   (import: ./rexpr)
   (import: ./json)
+  (import: ./aliases)
   (import: ./calls)
   (import: ./procs)
   (import: ./eth)

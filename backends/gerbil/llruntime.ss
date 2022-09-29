@@ -112,8 +112,8 @@
   (error "close-pipe: !Yet"))
 
 ;; Paths
-(define (path-normalize PATH)
-  (path-expand PATH))
+;(define (path-normalize PATH) ;; TODO: throw this away
+;  (string-trim-right (path-expand PATH) #\/))
 
 ;; Procedures
 (define (procedure-name F)

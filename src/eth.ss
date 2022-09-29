@@ -65,12 +65,14 @@
                         ",\"id\":0}' --url 127.0.0.1:8545 2>/dev/null")))
   (json-parse (car RES)))
 
+;; Current block number
 (define (eth-blockNumber)
   (define RES (: (geth "eth_blockNumber" "[]") 'result))
   (string->number (substring RES 2 (string-length RES)) 16))
 
+;; Create an instance
 (define (eth-createInstance ABI CODE)
-  (define RCPT (car (eth-execcmd "prg1" (string+ "createInstanceHashOf(" ABI ",\"" CODE "\")"))))
+  (define RCPT (car (eth-execcmd "runtime" (string+ "createInstanceHashOf(" ABI ",\"" CODE "\")"))))
   (define (receipt)
     (geth "eth_getTransactionReceipt" (json-serialize `(,(json-parse RCPT)))))
   (define RES Nil)
@@ -80,12 +82,44 @@
     (set! RES (: (receipt) 'result)))
   (: RES 'contractAddress))
 
-(define (eth-callMethod ABI ADDR FNAME PARM)
-  (car (eth-execcmd "prg1" (string+ "callMethod(" ABI ",\""
-                                                  ADDR "\",\""
-                                                  FNAME "\","
-                                                  (json-serialize PARM) ")"))))
+(define _ETHCODEDIR Unspecified)
+(define _ETHALIASES Unspecified)
+(define (eth-create-init DIR)
+  (set! _ETHCODEDIR (path-normalize DIR))
+  (set! _ETHALIASES (aliases (string+ _ETHCODEDIR "/ALIASES"))))
+ 
+(define (eth-addr NAME)
+  (^ 'addr _ETHALIASES NAME))
 
+(define (eth-abi CNAME)
+  (car (file-read (path-normalize (string+ _ETHCODEDIR "/" CNAME ".abi")) 1)))
+
+(define (eth-bin CNAME)
+  (car (file-read (path-normalize (string+ _ETHCODEDIR "/" CNAME ".bin")) 1)))
+
+(define (eth-create CNAME)
+  (define ABI (eth-abi CNAME))
+  (define BIN (eth-bin CNAME))
+  (define ADDR (eth-createInstance ABI (string+ "0x" BIN)))
+  (^ 'new! _ETHALIASES CNAME ADDR)
+  ADDR)
+
+;; Call a method
+(define (_eth-callMethod ABI ADDR FNAME PARM . LOGIN)
+  (if (null? LOGIN)
+    (set! LOGIN "")
+    (let* ((USER (car LOGIN))
+           (PASS (cadr LOGIN)))
+      (set! LOGIN (string+ "," (string USER) ",\"" PASS "\""))))
+  (car (reverse (eth-execcmd "runtime" (string+ "callMethod(" ABI ",\""
+                                                              ADDR "\",\""
+                                                              FNAME "\","
+                                                              (json-serialize PARM) LOGIN ")")))))
+(define (eth-callMethod CNAME ADDR FNAME PARM . LOGIN)
+  (define ABI (eth-abi CNAME)) ;; TODO: cache those
+  (apply _eth-callMethod `(,ABI ,ADDR ,FNAME ,PARM . ,LOGIN)))
+
+;; Get the logs of an instance
 (define (eth-getFilterLogs FROMB ADDR) ;; TODO: add a filter for transactions
   (define FLT (: (geth "eth_newFilter" (json-serialize `(,(rexpr Unspecified
                                                                  `(fromBlock ,(number->hex FROMB)

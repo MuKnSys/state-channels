@@ -109,6 +109,19 @@
            (else
             (display (substring/shared S START))))))))))
 
+;; Strsys
+(define (strsy+ . L)
+  (define SY Void)
+  (define RES Void)
+  (if (empty? L)
+    (error "strsy+"))
+  (set! SY (symbol? (car L)))
+  (set! L (map string L))
+  (set! RES (apply string+ L))
+  (if SY
+    (sy RES)
+    RES))
+
 ;; Atoms
 (define (atom? O)
   (or (unspecified? O)
@@ -126,9 +139,10 @@
 ;; Attributes
 (define (attr? S)
   (if (not (strsy? S))
-    (error "attr? : " S " is not an strsy"))
-  (set! S (if (symbol? S) (symbol->string S) S))
-  (and (> (string-length S) 0) (== (string-get S 0) #\:)))
+    False ;;(error "attr? : " S " is not an strsy"))
+    (begin
+      (set! S (if (symbol? S) (symbol->string S) S))
+      (and (> (string-length S) 0) (== (string-get S 0) #\:)))))
 
 (define (attr S)
   (define ISSY (symbol? S))
@@ -256,8 +270,52 @@
   (define READ (if (empty? TXT)
                  read read-line))
   (call-with-input-file FNAME
-    (lambda (P)
+    (=> (P)
       (reverse (fetch P Nil READ)))))
+
+(define (file-write FNAME OBJ . WRITE)
+  (with-output-to-file FNAME
+    (=> ()
+      (if (empty? WRITE)
+        (write OBJ)
+        ((car WRITE) OBJ))
+      (cr))))
+
+;; Paths
+(define (path-normalize FPATH)
+  (define (p2l PATH)
+    (set! PATH (string-split PATH #\/))
+    (filter (=> (S)
+              (!= S "")) PATH))
+  (define (evp L)
+    (define RES '())
+    (define (push X)
+      (set! RES (cons X RES)))
+    (define (pop)
+      (set! RES (cdr RES)))
+    (while (not (empty? L))
+      (cond ((== (car L) ".")
+             (noop))
+            ((== (car L) "..")
+             (pop))
+            (else
+             (push (car L))))
+      (set! L (cdr L)))
+    (string+ "/" (string-join (reverse RES) "/")))
+  (define HOME (p2l (getenv "HOME")))
+  (define CWD (p2l (getcwd)))
+  (set! FPATH (string-trim FPATH #\space))
+  (if (== FPATH "")
+    (set! FPATH "."))
+  (set! FPATH (p2l FPATH))
+  (cond ((empty? FPATH)
+         "/")
+        ((or (== (car FPATH) ".") (== (car FPATH) ".."))
+         (evp (list-add CWD FPATH)))
+        ((== (car FPATH) "~")
+         (evp (list-add HOME (cdr FPATH))))
+        (else
+         (evp FPATH))))
 
 ;; Basic I/O
 (define _OUTP False)

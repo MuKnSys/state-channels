@@ -34,11 +34,11 @@
   (access? FNAME F_OK))
 
 ;; Paths
-(define (path-normalize PATH)
-  (define HOME (getenv "HOME"))
-  (if HOME
-    (set! PATH (string-replace PATH "~" HOME)))
-  (canonicalize-path PATH))
+;(define (path-normalize PATH) ;; TODO: throw this away
+;  (define HOME (getenv "HOME"))
+;  (if HOME
+;    (set! PATH (string-replace PATH "~" HOME)))
+;  (canonicalize-path PATH)) ;; FIXME: implement one that _DOESNT_ errors when the path doesnt exists
 
 ;; Procedures
 (define (procedure-name F) ;; FIXME: doesn't work for anonymous procedures
@@ -103,6 +103,7 @@
   (_pushcf (string-append (getcwd) "/" (car (command-line)))))
 
 ;; Shell
+(define _SH_CMD_LOG #f)
 (define (sh-cmd CMD)
   (if _SH_CMD_LOG
   (begin

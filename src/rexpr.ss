@@ -90,8 +90,9 @@
   (set! SLOT (map (=> (A)
                     (_valn A))
                   SLOT))
-  (if (not (empty? METHOD))
-    (set! METHOD (car METHOD)))
+  (set! METHOD (if (empty? METHOD)
+                 (empty)
+                 (car METHOD)))
   (set! METHOD (map (=> (A)
                  (if (pair? A) ;; FIXME: f$%&/(g problem of the (boxed-empty?) ; get rid of that
                    (set-car! A (attr (car A))))
@@ -215,9 +216,18 @@
 ;; Parse/serialize
 (define (rexpr-serialize O . OPT) ;; either to the level of the 1st rexprs having IDs, or full
   (define RAW (and (pair? OPT) (== (car OPT) 'Raw)))
+  (define INDENT (and (pair? OPT) (== (car OPT) 'Indent))) ;; FIXME: use (contains), instead
   (if (list? O)
     (if (empty? O)
       (outraw "Nil")
+      (if (attr? (car O))
+      (begin
+        (outraw "(")
+        (out (car O))
+        (outraw " ")
+        (apply rexpr-serialize (cons (cadr O) OPT))
+        (outraw ")"))
+        
       (let* ((FIRST True)
              (A (rexpr-ref O 'TYPE)) 
             )
@@ -227,16 +237,18 @@
           (outraw "(:TYPE ")
           (out (if (specified? TYID) TYID (typeof O))) ;; FIXME: hack for lists which syntactically, look like the beginning of an rexpr, e.g. in :SLOTTY => (:SLOTTY ((:TYPE (type)) (:ID (int)) ...))
           (outraw ")")))
+        (if INDENT (indent+ 2))
         (for-each (=> (ELT)
           (if (not (and (specified? A) (list? (typeof O)) FIRST))
           (begin
             (if (not FIRST)
-              (outraw " "))
+              (if INDENT (cr) (outraw " ")))
             (apply rexpr-serialize (cons ELT OPT)) ;; Shitty apply ; no spread operator available
           ))
           (set! FIRST False))
           O)
-        (outraw ")")))
+        (if INDENT (indent+ -2))
+        (outraw ")"))))
     (if (unspecified? O)
       (outraw "_")
     (if (boolean? O)
@@ -244,6 +256,16 @@
     (if (procedure? O)
       (outraw "proc<>") ;(string+ "proc<" (procedure-name O) ">"))
       ((if RAW outraw out) O)))))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
+
+(define (rexpr-link O)
+  (if (pair? O)
+    (if (== (car O) ':TYPE)
+      (if (atom? (cadr O))
+        (let* ((TYVAL (type-by-name (cadr O))))
+          (if (specified? TYVAL)
+            (set-car! (cdr O) TYVAL))))
+      (map rexpr-link O)))
+  O)
 
 (define (rexpr-parse S . OPT) ;; links to when they exists, or creates folded entries for IDed rexprs
   Nil)
@@ -305,7 +327,7 @@
   (:= (: TYPE 'METHOD) NAME (_valn F))
   (:= (: TYPE 'SLOTTY) NAME (_valv F)))
 
-(define (mcall F . PARM)
+(define (mcall F . PARM) ;; TODO: turn that to a macro to be able to give F with no quote
   (apply (method (typeof (car PARM)) F) PARM))
 
 (define (mvparmcvt VAL TY)
