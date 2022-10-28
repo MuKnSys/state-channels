@@ -11,32 +11,61 @@
 (^ 'lst MP2)(cr)
 (^ 'lst MP3)(cr)
 
+;; Creating the host
+(define HOST1 (proch 'USER 'system
+                     'UID "HOST1"))
+(current-proch! HOST1)
+
 ;; Creating the procs
-(define PR1 (proc 'USER "smith"
-                  'UID "PR1"
-                  'SELF MP1))
-(define PR2 (proc 'USER "dupont"
-                  'UID "PR2"
-                  'SELF MP2))
-(define PR3 (proc 'USER "durand"
-                  'UID "PR3"
-                  'SELF MP3))
+(define PR1 (procl 'USER "smith"
+                   'UID "PR1"
+                   'SELF MP1))
+(define PR2 (procl 'USER "dupont"
+                   'UID "PR2"
+                   'SELF MP2))
+(define PR3 (procl 'USER "durand"
+                   'UID "PR3"
+                   'SELF MP3))
 (net-enter PR1)
 (net-enter PR2)
 (net-enter PR3)
-(proc-group Void PR1 PR2 PR3)
-(netlist)(cr)
+(define GR1 (proc-group Void PR1 PR2 PR3))
+(:= GR1 'UID "GR1")
+(:= GR1 'USER "nobody")
+(outraw "---\n")
+(netlist 1)(cr)
+
+(define (lstp . STATES)
+  (outraw "---\n")
+  (_lsp2 PR1)(cr)
+  (_lsp2 PR2)(cr)
+  (_lsp2 PR3)(cr)
+  (if (not (empty? STATES))
+  (begin
+    (outraw "=>\n")
+    (^ 'lst MP1)(cr)
+    (^ 'lst MP2)(cr)
+    (^ 'lst MP3)(cr))))
 
 ;; Doing a micropayment
 (current-proc! PR1)
-(^ 'send* PR1 'transfer 'dupont 5)
-(netlist)(cr)
+(^ 'send (: PR1 'GROUP) 'transfer 'dupont 5)
+(lstp)
+
 (^ 'step PR1)
-(netlist)(cr)
-(^ 'lst MP1)(cr)
-(^ 'step PR1)
+(lstp)
+
 (^ 'step PR2)
+(lstp 1)
+
+(^ 'step PR1)
+(lstp 1)
+
+(^ 'step PR1)
+(lstp)
+
 (^ 'step PR3)
-(^ 'lst MP1)(cr)
-(^ 'lst MP2)(cr)
-(^ 'lst MP3)(cr)
+(lstp 1)
+
+(^ 'step PR1)
+(lstp)

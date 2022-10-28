@@ -1,10 +1,10 @@
 Examples (.ss files)
 
-guile --debug examples/mp1_1.ss
-guile --debug examples/mp2_1.ss
+guile --no-auto-compile --debug -l src/llruntime.ss examples/mp1_1.ss
+guile --no-auto-compile --debug -l src/llruntime.ss examples/mp2_1.ss
 
 
-Examples (.scsh files)
+Examples (.scsh files) [TODO: fix guile call, needs the -l src/llruntime.ss ; use scm ?]
 
 guile --debug src/clish.ss mp1 mp1_1
 guile --debug src/clish.ss mp1 mp1_2

@@ -55,6 +55,13 @@
 (define True #t)
 (define False #f)
 
+(define (ifTrue TEST FN)
+  (if TEST
+  (begin
+    (FN)
+    True)
+  False))
+
 ;; Numbers
 (define (number O)
   (if (number? O)
@@ -190,6 +197,15 @@
     PREV
     Unspecified))
 
+(define (list-find-prev-ref L PTR)
+  (define PREV Unspecified)
+  (while (and (not (empty? L)) (not (eq? L PTR)))
+    (set! PREV L)
+    (set! L (cdr L)))
+  (if (eq? L PTR)
+    PREV
+    Unspecified))
+
 (define (list-length L)
   (if (boxed-empty? L)
     0
@@ -202,9 +218,9 @@
 ;(define [ list-ref)
 ;(define [:= list-set)
 
-(define (push L VAL)
+(define (list-push L VAL)
   (if (not (pair? L))
-    (error "push")
+    (error "list-push")
     (set-cdr! (last-pair L) `(,VAL))))
 
 (define list-add append)
@@ -230,6 +246,51 @@
             L)
   (reverse RES))
 
+;; Queues
+(define (queue)
+  (empty))
+
+(define (queue? Q)
+  (and (pair? Q) (== (car Q) Unspecified)))
+
+(define (queue-empty? Q)
+  (boxed-empty? Q))
+
+(define (queue-shift Q)
+  (if (or (not (queue? Q)) (queue-empty? Q))
+    (error "queue-shift"))
+  (let* ((RES (cadr Q)))
+    (set-cdr! Q (cddr Q))
+    RES))
+  
+(define (queue-unshift Q VAL)
+  (if (not (queue? Q))
+    (error "queue-shift"))
+  (set-cdr! Q (cons VAL (cdr Q))))
+  
+(define (queue-push Q VAL)
+  (if (not (queue? Q))
+    (error "queue-push"))
+  (list-push Q VAL))
+
+(define (queue-pop Q)
+  (if (or (not (queue? Q)) (queue-empty? Q))
+    (error "queue-pop"))
+  (let* ((PTR (list-last Q))
+         (PREV (list-find-prev-ref Q PTR)))
+    (set-cdr! PREV Nil)
+    (car PTR)))
+
+(define (queue-remove Q VAL)
+  (if (not (queue? Q))
+    (error "queue-remove"))
+  (if (not (queue-empty? Q))
+    (let* ((PTR (list-find-prev (=> (X)
+                                  (== X VAL))
+                                Q)))
+      (if (specified? PTR)
+        (set-cdr! PTR (cddr PTR))))))
+
 ;; RLists
 (define (list-group L . BYN) ;; TODO: enable BYN ; as a default, BYN==2
   (define RES '())
@@ -249,7 +310,7 @@
 ;; Hash tables
 (define (hash-for-each-in-order FUNC HT)
   (set! HT (sort (hash-map->list cons HT)
-                 (=> (ELT1 ELT2) (< (car ELT1) (car ELT2)))))
+                 (=> (ELT1 ELT2) (string< (string (car ELT1)) (string (car ELT2)))))) ;; TODO: see if it's always OK with string comparisons
   (for-each (=> (ELT) (FUNC (car ELT) (cdr ELT)))
             HT))
 

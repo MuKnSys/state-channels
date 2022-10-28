@@ -1,7 +1,9 @@
 #!/bin/bash
 
+SC_HOME=`dirname $0`/..
+
 if [[ "$1" == "" ]]; then
   echo "scm <PROG> expected"
 else
-  guile --no-auto-compile --debug -l src/llruntime.ss $1
+  guile --no-auto-compile --debug -l $SC_HOME/src/llruntime.ss $1
 fi

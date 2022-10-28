@@ -82,7 +82,18 @@
 (define (type NAME SLOT . METHOD)
   (define SLOTTY '())
   (define METHODTY '())
-  (set! SLOT (list-add '((type :TYPE) (int :ID)) (map attr SLOT)))
+  (define INHERITS Nil)
+  (if (pair? NAME)
+  (begin
+    (set! INHERITS (cadr NAME))
+    (set! NAME (car NAME))))
+  (set! SLOT (list-add (if (nil? INHERITS) '((type :TYPE) (int :ID)) '())
+                       (map (=> (A)
+                              (if (pair? A)
+                                (set-car! (list-last A) (attr (car (list-last A))))
+                                (set! A (attr A)))
+                              A)
+                            SLOT)))
   (set! SLOTTY (map (=> (A)
                       `(,(_valn A)
                         ,(_valv A)))
@@ -104,18 +115,27 @@
   (heap-set!
     _TYPES
     (make-id NAME)
-    (rexpr '@type `(:ID ,(make-id NAME)
+    (rexpr '@type `(:INHERITS ,INHERITS
+                    :ID ,(make-id NAME)
                     :NAME ,NAME
                     :INSTNO 0
                     :SLOT ,SLOT
                     :METHOD ,METHOD
                     :SLOTTY ,SLOTTY))))
 
+(define (type? O)
+  (eq? (typeof O) '@type))
+
 ;; Rexprs (Record expressions)
 (define (rexpr TYPE L) ;; Creates an rexpr having the type TYPE
+  (define (slots TY)
+    (define LS '())
+    (while (not (nil? TY))
+      (set! LS (list-add (: TY 'SLOT) LS))
+      (set! TY (: TY 'INHERITS)))
+    LS)
   (define TYPE0 TYPE)  ;; TODO: make :TYPE attribute virtual, i.e., ((:A 1)(:B 2)) is an rexpr
   (define RES Nil)
-  (define SLOT Nil)
   (define INSTNO Nil)
   (if (unspecified? TYPE)
     (set! TYPE "rexpr"))
@@ -129,9 +149,8 @@
   (if (symbol? TYPE)
     (set! RES (cons `(:TYPE ,TYPE) L))
     (begin
-      (set! SLOT (: TYPE 'SLOT))
       (set! RES (map (=> (VAR) `(,VAR ,Unspecified))
-                     (: TYPE 'SLOT)))
+                     (slots TYPE)))
       (:= RES 'TYPE TYPE)
       (for-each (=> (A)
         (:= RES (car A) (cadr A)))
@@ -220,32 +239,25 @@
   (if (list? O)
     (if (empty? O)
       (outraw "Nil")
-      (if (attr? (car O))
+      (if (and (== (list-length O) 2) (attr? (car O)))
       (begin
         (outraw "(")
         (out (car O))
         (outraw " ")
-        (apply rexpr-serialize (cons (cadr O) OPT))
+        (if (type? (cadr O))
+          (out (: (cadr O) 'ID))
+          (apply rexpr-serialize (cons (cadr O) OPT)))
         (outraw ")"))
         
-      (let* ((FIRST True)
-             (A (rexpr-ref O 'TYPE)) 
-            )
+      (let* ((FIRST True))
         (outraw "(")
-        (if (and (specified? A) (list? (typeof O)))
-        (let* ((TYID (: (typeof O) 'ID)))
-          (outraw "(:TYPE ")
-          (out (if (specified? TYID) TYID (typeof O))) ;; FIXME: hack for lists which syntactically, look like the beginning of an rexpr, e.g. in :SLOTTY => (:SLOTTY ((:TYPE (type)) (:ID (int)) ...))
-          (outraw ")")))
         (if INDENT (indent+ 2))
         (for-each (=> (ELT)
-          (if (not (and (specified? A) (list? (typeof O)) FIRST))
-          (begin
-            (if (not FIRST)
-              (if INDENT (cr) (outraw " ")))
-            (apply rexpr-serialize (cons ELT OPT)) ;; Shitty apply ; no spread operator available
-          ))
-          (set! FIRST False))
+          (if (not FIRST)
+            (if (and INDENT (not (and (pair? ELT) (attr? (car ELT)) (type? (cadr ELT)))))
+                (cr) (outraw " "))
+            (set! FIRST False))
+          (apply rexpr-serialize (cons ELT OPT))) ;; Shitty apply ; no spread operator available
           O)
         (if INDENT (indent+ -2))
         (outraw ")"))))
@@ -315,8 +327,20 @@
     (: O 'TYPE)
     Void))
 
+(define (inherits? TYPE TY0)
+  (cond ((or (not (type? TYPE)) (not (type? TY0)))
+         False)
+        ((== TYPE TY0)
+         True)
+        (else
+          (inherits? (: TYPE 'INHERITS) TY0))))
+
 (define (method TYPE F)
-  (: (: TYPE 'METHOD) F))
+  (define M Void)
+  (while (and (not (nil? TYPE)) (unspecified? M))
+    (set! M (: (: TYPE 'METHOD) F))
+    (set! TYPE (: TYPE 'INHERITS)))
+  M)
 
 (define (slotty TYPE F)
   (: (: TYPE 'SLOTTY) F))

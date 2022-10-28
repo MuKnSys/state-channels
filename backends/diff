@@ -1,0 +1,7 @@
+#!/usr/bin/guile --no-auto-compile
+!#
+(load "buildlib.scm")
+
+(diff*! "llruntime.ss" ;; TODO: read that directly from DIR's contents
+        "clish.ss"     ;; TODO: for commands, have the launcher automatically generated
+        "scm")

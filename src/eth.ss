@@ -9,7 +9,8 @@
 ;
 
 (export #t)
-(import ./rexpr ./json)
+(import ./rexpr ./json
+        ./aliases)
 
 ;; Geth (util funcs)
 (define (number->hex N)

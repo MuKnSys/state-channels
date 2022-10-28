@@ -16,83 +16,181 @@
   (import: ./calls))
 
 ;; Procs
-(set! tproc (type "proc" 
-                 '(IP PORT  ;; Address : IP/Filesocket [Remote];; Serversocket/Mem [Local]
-                   ID       ;; PID
-                   UID      ;; Proc's name (unique identity in the network)
-                   USER     ;; User's identity
-                   FROM     ;; Upstream server
-                   PEER     ;; Peers
-                   HEAP     ;; Persisteable heap
-                   IN IN!   ;; Incoming messages
-                   INPTR    ;; Cons of the current message
-                   OUT      ;; Outcoming (asynchronous) messages
-                   OUTPTR   ;; Cons of the last message
-                   HANDLER  ;; Proc handler => usually calls SELF's methods
-                   SELF     ;; Server's own servlet (1st object in the heap)
-                   STOPPED  ;; Stopped
-                   VERBOSE  ;; Verbosity level
-                  )
-                  (empty)
-            ))
+(set! tproc (type "proc"     ;; Abstract class for procs
+                  '(         ;; Shell : Logical/Remote representation
+                    UID      ;; Proc's name (unique identity in the network)
+                    USER     ;; User's identity
+                    GROUP    ;; Proc's group (if any)
+                    STATE    ;; Proc's state : Idle[msgs in the queues], Active[pending msgs in the queues], Waiting
+                    COND     ;; Proc's waiting condition : set of messages to be received
+                    IN IN!   ;; Incoming messages
+                    INPTR    ;; Cons of the next message to be processed
+                    OUT      ;; Outcoming (asynchronous) messages
+                    OUTPTR   ;; Cons of the next message to be processed
+                    STOPPED  ;; Stopped
+                    VERBOSE  ;; Verbosity level
+                             ;; Physical
+                    ROLE     ;; Role: Mapping, Core
+                    HEAP     ;; Persisteable heap
+                    HANDLER  ;; Proc handler => usually calls SELF's methods (when there is a SELF)
+                    HOST     ;; Host process
+                   )))
+
+;; Various physical kinds of proc (standard proclet ; UNIX proc ; and Ethereum contract, are the basic ones)
+(set! tprocl (type `("procl" ,tproc)  ;; Proclet
+                   '(SELF             ;; Server's own servlet (1st object in the heap)
+                    )))
+
+(set! tproch (type `("proch" ,tproc)  ;; Host process
+                   '(IP PORT          ;; Address : IP+PORT/Filesocket ; or pure in-mem
+                     SCHED            ;; Local host's scheduler
+                    )))
+
+(set! tprocph (type `("procph" ,tproch) ;; Physical host process (_one_ per physical OS-level process) ; by means
+                    '()))               ;; of migrating host processes to various physical host processes, one can
+                                        ;; deploy a distributed app in various ways.
+
+;; Proc groups
+;; =>
+;;   proc groups have proc UIDs ; but we dispatch on them only locally, at the moment ;
+;;   proc groups can receive and send messages, but they are virtual ; so, that requires consensus ;
+;;   procs can belong to only one group (for state-channel-replicated procs, seems that it can't be otherwise) ;
+;;
+(set! tprocg (type `("procg" ,tproc)  ;; Proc group
+                   '(PARENT           ;; Parent process
+                     PEER             ;; Peers
+                    )))
+
+(set! tstatech (type `("statech" ,tprocg) ;; State channel
+                     '()))
 
 ;; Procs (kinds of proc)
-(method! tproc 'local? (=> (PROC)
-  (unspecified? (: PROC 'IP))))
+(method! tproc 'core? (=> (PROC) ;; Core is similar to "server" ; there is only one core, several mappings
+  (== (: PROC 'ROLE) 'Core)))
 
-(method! tproc 'remote? (=> (PROC)
-  (not (^ 'local? PROC))))
-
-(method! tproc 'inmem? (=> (PROC)
-  (and (^ 'local? PROC)
-       (unspecified? (: PROC 'PORT)))))
-
-(method! tproc 'ssock? (=> (PROC)
-  (and (^ 'local? PROC)
-       (specified? (: PROC 'PORT)))))
+(method! tproc 'mapping? (=> (PROC) ;; Mapping is similar to "client"
+  (== (: PROC 'ROLE) 'Mapping)))
 
 ;; Constructor
 (define _PROC (make-hashv-table))
-(define _PROCNO 0)
 (define (allprocs)
   _PROC)
 
-(define (proc . PARM)
+(define (_procId PROC)
+  (define (postfix)
+    (cond ((== (typeof PROC) tprocl)
+           "")
+          ((== (typeof PROC) tproch)
+           "h")
+          ((== (typeof PROC) tprocph)
+           "ph")
+          ((== (typeof PROC) tprocg)
+           "g")
+          (else
+           (error "_procId.postfix"))))
+  (define ID (string (: PROC 'ID)))
+  (string+ (car (list-last (string-split ID #\@))) (postfix)))
+
+(define (_getProc PID)
+  (define PR Void)
+  (if (proc? PID)
+    (set! PID (_procId PID)))
+  (hash-ref (allprocs) PID))
+
+(define (proc TYPE . PARM)
   (let* ((L (list-group PARM))
-         (TAG (<- L 'TAG)))
-    (define RES (rexpr tproc L))
-    (:= RES 'ID _PROCNO)
-    (hash-set! (allprocs) _PROCNO RES)
-    (set! _PROCNO (+ _PROCNO 1))
-    (:? RES 'PEER (empty))
+         (TAG (<- L 'TAG))
+         (RES Void))
+    (if (not (type? TYPE))
+      (error "proc " TYPE))
+    (set! RES (rexpr TYPE L))
+    (hash-set! (allprocs) (_procId RES) RES)
+    (:? RES 'GROUP Nil)
+    (:? RES 'STATE 'Idle)
+    (:= RES 'COND Nil)
     (:? RES 'IN (empty))
-    (:? RES 'INPTR Nil)
+    (:= RES 'INPTR Nil)
     (:? RES 'IN! (empty))
     (:? RES 'OUT (empty))
-    (:? RES 'OUTPTR Nil)
-    (:? RES 'STOPPED False)
+    (:= RES 'OUTPTR Nil)
+    (:= RES 'STOPPED False)
     (:? RES 'VERBOSE 'Short)
+    (:? RES 'ROLE 'Core)
+    (:? RES 'HEAP Nil)
+    (:? RES 'HANDLER Nil)
+    (:? RES 'HOST Nil)
     RES))
 
-;(define (proc? PROC) ;; FIXME: shitty wart(0)
-;  (== (typeof PROC) tproc))
+(define (allprocsh . PROC)
+  (define PROCH (current-proch)) ;; FIXME: hmm, not nice, should dispatch more on what kind of proc it is
+  (if (and (not (empty? PROC)) (proc? (car PROC)))
+    (set! PROCH (car PROC)))
+  (: (: PROCH 'SCHED) 'ALLPROCS))
 
-;; Group
-(define (proc-group . L)
+(define (procl . PARM)
+  (define RES (apply proc `(,tprocl . ,PARM)))
+  (^ 'host-init RES)
+  RES)
+
+(define (proch . PARM)
+  (define RES (apply proc `(,tproch . ,PARM)))
+  (:? RES 'SCHED (sched))
+  (if (nil? (: RES 'HOST))
+    (:= RES 'HOST (host-proc)))
+  (^ 'host-init RES)
+  RES)
+
+(define (procph . PARM)
+  (define RES (apply proc `(,tprocph . ,PARM)))
+  (:? RES 'SCHED (sched))
+  RES)
+
+;(define (proc? PROC)) ;; FIXME: done in calls.ss
+;(define (procl? PROC))
+;(define (proch? PROC))
+;(define (procph? PROC))
+
+;; Proc groups
+(define (procg . PARM)
+  (define RES (apply proc `(,tprocg . ,PARM)))
+  (:? RES 'PEER (empty))
+  (^ 'host-init RES)
+  RES)
+
+(define (proc-group . L) ;; TODO: improve this
   (if (not (empty? L))
   (let* ((FROM (car L))
-         (L2 Void))
+         (L2 Void)
+         (RES (procg)))
     (set! L (cdr L))
     (set! L2 (map (=> (PR)
                     (if (proc? PR)
                       (: PR 'UID)
                       PR))
                   L))
+    (:= RES 'PARENT FROM)
+    (:= RES 'PEER (list-copy L2))
     (for-each (=> (PR)
-                (:= PR 'FROM FROM)
-                (:= PR 'PEER (list-copy L2))
+                (:= PR 'GROUP RES)
               )
-              L))))
+              L)
+    RES)))
+
+(define (statech . PARM)
+  (apply proc `(,tstatech . ,PARM)))
+
+;(define (procg? PROC))
+;(define (statech? PROC))
+
+;; Current hproc
+;(define _CURPROCH Nil) ;; FIXME: done in calls.ss
+;(define (current-proch)
+;  _CURPROCH)
+
+(define (current-proch! PROC)
+  (if (not (or (nil? PROC) (== (typeof PROC) tproch)))
+    (error "current-proc! : not a proch" (typeof PROC)))
+  (set! _CURPROCH PROC))
 
 ;; Current proc
 (define _CURPROC Nil)
@@ -100,9 +198,13 @@
   _CURPROC)
 
 (define (current-proc! PROC)
-  (if (not (or (nil? PROC) (proc? PROC)))
-    (error "current-proc! : not a proc"))
-  (set! _CURPROC PROC))
+  (if (not (or (nil? PROC)
+               (and (== (typeof PROC) tprocl)
+                    (== (: PROC 'ROLE) 'Core))))
+    (error "current-proc! : not a proc" (typeof PROC)))
+  (set! _CURPROC PROC)
+  (if (not (nil? PROC))
+    (current-proch! (: PROC 'HOST))))
 
 ;; Sender proc
 (define _SENDPROC Nil)
@@ -123,50 +225,24 @@
          (== (substring F (- LF LP) LF) "/return"))))
 
 (method! tproc 'call (=> (PROC FNAME . PARM)
-  (cond
-    ((^ 'remote? PROC)
-     Void ;; TODO: send (cons FNAME PARM) thru the socket
-    )
-    (else
-      (let* ((SELF (: PROC 'SELF)) ;; TODO: add what to do if HANDLER is set (is HANDLER necessary ?)
-            )
-        Void ;; TODO: context-switch to SELF.HEAP
-        Void ;; TODO: log the call in SELF.LOG
-        (if (unspecified? SELF)
-          (error "proc<" (: PROC 'UID) ">::call : no SELF"))
-        (if (fname-isret? FNAME)
-          (let* ((FROM (: PROC 'FROM))
-                 (CALL (car PARM))) ;; FIXME: should ensure the same return is not evaluated 2 times
-            (if (unspecified? FROM)
-              (error "proc.call : return without FROM"))
-            (if (string? CALL)
-              (set! CALL (string->number CALL)))
-            (set! CALL (copy-tree (list-get (: FROM 'IN!) CALL)))
-            (:= CALL 'PARM (cdr (mvparms (: CALL 'FUNC)
-                                         (cons (: (net-resolve (: CALL 'TO)) 'SELF)
-                                               (: CALL 'PARM)))))
-            (apply ^? `(,FNAME ,SELF . (,CALL))))
-          (apply ^? `(,FNAME ,SELF . ,PARM))))))))
-
-(method! tproc 'sync (=> (PROC)
-  (define RETS (map (=> (CALL)
-                      (number (car (: CALL 'PARM))))
-                    (filter (=> (CALL)
-                              (and (fname-isret? (: CALL 'FUNC))
-                                   (not (: CALL 'ACK))))
-                            (: PROC 'IN))))
-  (define RL0 Void)
-  (define MASTER (: PROC 'FROM))
-  (if (and (specified? MASTER) (not (boxed-empty? (: MASTER 'IN!))))
-  (begin
-    (set! RL0 (filter (=> (CALL)
-                        (not (list-in? (cadr CALL) RETS)))
-                      (map (=> (CALL)
-                             `(,(: CALL 'FUNC) ,(: CALL 'INNB)))
-                           (: MASTER 'IN!))))
-    (for-each (=> (CALL)
-                (^ 'send* PROC (sy (string+ (string (car CALL)) "/return")) (cadr CALL)))
-              RL0)))))
+  (let* ((SELF (: PROC 'SELF)) ;; TODO: add what to do if HANDLER is set (is HANDLER necessary ?)
+        )
+    Void ;; TODO: context-switch to SELF.HEAP
+    (if (unspecified? SELF)
+      (error "proc<" (: PROC 'UID) ">::call : no SELF"))
+    (if (fname-isret? FNAME)
+      (let* ((FROM (: PROC 'FROM))
+             (CALL (car PARM))) ;; FIXME: should ensure the same return is not evaluated 2 times
+        (if (unspecified? FROM)
+          (error "proc.call : return without FROM"))
+        (if (string? CALL)
+          (set! CALL (string->number CALL)))
+        (set! CALL (copy-tree (list-get (: FROM 'IN!) CALL)))
+        (:= CALL 'PARM (cdr (mvparms (: CALL 'FUNC)
+                                     (cons (: (net-resolve (: CALL 'TO)) 'SELF)
+                                           (: CALL 'PARM)))))
+        (apply ^? `(,FNAME ,SELF . (,CALL))))
+      (apply ^? `(,FNAME ,SELF . ,PARM))))))
 
 ;; Map
 (method! tproc 'prog! (=> (PROC O) ;; Set the proc's servlet
@@ -175,7 +251,17 @@
 (method! tproc 'map (=> (PROC ADDR) ;; Map the proc's heap ;; ADDR is a distributed resource UID
   Void))
 
-;; Send ;; TODO: only for (inmem?)s at the moment
+;; Proc queues
+(method! tproc 'in-idle? (=> (PROC)
+  (nil? (: PROC 'INPTR))))
+
+(method! tproc 'out-idle? (=> (PROC)
+  (nil? (: PROC 'OUTPTR))))
+
+(method! tproc 'idle? (=> (PROC)
+  (and (^ 'in-idle? PROC)
+       (^ 'out-idle? PROC))))
+
 (method! tproc 'outnb (=> (PROC)
   (define PTR (: PROC 'OUTPTR))
   (if (nil? PTR)
@@ -184,201 +270,346 @@
 
 (method! tproc 'out+ (=> (PROC CALL)
   (:+ PROC 'OUT CALL)
-  (:= PROC 'OUTPTR (list-last (: PROC 'OUT)))))
+  (if (^ 'out-idle? PROC)
+    (:= PROC 'OUTPTR (list-last (: PROC 'OUT))))))
+
+(method! tproc 'out++ (=> (PROC)
+  (define RES Nil)
+  (if (not (^ 'out-idle? PROC))
+  (begin
+    (set! RES (car (: PROC 'OUTPTR)))
+    (:= PROC 'OUTPTR (cdr (: PROC 'OUTPTR)))))
+  RES))
 
 (method! tproc 'in+ (=> (PROC CALL)
   (:+ PROC 'IN CALL)
-  (if (nil? (: PROC 'INPTR))
+  (if (^ 'in-idle? PROC)
     (:= PROC 'INPTR (list-last (: PROC 'IN))))))
 
 (method! tproc 'in++ (=> (PROC)
   (define RES Nil)
-  (if (not (nil? (: PROC 'INPTR)))
+  (if (not (^ 'in-idle? PROC))
   (begin
     (set! RES (car (: PROC 'INPTR)))
     (:= PROC 'INPTR (cdr (: PROC 'INPTR)))))
   RES))
 
-(define (proc-resolve L)
-  (if (strsy? L)
-    (set! L `(,L)))
-  (map (=> (P)
-           (define PR (net-resolve P))
-           (if (not PR)
-             (error "proc-resolve : unresolveable target => " P))
-           PR)
-       L))
+;; Proc send
+(method! tproc 'send (=> (PROC FNAME . PARM) ;; NOTE: PROC is the _target_ (i.e., the TO)
+  (let* ((FROM (current-proc))
+         (STATE (: FROM 'STATE))
+         (CALL Void))
+    (if (not (or (== STATE 'Idle) (== STATE 'Active)))
+      (error "proc::send"))
+    (:= FROM 'STATE 'Active)
+    (set! CALL (call 'USER (: FROM 'USER)
+                     'FROM (: FROM 'UID)
+                     'OUTNB (^ 'outnb FROM)
+                     'TO (: PROC 'UID)
+                     'FUNC FNAME
+                     'PARM PARM))
+    (sign CALL (: FROM 'USER) 'SIGN_B)
+    (^ 'out+ FROM CALL)
+    (^ 'schedule FROM))))
 
-(define (proc-queue CALL)
-  (define FROM (: (current-proc) 'UID))
-  (define TO (: CALL 'TO))
-  (define L Void)
-  (define MASTER (: (current-proc) 'FROM))
-  (if (or (unspecified? FROM) (empty? FROM) (boxed-empty? FROM))
-    (error "proc-queue : no FROM => " FROM))
-  (if (not (or (unspecified? TO) (empty? TO) (boxed-empty? TO)))
-  (begin
-    (if (and (unspecified? (: CALL 'INNB))
-             (or (unspecified? MASTER) (!= TO (: MASTER 'UID)))
-             (not (and (string? TO) (!= TO FROM)))) ;; TODO: beware with these half-baked conditions everywhere ; summarize all that fully & set all straight, at some point.
-      (set! L `(,FROM))
-      (begin
-        (set! L TO)
-        (if (string? TO)
-        (begin
-          (set! CALL (copy-tree CALL)) ;; NOTE : keep this ?
-          (sign CALL (: (current-proc) 'USER) 'SIGN_E)))))
-    (set! L (proc-resolve L))
-    (if (specified? (: CALL 'INNB))
-      (set! L (filter (=> (PR)
-                          (!= (: PR 'UID) FROM))
-                      L)))
-    (for-each (=> (P)
-      (^ 'in+ P (copy-tree CALL))) ;; FIXME: hmm (tree-copy) risks breaking, at some point (the copy belongs to another heap, in fact)
-      L))))
+;; Stepping
+(define _TRACESTEPS False)
+(define (trace-steps . B)
+  (if (empty? B)
+    _TRACESTEPS
+    (set! _TRACESTEPS (car B))))
 
-(define (proc-send PROC MULTI FNAME . PARM) ;; NOTE: PROC is the _target_ (i.e., the TO)
-  (define PR (current-proc))
-  (define L '())
-  (define TO Nil)
-  (define CALL Nil)
-  (if (nil? PR)
-    (error "Send : no current proc"))
-  (if MULTI
-    (set! L (map (=> (P)
-                     (define PR (net-resolve P))
-                     (if (not PR)
-                       (error "proc-send::MULTI : unresolveable target => " P))
-                     PR)
-                 (: PR 'PEER)))
-    (if (not (net-resolve PROC))
-      (error "proc-send : unresolveable target => " (: PROC 'UID))))
-  (set! TO
-        (if MULTI (map (=> (P) (: P 'UID))
-                       L)
-                  (: PROC 'UID)))
-  (set! CALL (call 'USER (: PR 'USER)
-                   'FROM (: PR 'UID)
-                   'OUTNB (^ 'outnb PR)
-                   'TO TO
-                   'FUNC FNAME
-                   'PARM PARM))
-  (sign CALL (: PR 'USER) 'SIGN_B)
-  (^ 'out+ PR CALL)
-  (proc-queue CALL))
+(method! tproc 'out-step (=> (PROC)
+  (ifTrue (and (not (^ 'out-idle? PROC))
+               (== (: PROC 'STATE) 'Active))
+          (=> ()
+            (net-send (^ 'out++ PROC))))))
 
-(method! tproc 'send (=> (PROC FNAME . PARM)
-  (apply proc-send `(,PROC ,False ,FNAME . ,PARM))))
-
-(method! tproc 'send* (=> (PROC FNAME . PARM)
-  (apply proc-send `(,PROC ,True ,FNAME . ,PARM))))
-
-(method! tproc 'step (=> (PROC)
-  (define OCURPROC (current-proc)) ;; Not absolutely necessary ; (current-proc) should be Nil, in fact
-  (define MSG (^ 'in++ PROC))
+(method! tproc 'core-call (=> (PROC MSG)
+  (define SPROC Void)
   (define RES Void)
-  (define PEER (: PROC 'PEER))
-  (define ISPEER Void)
-  (define ISVOLATILE False)
-  (set! ISPEER (not (or (empty? PEER) (boxed-empty? PEER))))
-  (if (not (nil? MSG))
-  (begin
-    (current-proc! PROC)
-    (let* ((FUNC (: MSG 'FUNC))
-           (SELF (: PROC 'SELF))
-           (SLOTTY Void)
-           (DESCR Void)
-           (SPROC Void)
-           (TO Void)
-          )
-      (if (unspecified? SELF)
-        (error "proc<" (: PROC 'UID) ">::step : no SELF"))
-      (if (unspecified? (method (typeof SELF) (sy FUNC)))
-        (error "proc<" (: PROC 'UID) ">::step : no method " FUNC))
-      (set! SLOTTY (: (typeof SELF) 'SLOTTY))
-      (set! DESCR (: SLOTTY FUNC))
-      (if (and (specified? DESCR) (not (empty? DESCR)))
-        (set! ISVOLATILE (eq? (car DESCR) 'volatile))) ;; FIXME: make something more general than this !!!
-      (cond
-        ((: MSG 'ACK)
-         (if (not (specified? (: MSG 'INNB)))
-           (error "proc<" (: PROC 'UID) ">::step : ACKed MSG without INNB"))
-         (let* ((MSG0 (list-get (: PROC 'IN!) (: MSG 'INNB)))
-               )
-           (sign:+ MSG0 MSG)
-           (:= MSG0 'ACK* (signed-all? MSG0)))
-        )
-        (else
-         (set! TO (: MSG 'TO))
-         (if (or (pair? TO) (== TO (: PROC 'UID))) ;; FIXME: improve this test ; and optionally, treat OUT just like IN, rather than putting every outcoming message inside IN for redispatching, as we currently do ;; no use for this, at the moment (1) ...
-           (begin
-             (set! SPROC (net-resolve (: MSG 'FROM)))
-             (if (not SPROC)
-               (error "proc<" (: MSG 'FROM) ">::step : no sender proc"))
-             (sender-proc! SPROC)
-             (set! RES (apply ^ `(call ,PROC ,FUNC . ,(: MSG 'PARM))))
-             (:= MSG 'RESULT RES)
-             (sender-proc! Nil)
-             (if (and RES (not ISVOLATILE)) ;; TODO: when (not RES), rollback changes
-               (let* ((INNB (: MSG 'INNB))
-                      (INNB2 (list-length (: PROC 'IN!)))
-                     )
-                 (if (and (specified? INNB) (!= INNB INNB2))
-                   (error "proc<" (: PROC 'UID) ">::step : wrong INNB"))
-                 (:= MSG 'INNB INNB2)
-                 (set! MSG (copy-tree MSG)) ;; NOTE : keep this ?
-                 (sign MSG (: PROC 'USER) 'SIGN_E)
-                 (if (specified? INNB)
-                   (:= MSG 'ACK True))
-                 (:+ PROC 'IN! MSG)
-                 (proc-queue MSG)
-                 (:= MSG 'ACK False))))
-           (let* ((MSG0 MSG)) ;; no use for this, at the moment (2)
-             (set! MSG (copy-tree MSG)) ;; NOTE : keep this ?
-             (:= MSG0 'REDIR True)
-             (sign MSG (: PROC 'USER) 'SIGN_E)
-             (current-proc! (net-resolve TO)) ;; FIXME: test this !!!
-             (proc-queue MSG)))
-        )))
-    (current-proc! OCURPROC)))
+  (if (not (^ 'core? PROC))
+    (error "in-step"))
+  (set! SPROC (net-resolve (: MSG 'FROM)))
+  (if (not SPROC)
+    (error "proc<" (: MSG 'FROM) ">::core-call : no sender proc"))
+  (sender-proc! SPROC)
+  (set! RES (apply ^ `(call ,PROC ,(: MSG 'FUNC) . ,(: MSG 'PARM))))
+  (:= MSG 'RESULT RES)
+  (sender-proc! Nil)
   RES))
 
-;; Start
+(method! tproc 'post-to (=> (PROC MSG) ;; TODO: discard duplicated MSGs
+  (^ 'in+ PROC MSG)
+  (^ 'update-state PROC)
+  (^ 'schedule PROC)))
+
+(method! tproc 'core-call-RSM (=> (PROC MSG)
+  (error "tproc::core-call-RSM : abstract")))
+
+(method! tproc 'in-step (=> (PROC)
+  (ifTrue (not (^ 'in-idle? PROC))
+          (=> ()
+            (define MSG Void)
+            (cond ((== (: PROC 'STATE) 'Active)
+                   (set! MSG (^ 'in++ PROC))
+                   (if (: MSG 'ACK)
+                     (noop)
+                     (^ 'core-call-RSM PROC MSG)))
+                  ((== (: PROC 'STATE) 'Waiting)
+                   (if ((: PROC 'COND) PROC 1)
+                   (begin
+                     (:= PROC 'COND Nil)
+                     (:= PROC 'STATE 'Active))))
+                  (else
+                   (error "in-step")))))))
+    
+(method! tproc 'update-state (=> (PROC)
+  (cond ((== (: PROC 'STATE) 'Active)
+         (if (^ 'idle? PROC)
+           (:= PROC 'STATE 'Idle)))
+        ((== (: PROC 'STATE) 'Idle)
+         (if (not (^ 'idle? PROC))
+           (:= PROC 'STATE 'Active))))))
+
+(method! tproc 'step (=> (PROC)
+  (ifTrue (or (^ 'out-step PROC)
+              (^ 'in-step PROC))
+          (=> ()
+            (^ 'update-state PROC)
+            (^ 'schedule PROC)))))
+
+;; RSM
+(method! tprocg 'post-to (=> (PROC MSG)
+  (for-each (=> (PR)
+              (net-send MSG (net-resolve PR)))
+            (: PROC 'PEER))))
+ ;(outraw "post-to[group] ")
+ ;(outraw (: PROC 'UID))
+ ;(cr)))
+
+(define (method-descr TYPE FNAME)
+  (define SLOTTY Void)
+  (define DESCR Void)
+  (if (unspecified? (method TYPE (sy FNAME)))
+    (error "method-descr::no method " FNAME " in " (: TYPE 'NAME)))
+  (set! SLOTTY (: TYPE 'SLOTTY))
+  (: SLOTTY (sy FNAME)))
+
+(define (proc-replay-list++ PROC MSG)
+ ;(outraw "RL++ ")
+ ;(outraw (: PROC 'UID))
+ ;(outraw " ")
+ ;(outraw (: MSG 'TO))
+ ;(outraw " ")
+ ;(outraw (: MSG 'FUNC))
+ ;(cr)
+  (let* ((INNB (: MSG 'INNB))
+         (INNB2 (list-length (: PROC 'IN!)))
+        )
+    (if (and (specified? INNB) (!= INNB INNB2))
+      (error "proc<" (: PROC 'UID) ">::RL++ : wrong INNB"))
+    (:= MSG 'INNB INNB2)
+    (sign MSG (: PROC 'USER) 'SIGN_E)
+    (:+ PROC 'IN! MSG)))
+
+(define (proc-send-acks PROC PROCG MSG)
+  (define PEER (filter (=> (UID)
+                         (!= UID (: PROC 'UID)))
+                       (: PROCG 'PEER)))
+ ;(outraw "Send ACKs ")
+ ;(outraw (: PROC 'UID))
+ ;(outraw " to ")
+ ;(outraw PEER)
+ ;(cr)
+  (set! MSG (copy-tree MSG))
+  (:= MSG 'ACK True)
+  (for-each (=> (PROC)
+              (set! PROC (net-resolve PROC))
+              (net-send MSG PROC))
+            PEER))
+
+;; ATTENTION: __UNICITÉ DE LA REPLAY LIST__
+;; Il faut au moins que:
+;; (1) le proc group contienne, pour chaque proc, le user qui est habilité à parler en
+;;     utilisant ce proc ;
+;; (2) le message avec le INNB, au moment où il est inséré dans la replay list de celui
+;;     qui l'a proposé, doit être signé _à nouveau_ par celui qui l'a proposé (pour signer
+;;     le INNB) ; il faut probablement aussi la signature du master courant, pour s'assurer
+;;     qu'on ne peut pas fabriquer de fausses replay list en se passant du master (quid de
+;;     la collusion entre le master et un des players ? à priori, pour ca les deux n'ont pas
+;;     besoin de forger le message avec INNB, il suffit que le master choisisse le message
+;;     du player avec qui il collude) ;
+;; => VÉRIFIER tout ca.
+(define (proc-await-cond PROC MSG PEER)
+  (=> (PROC . DOIT)
+    (define IN (: PROC 'IN)) ;; TODO: search inside only the non-processed inputs (?)
+    (define RES True)
+    (define ACKL (empty))
+   ;(outraw "Checking condition on ")
+   ;(outraw (: PROC 'UID))
+    (for-each (=> (UID)
+                (define PR (net-map UID)) ;; FIXME: how are we sure that PR.USER is not hackeable ???
+                (define ACKM Void)
+                (set! ACKM (list-find (=> (MSG2)
+                             (and (== (: MSG 'FROM) (: MSG2 'FROM))
+                                  (== (: MSG 'OUTNB) (: MSG2 'OUTNB))
+                                  (specified? (: MSG 'INNB))
+                                  (== (: MSG 'INNB) (: MSG2 'INNB))
+                                  (: MSG2 'ACK)
+                                  (signed-by? MSG2 (: PR 'USER))))
+                             IN))
+                (if (unspecified? ACKM)
+                  (set! RES False)
+                  (rcons ACKL ACKM)))
+              PEER)
+    ;(outraw " ")
+    ;(outraw (if RES "OK" "FAIL"))
+    ;(cr)
+     (if (and RES (not (empty? DOIT)) (car DOIT))
+       (let* ((MSG0 (list-get (: PROC 'IN!) (: MSG 'INNB))))
+         (for-each (=> (MSG)
+                     (sign:+ MSG0 MSG))
+                   ACKL)
+         (:= MSG0 'ACK* (signed-all? MSG0))))
+     RES))
+
+(define (proc-await-acks PROC PROCG MSG)
+  (define PEER (filter (=> (UID)
+                         (!= UID (: PROC 'UID)))
+                       (: PROCG 'PEER)))
+ ;(outraw "Await ACKs ")
+ ;(outraw (: PROC 'UID))
+ ;(outraw " from ")
+ ;(outraw (: PROCG 'PEER))
+ ;(cr)
+  (:= PROC 'STATE 'Waiting)
+  (:= PROC 'COND (proc-await-cond PROC MSG PEER)))
+
+(define (proc-RSM-acks PROC MSG)
+  (define PROCG (net-resolve (: MSG 'TO)))
+  (if (procg? PROCG)
+  (begin
+    (proc-send-acks PROC PROCG MSG)
+    (proc-await-acks PROC PROCG MSG))))
+
+(method! tprocl 'core-call-RSM (=> (PROC MSG) ;; TODO: when MSG.TO is a group, verify that PROC belongs to it
+  (define DESCR (method-descr (typeof (: PROC 'SELF)) (: MSG 'FUNC)))
+  (^ 'core-call PROC MSG)
+  (if (not (list-in? 'volatile DESCR))
+  (begin
+    (proc-replay-list++ PROC MSG)
+    (proc-RSM-acks PROC MSG)))))
+
+;; Stepping (hosts)
+(method! tproch 'step (=> (PROC)
+  (define (logit PROC)
+    (if (trace-steps)
+    (begin
+      (outraw "!Stepping ")
+      (outraw (: PROC 'UID))
+      (cr))))
+  (define RES False)
+  (logit PROC)
+  (hash-for-each (=> (UID PR) ;; TODO: replace that by hash-for-each-in-order
+    (logit PR)
+    (if (^ 'step PR)
+      (set! RES True)))
+    (allprocsh PROC))
+  RES))
+
+;; Init/start
+(method! tproc 'host-init (=> (PROC)
+  (if (nil? (: PROC 'HOST))
+    (:= PROC 'HOST (cond
+      ((or (procl? PROC)
+           (procg? PROC))
+       (current-proch))
+      ((== (typeof PROC) tproch)
+       (host-proc))
+      (else
+       (error "host-init")))))
+  (if (nil? (: PROC 'HOST))
+    (error "host-init(2)"))
+  (hash-set! (allprocsh (: PROC 'HOST)) (: PROC 'ID) PROC)
+  (^ 'schedule PROC)))
+
 (method! tproc 'start (=> (PROC)
-  (cond
-    ((^ 'remote? PROC)
-     (noop)) ;; No start ;; connect is to be used instead (?)
-    ((^ 'inmem? PROC)
-     (noop))
-    ((^ 'ssock? PROC)
-     Void ;; TODO: start the server socket
-    ))))
+  Void))
 
 (method! tproc 'stop (=> (PROC . B)
-  (set! B (if (or (empty? B) (== (car B) True) (== (car B) 1)) True False))
-  (cond
-    ((^ 'inmem? PROC)
-    ;(outraw (string+ (if B "Stopping" "Restarting") " process " (: PROC 'UID)))
-     (:= PROC 'STOPPED B))
-    (else
-     (error "proc<" (: PROC 'UID) ">::stop : can't stop proc"))
-    )))
-
-(method! tproc 'idle? (=> (PROC)
-  (if (^ 'inmem? PROC)
-    (nil? (: PROC 'INPTR))
-    Unspecified)))
+  Void))
 
 (define (step . PROC)
-  (if (not (empty? PROC))
+  (if (and (not (empty? PROC))
+           (proc? (car PROC)))
     (^ 'step (car PROC))
-    (let* ((DOIT True)
-           (FIRST True))
-      (while DOIT
-        (set! DOIT False)
-        (hash-for-each (=> (UID PR) ;; TODO: replace that by hash-for-each-in-order
-                   (if (and (not (: PR 'STOPPED)) (not (^ 'idle? PR)))
-                   (begin
-                     (^ 'step PR)
-                     (set! DOIT True))))
-                 (allprocs))))))
+    (while (^ 'step (host-proc)))))
+
+;; Schedulers/simulated support procs
+(set! tsched (type "sched"     ;; Scheduler
+                   '(IDLE      ;; Idle procs
+                     ACTIVE    ;; Active procs
+                     WAITING   ;; Waiting procs (on some condition)
+                     ALLPROCS  ;; All procs (hashtable)
+                    )))
+
+(define (sched)
+  (define RES (rexpr tsched '()))
+  (:= RES 'IDLE (queue))
+  (:= RES 'ACTIVE (queue))
+  (:= RES 'WAITING (queue))
+  (:= RES 'ALLPROCS (make-hashv-table))
+  RES)
+
+(define (sched-queue SCH STATE)
+  (cond
+   ((== STATE 'Idle)
+    (: SCH 'IDLE))
+   ((== STATE 'Active)
+    (: SCH 'ACTIVE))
+   ((== STATE 'Waiting)
+    (: SCH 'WAITING))
+   (else
+    (error "sched-queue"))))
+
+(define (sched-proc SCH PROC)
+  (define IN Void)
+  (if (not (sched? SCH))
+    (error "sched-proc"))
+  (set! IN (sched-queue SCH (: PROC 'STATE))) ;; FIXME: recurring wart, one cannot put test code before (define ...)
+  (queue-remove (: SCH 'IDLE) PROC)
+  (queue-remove (: SCH 'ACTIVE) PROC)
+  (queue-remove (: SCH 'WAITING) PROC)
+  (queue-push IN PROC))
+
+(method! tproc 'schedule (=> (PROC)
+  (sched-proc (: (: PROC 'HOST) 'SCHED) PROC)))
+
+(define (sched-idle? SCH)
+  (queue-empty? (: SCH 'ACTIVE)))
+
+(define (sched-step SCH) ;; NOTE: unused
+  (define PR Void)
+  (if (not (sched-idle? SCH))
+  (begin
+    (set! PR (queue-shift (: SCH 'ACTIVE)))
+    (if (!= (: PR 'STATE) 'Active)
+      (error "sched-step"))
+    (outraw "Stepping ")
+    (outraw (: PR 'UID))
+    (cr)
+    (^ 'step PR)
+    (sched-proc SCH PR))))
+
+;; Physical host proc
+(define _HOSTPROC Nil)
+(define (host-proc)
+  _HOSTPROC)
+
+(define (host-proc! PROC)
+  (if (not (or (nil? PROC) (procph? PROC)))
+    (error "host-proc! : not a physical host proc"))
+  (set! _HOSTPROC PROC))
+
+(host-proc! (procph 'USER 'system)) ;; TODO: see if "system" is ok, as an identity

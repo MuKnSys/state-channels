@@ -1,0 +1,197 @@
+smith : 10
+dupont : 10
+durand : 10
+smith : 10
+dupont : 10
+durand : 10
+smith : 10
+dupont : 10
+durand : 10
+---
+PID      NAME   USER    PEER                 SELF       
+0^       PR1    smith   ("PR1" "PR2" "PR3")  @micropay@0
+0procg^  GR1    nobody                       _          
+0h_      HOST1  system                       _          
+0ph_     _      system                       _          
+1^       PR2    dupont  ("PR1" "PR2" "PR3")  @micropay@1
+2^       PR3    durand  ("PR1" "PR2" "PR3")  @micropay@2
+6 procs
+---
+PR1 smith ^
+in:
+rl:
+out:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+PR2 dupont ^
+in:
+rl:
+out:
+PR3 durand ^
+in:
+rl:
+out:
+---
+PR1 smith ^
+in:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+rl:
+out:
+  <0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+PR2 dupont ^
+in:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+rl:
+out:
+PR3 durand ^
+in:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+rl:
+out:
+---
+PR1 smith ^
+in:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+rl:
+out:
+  <0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+PR2 dupont ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+out:
+PR3 durand ^
+in:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+rl:
+out:
+=>
+smith : 10
+dupont : 10
+durand : 10
+smith : 5
+dupont : 15
+durand : 10
+smith : 10
+dupont : 10
+durand : 10
+---
+PR1 smith ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
+out:
+  <0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+PR2 dupont ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+out:
+PR3 durand ^
+in:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+rl:
+out:
+=>
+smith : 5
+dupont : 15
+durand : 10
+smith : 5
+dupont : 15
+durand : 10
+smith : 10
+dupont : 10
+durand : 10
+---
+PR1 smith ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
+out:
+  <0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+PR2 dupont ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+out:
+PR3 durand ^
+in:
+ *<0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+rl:
+out:
+---
+PR1 smith ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
+out:
+  <0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+PR2 dupont ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+out:
+PR3 durand ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m[39;49m
+out:
+=>
+smith : 5
+dupont : 15
+durand : 10
+smith : 5
+dupont : 15
+durand : 10
+smith : 5
+dupont : 15
+durand : 10
+---
+PR1 smith ^
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont durand)[31;49m!*[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont durand)[31;49m!*[39;49m
+out:
+  <0 _>transfer PR1=>GR1 (dupont 5) _[31;49m[39;49m
+PR2 dupont ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m[39;49m
+out:
+PR3 durand ^?
+in:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m[39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m dupont)[31;49m!![39;49m
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
+rl:
+  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m durand)[31;49m[39;49m
+out:

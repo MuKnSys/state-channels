@@ -82,6 +82,28 @@
     (set! L (cdr L)))))
 
 ;; Procs
+(define (strpid PR)
+  (define L (string-split (string (: PR 'ID)) #\@))
+  (if (== (list-length L) 1)
+    L
+    (let* ((TY (list-get L 1)))
+      (set! TY (cond
+                ((== TY "procl") "")
+                ((== TY "proch") "h")
+                ((== TY "procph") "ph")
+                (else
+                  TY)))
+      (string+ (car (list-last L)) TY))))
+
+(define (lstprocg GR)
+  (if (procg? GR)
+  (begin
+    (>> (: GR 'PEER))
+    (if (specified? (: GR 'PARENT))
+    (begin
+      (outraw "@")
+      (outraw (: (: GR 'PARENT) 'UID)))))))
+
 (define (lstproc PR . SHORT)
   (define UID (: PR 'UID))
   (define SELF (: PR 'SELF))
@@ -89,7 +111,7 @@
   (set! SHORT (and (not (empty? SHORT)) (== (car SHORT) 1)))
   (if (not SHORT)
   (begin
-    (outraw (: PR 'ID))
+    (outraw (strpid PR))
     (outraw (if (net-resolve PR) "^" "_"))
     (outraw " ")))
   (outraw (if (specified? UID) UID "_"))
@@ -97,14 +119,11 @@
   (outraw (: PR 'USER))
   (outraw " ")
   (outraw (if (: PR 'STOPPED) "_" "^"))
+  (outraw (if (== (: PR 'STATE) 'Waiting) "?" ""))
   (if (not SHORT)
   (begin
     (outraw " ")
-    (>> (: PR 'PEER))
-    (if (specified? (: PR 'FROM))
-    (begin
-      (outraw "@")
-      (outraw (: (: PR 'FROM) 'UID))))
+    (lstprocg (: PR 'GROUP))
     (outraw " ")
     (>> (if (pair? SELF)
           (: SELF 'ID)
@@ -128,19 +147,14 @@
 (define (lstproc2 PR . INDENT)
   (define UID (: PR 'UID))
   (define SELF (: PR 'SELF))
-  (outraw (: PR 'ID))
+  (outraw (strpid PR))
   (outraw (if (net-resolve PR) "^" "_"))
   (tab)
   (outraw (if (specified? UID) UID "_"))
   (tab)
   (outraw (: PR 'USER))
   (tab)
-  (outraw (map (=> (X) (if (unspecified? X) "_" X)) 
-               (: PR 'PEER)))
-  (if (specified? (: PR 'FROM))
-  (begin
-    (outraw "@")
-    (outraw (: (: PR 'FROM) 'UID))))
+  (lstprocg (: PR 'GROUP))
   (tab)
   (>> (if (pair? SELF)
         (: SELF 'ID)
@@ -228,7 +242,7 @@
   (proc 'USER USER 'UID UID))
 
 (define (_pr- PID)
-  (hash-remove! _PROC PID))
+  (hash-remove! (allprocs) PID))
 
 (define (_pr! PID A V)
   (let* ((PR (hash-ref (allprocs) PID)))
@@ -249,10 +263,16 @@
              (outraw " not found")))))))
 
 (define (_npr PID)
-  (net-enter (hash-ref (allprocs) PID)))
+  (define PR (_getProc PID))
+  (if (not PR)
+    (error "_npr : proc " PID " not found"))
+  (net-enter PR))
 
 (define (_npr- PID)
-  (net-leave (hash-ref (allprocs) PID)))
+  (define PR (_getProc PID))
+  (if (not PR)
+    (error "_npr- : proc " PID " not found"))
+  (net-leave PR))
 
 (define (_proc USER UID SELF)
   (define PR (proc 'USER USER 'UID UID))
@@ -269,7 +289,7 @@
       (outraw "Object ")
       (outraw SELF)
       (outraw " not found")))
-  (_npr (: PR 'ID)))
+  (_npr PR))
 
 (define (_cpr . UID)
   (set! UID (if (empty? UID)
@@ -286,7 +306,8 @@
         (outraw "No current proc")
         (outraw (: UID 'ID))))))
 
-(define (_sc . UID)
+(define (_sc . UID) ;; FIXME: use (proc-group)
+  (error "_sc")
   (let* ((LP (map (=> (NAME)
                       (if (specified? NAME)
                         (if (== NAME "_")
@@ -440,8 +461,8 @@
 (apimon "pr!" _pr! '(num sy str))
 (apimon "prog!" _prog! '(num str))
 
-(apimon "npr" _npr '(num))
-(apimon "npr-" _npr- '(num))
+(apimon "npr" _npr '(str))
+(apimon "npr-" _npr- '(str))
 (apimon "proc" _proc '(str str str))
 (apimon '("cpr" "iam" "whoami") _cpr '(str) 'VARGS True)
 

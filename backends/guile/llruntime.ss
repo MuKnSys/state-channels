@@ -78,7 +78,7 @@
                   (if (not (_mod-resolve NAME)) ;; FIXME: doesn't resolves the problem of modules that load themselves
                   (begin
                     (_mod-store NAME)
-		    (if (not (eq? (string-ref MOD 0) #\/))
+                    (if (not (eq? (string-ref MOD 0) #\/))
                       (set! MOD (string-append DIR MOD)))
                     (_pushcf (string-append MOD ".ss"))
                     (load (string-append MOD ".ss"))
@@ -100,7 +100,9 @@
 (_mod-store "llruntime") ;; Because it can be loaded directly, by means of (load)
 
 (if (pair? (command-line))
-  (_pushcf (string-append (getcwd) "/" (car (command-line)))))
+  (let* ((CLI (car (command-line))))
+    (_pushcf (if (eq? (string-ref CLI 0) #\/) CLI
+                                              (string-append (getcwd) "/" CLI)))))
 
 ;; Shell
 (define _SH_CMD_LOG #f)
