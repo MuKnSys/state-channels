@@ -6,8 +6,8 @@ cd "$SC_HOME" 2> /dev/null ; SC_HOME=`pwd` ; cd - > /dev/null
 BIN=$SC_HOME/bin
 SRC=$SC_HOME/src
 TESTS=$SC_HOME/tests
-SNIPPETS=$SC_HOME/snippets
-SCORIES=$SC_HOME/scories
+#SNIPPETS=$SC_HOME/snippets
+#SCORIES=$SC_HOME/scories
 EXAMPLES=$SC_HOME/examples
 
 cd $TESTS
