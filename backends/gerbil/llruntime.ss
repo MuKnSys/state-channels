@@ -105,6 +105,9 @@
 (define (getcwd)
   (string-trim-right (current-directory) #\/))
 
+(define (dirname PATH)
+  (string-trim-right (path-directory PATH) #\/))
+
 (define (open-input-pipe CMD)
   (error "open-input-pipe: !Yet"))
 

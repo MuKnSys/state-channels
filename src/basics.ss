@@ -253,6 +253,11 @@
 (define (queue? Q)
   (and (pair? Q) (== (car Q) Unspecified)))
 
+(define (queue-length Q)
+  (if (not (queue? Q))
+    (error "queue-length"))
+  (- (length Q) 1))
+
 (define (queue-empty? Q)
   (boxed-empty? Q))
 

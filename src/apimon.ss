@@ -96,13 +96,16 @@
       (string+ (car (list-last L)) TY))))
 
 (define (lstprocg GR)
-  (if (procg? GR)
-  (begin
-    (>> (: GR 'PEER))
-    (if (specified? (: GR 'PARENT))
-    (begin
-      (outraw "@")
-      (outraw (: (: GR 'PARENT) 'UID)))))))
+  (cond ((procg? GR)
+         (>> (: GR 'PEER))
+         (if (specified? (: GR 'PARENT))
+         (begin
+           (outraw "@")
+           (outraw (: (: GR 'PARENT) 'UID)))))
+        ((nil? GR)
+         (outraw "(_)"))
+        (else
+          (outraw "??"))))
 
 (define (lstproc PR . SHORT)
   (define UID (: PR 'UID))
@@ -274,8 +277,14 @@
     (error "_npr- : proc " PID " not found"))
   (net-leave PR))
 
+(define (_proch USER UID)
+  (define HOST (proch 'USER USER
+                      'UID UID))
+  (_npr HOST) ;; FIXME: _npr should not be necessary, but is used in the shell
+  HOST)
+
 (define (_proc USER UID SELF)
-  (define PR (proc 'USER USER 'UID UID))
+  (define PR (procl 'USER USER 'UID UID))
   (define OBJ Void)
   (if (!= SELF "_")
   (begin
@@ -304,6 +313,21 @@
       (set! UID (current-proc))
       (if (nil? UID)
         (outraw "No current proc")
+        (outraw (: UID 'ID))))))
+
+(define (_cprh . UID)
+  (set! UID (if (empty? UID)
+              Void
+              (car UID)))
+  (if (specified? UID)
+    (let* ((PR (net-resolve UID)))
+      (if PR
+        (current-proch! PR)
+        (outraw (string+ "Host proc " UID " is not on the net"))))
+    (begin
+      (set! UID (current-proch))
+      (if (nil? UID)
+        (outraw "No current host proc")
         (outraw (: UID 'ID))))))
 
 (define (_sc . UID) ;; FIXME: use (proc-group)
@@ -464,7 +488,9 @@
 (apimon "npr" _npr '(str))
 (apimon "npr-" _npr- '(str))
 (apimon "proc" _proc '(str str str))
+(apimon "proch" _proch '(str str))
 (apimon '("cpr" "iam" "whoami") _cpr '(str) 'VARGS True)
+(apimon "chost" _cprh '(str) 'VARGS True)
 
 (apimon '("_sc!" "join") _sc '(str str str str) 'VARGS True)
 (apimon "stop" _prstop '(str))

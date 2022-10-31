@@ -24,8 +24,8 @@ cd $TESTS
 $BIN/scm $EXAMPLES/mp1_1.ss > OUT 2> /dev/null
 diff -q -U2 OUT1_1.txt OUT
 
-#$SRC/clish.ss mp0 mp0_1 > OUT 2> /dev/null
-#diff -q -U2 OUT0 OUT
+$SRC/clish.ss mp0 mp0_1 > OUT 2> /dev/null
+diff -q -U2 OUT0 OUT
 
 #$SRC/clish.ss mp1 mp1_3 > OUT 2> /dev/null
 #diff -q -U2 OUT1 OUT

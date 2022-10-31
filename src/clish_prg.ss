@@ -15,7 +15,7 @@
 (if (< (list-length L) 2)
   (error "clish <PROG> [SCRIPT] expected"))
 
-(define CWD (getcwd))
+(define CWD (string+ (dirname (list-ref L 0)) "/.."))
 (define PROG (string+ CWD "/examples/" (list-ref L 1) ".ss"))
 
 (define SCRIPT False)

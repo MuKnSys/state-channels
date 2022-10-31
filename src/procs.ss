@@ -263,10 +263,7 @@
        (^ 'out-idle? PROC))))
 
 (method! tproc 'outnb (=> (PROC)
-  (define PTR (: PROC 'OUTPTR))
-  (if (nil? PTR)
-    0
-    (+ (: (car PTR) 'OUTNB) 1))))
+  (list-length (: PROC 'OUT))))
 
 (method! tproc 'out+ (=> (PROC CALL)
   (:+ PROC 'OUT CALL)
@@ -308,7 +305,7 @@
                      'TO (: PROC 'UID)
                      'FUNC FNAME
                      'PARM PARM))
-    (sign CALL (: FROM 'USER) 'SIGN_B)
+    (sign CALL (: FROM 'USER) 'SIGN_B) ;; TODO: verify that it's necessary (cf. (sign) step in (out-step))
     (^ 'out+ FROM CALL)
     (^ 'schedule FROM))))
 
@@ -323,7 +320,9 @@
   (ifTrue (and (not (^ 'out-idle? PROC))
                (== (: PROC 'STATE) 'Active))
           (=> ()
-            (net-send (^ 'out++ PROC))))))
+            (define MSG (^ 'out++ PROC))
+            (sign MSG (: PROC 'USER) 'SIGN_E) ;; TODO: verify that it's necessary
+            (net-send MSG)))))
 
 (method! tproc 'core-call (=> (PROC MSG)
   (define SPROC Void)
@@ -410,8 +409,10 @@
     (if (and (specified? INNB) (!= INNB INNB2))
       (error "proc<" (: PROC 'UID) ">::RL++ : wrong INNB"))
     (:= MSG 'INNB INNB2)
+    (set! MSG (copy-tree MSG)) ;; TODO: verify it's necessary
     (sign MSG (: PROC 'USER) 'SIGN_E)
-    (:+ PROC 'IN! MSG)))
+    (:+ PROC 'IN! MSG)
+    MSG))
 
 (define (proc-send-acks PROC PROCG MSG)
   (define PEER (filter (=> (UID)
@@ -498,7 +499,7 @@
   (^ 'core-call PROC MSG)
   (if (not (list-in? 'volatile DESCR))
   (begin
-    (proc-replay-list++ PROC MSG)
+    (set! MSG (proc-replay-list++ PROC MSG))
     (proc-RSM-acks PROC MSG)))))
 
 ;; Stepping (hosts)
@@ -612,4 +613,5 @@
     (error "host-proc! : not a physical host proc"))
   (set! _HOSTPROC PROC))
 
-(host-proc! (procph 'USER 'system)) ;; TODO: see if "system" is ok, as an identity
+(host-proc! (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
+                    'UID 'phys))

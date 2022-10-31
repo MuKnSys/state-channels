@@ -40,7 +40,9 @@
 
 ;; Encryption & identities
 (define (sign O UID VAR)
-  (:+ O VAR UID '(sign)))
+  (if (not (and (list? (: O VAR))
+                (list-in? UID (: O VAR)))) ;; TODO: check this
+    (:+ O VAR UID '(sign))))
 
 (define (sign:+ . L) ;; TODO: clean all that
   (define RES (car L))
@@ -184,10 +186,11 @@
 
 (define (net-resolve-group NAME) ;; Groups are always local
   (define RES Void)              ;; TODO: clean this & find a way to move that to procs.ss
-  (hash-for-each (=> (ID PR)
-                   (if (== (: PR 'UID) NAME)
-                     (set! RES PR)))
-     (: (: (current-proch) 'SCHED) 'ALLPROCS))
+  (if (proch? (current-proch))
+    (hash-for-each (=> (ID PR)
+                     (if (== (: PR 'UID) NAME)
+                       (set! RES PR)))
+       (: (: (current-proch) 'SCHED) 'ALLPROCS)))
   (if (not (procg? RES))
     (set! RES False))
   RES)
@@ -196,6 +199,8 @@
   (define RES Void)
   (if (proc? NAME)
     (set! NAME (: NAME 'UID)))
+  (if (or (not NAME) (unspecified? NAME))
+    (error "net-resolve"))
   (set! RES (hash-ref (current-network) NAME))
   (if (not RES)
     (set! RES (net-resolve-group NAME)))
