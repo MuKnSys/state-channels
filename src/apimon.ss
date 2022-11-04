@@ -330,8 +330,7 @@
         (outraw "No current host proc")
         (outraw (: UID 'ID))))))
 
-(define (_sc . UID) ;; FIXME: use (proc-group)
-  (error "_sc")
+(define (_sc NAME . UID)
   (let* ((LP (map (=> (NAME)
                       (if (specified? NAME)
                         (if (== NAME "_")
@@ -340,11 +339,11 @@
                             (if P
                               P
                               (outraw (string+ "Proc " NAME " is not on the net")))))))
-                   UID)))
-    (map (=> (PR)
-           (:= PR 'FROM (car LP))
-           (:= PR 'PEER (list-copy (cdr UID))))
-         (cdr LP))))
+                   UID))
+         (RES (apply proc-group LP)))
+    (:= RES 'UID NAME)
+    (:= RES 'USER "nobody")
+    RES))
 
 (define (_prstop UID)
   (define PR (net-resolve UID))
@@ -371,8 +370,8 @@
 (define (_prs* UID)
   (define PR (net-resolve UID))
   (if PR
-    (while (not (nil? (: PR 'INPTR)))
-      (^ 'step PR))
+    (while (and (step PR) (== (: PR 'STATE) 'Active))
+      (noop))
     (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_lsp)
@@ -492,7 +491,7 @@
 (apimon '("cpr" "iam" "whoami") _cpr '(str) 'VARGS True)
 (apimon "chost" _cprh '(str) 'VARGS True)
 
-(apimon '("_sc!" "join") _sc '(str str str str) 'VARGS True)
+(apimon '("_sc!" "join") _sc '(str str str str str) 'VARGS True)
 (apimon "stop" _prstop '(str))
 (apimon "unstop" _prunstop '(str))
 (apimon '("prs" "step") _prs '(str))

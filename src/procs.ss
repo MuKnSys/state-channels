@@ -423,12 +423,14 @@
  ;(outraw " to ")
  ;(outraw PEER)
  ;(cr)
-  (set! MSG (copy-tree MSG))
-  (:= MSG 'ACK True)
-  (for-each (=> (PROC)
-              (set! PROC (net-resolve PROC))
-              (net-send MSG PROC))
-            PEER))
+  (if (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when the message was already sent from FROM
+  (begin
+    (set! MSG (copy-tree MSG))
+    (:= MSG 'ACK True)
+    (for-each (=> (PROC)
+                (set! PROC (net-resolve PROC))
+                (net-send MSG PROC))
+              PEER))))
 
 ;; ATTENTION: __UNICITÉ DE LA REPLAY LIST__
 ;; Il faut au moins que:
@@ -444,7 +446,7 @@
 ;; => VÉRIFIER tout ca.
 (define (proc-await-cond PROC MSG PEER)
   (=> (PROC . DOIT)
-    (define IN (: PROC 'IN)) ;; TODO: search inside only the non-processed inputs (?)
+    (define IN (: PROC 'INPTR)) ;; TODO: verify that searching inside only the non-processed inputs actually always works
     (define RES True)
     (define ACKL (empty))
    ;(outraw "Checking condition on ")
@@ -464,16 +466,16 @@
                   (set! RES False)
                   (rcons ACKL ACKM)))
               PEER)
-    ;(outraw " ")
-    ;(outraw (if RES "OK" "FAIL"))
-    ;(cr)
-     (if (and RES (not (empty? DOIT)) (car DOIT))
-       (let* ((MSG0 (list-get (: PROC 'IN!) (: MSG 'INNB))))
-         (for-each (=> (MSG)
-                     (sign:+ MSG0 MSG))
-                   ACKL)
-         (:= MSG0 'ACK* (signed-all? MSG0))))
-     RES))
+   ;(outraw " ")
+   ;(outraw (if RES "OK" "FAIL"))
+   ;(cr)
+    (if (and RES (not (empty? DOIT)) (car DOIT))
+      (let* ((MSG0 (list-get (: PROC 'IN!) (: MSG 'INNB))))
+        (for-each (=> (MSG)
+                    (sign:+ MSG0 MSG))
+                  ACKL)
+        (:= MSG0 'ACK* (signed-all? MSG0))))
+    RES))
 
 (define (proc-await-acks PROC PROCG MSG)
   (define PEER (filter (=> (UID)

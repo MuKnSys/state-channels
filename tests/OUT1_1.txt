@@ -89,7 +89,6 @@ out:
 PR2 dupont ^?
 in:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
- *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
 rl:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m[39;49m
 out:
@@ -97,7 +96,6 @@ PR3 durand ^
 in:
  *<0 _>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m!![39;49m
-  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
 rl:
 out:
 =>
@@ -122,7 +120,6 @@ out:
 PR2 dupont ^?
 in:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
- *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
 rl:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m[39;49m
 out:
@@ -130,7 +127,6 @@ PR3 durand ^
 in:
  *<0 _>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m!![39;49m
-  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
 rl:
 out:
 ---
@@ -146,8 +142,7 @@ out:
 PR2 dupont ^?
 in:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
- *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
-  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith durand)[31;49m!![39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith durand)[31;49m!![39;49m
 rl:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m[39;49m
 out:
@@ -155,7 +150,6 @@ PR3 durand ^?
 in:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
  *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m!![39;49m
-  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
 rl:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith durand)[31;49m[39;49m
 out:
@@ -182,8 +176,7 @@ out:
 PR2 dupont ^?
 in:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
- *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
-  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith durand)[31;49m!![39;49m
+ *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith durand)[31;49m!![39;49m
 rl:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m[39;49m
 out:
@@ -191,7 +184,6 @@ PR3 durand ^?
 in:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m[39;49m
  *<0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith dupont)[31;49m!![39;49m
-  <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith)[31;49m!![39;49m
 rl:
   <0 0>transfer PR1=>GR1 (dupont 5) ([31;49mS[39;49m smith durand)[31;49m[39;49m
 out:

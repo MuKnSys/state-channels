@@ -15,15 +15,15 @@
 (if (< (list-length L) 2)
   (error "clish <PROG> [SCRIPT] expected"))
 
-(define CWD (string+ (dirname (list-ref L 0)) "/.."))
-(define PROG (string+ CWD "/examples/" (list-ref L 1) ".ss"))
+(define PROG (string+ "../examples/" (list-ref L 1) ".ss"))
+(define PROGFP (string+ (dirname (_getcf)) "/" PROG))
 
 (define SCRIPT False)
 (if (> (list-length L) 2)
-  (set! SCRIPT (string+ CWD "/examples/" (list-ref L 2) ".scsh")))
+  (set! SCRIPT (string+ (dirname (_getcf)) "/../examples/" (list-ref L 2) ".scsh")))
 
-(if (not (file-exists? PROG))
-  (error "File " PROG " not found"))
+(if (not (file-exists? PROGFP))
+  (error "File " PROGFP " not found"))
 
 (if (and SCRIPT (not (file-exists? SCRIPT)))
   (error "File " SCRIPT " not found"))

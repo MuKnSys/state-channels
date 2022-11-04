@@ -114,6 +114,9 @@
 (define (close-pipe)
   (error "close-pipe: !Yet"))
 
+(define (_getcf) ;; FIXME: not exactly the current source file ; (import) should keep this info updated
+  (list-ref (command-line) 0))
+
 ;; Paths
 ;(define (path-normalize PATH) ;; TODO: throw this away
 ;  (string-trim-right (path-expand PATH) #\/))
@@ -132,19 +135,19 @@
   (set! PRGPATH (if (not (null? PRGPATH)) (car PRGPATH) #f))
   (if PRGPATH
   (begin
-     (set! FNAME (path-normalize FNAME))
-     (set! PRGPATH (path-normalize PRGPATH))
-     (set! FNAME (string-split FNAME #\/))
-     (set! PRGPATH (string-split PRGPATH #\/))
-     (while (equal? (car FNAME) (car PRGPATH))
-     (begin
-       (set! FNAME (cdr FNAME))
-       (set! PRGPATH (cdr PRGPATH))))
-     (while (> (length PRGPATH) 1)
-     (begin
-       (set! FNAME (cons ".." FNAME))
-       (set! PRGPATH (cdr PRGPATH))))
-     (set! FNAME (string-join FNAME "/"))))
+    (set! PRGPATH (path-normalize PRGPATH))
+    (set! FNAME (path-normalize (string-append (dirname PRGPATH) "/" FNAME)))
+    (set! FNAME (string-split FNAME #\/))
+    (set! PRGPATH (string-split PRGPATH #\/))
+    (while (equal? (car FNAME) (car PRGPATH))
+    (begin
+      (set! FNAME (cdr FNAME))
+      (set! PRGPATH (cdr PRGPATH))))
+    (while (> (length PRGPATH) 1)
+    (begin
+      (set! FNAME (cons ".." FNAME))
+      (set! PRGPATH (cdr PRGPATH))))
+    (set! FNAME (string-join FNAME "/"))))
   (set! FNAME (string->symbol FNAME))
   (eval `(import ,FNAME) (interaction-environment)))
 

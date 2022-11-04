@@ -1,0 +1,358 @@
+> 
+> # Initializing everything
+> proch system HOST1
+> chost HOST1
+> $MP1 ! micropay bob 10 carol 10 dave 10
+> $MP2 ! micropay bob 10 carol 10 dave 10
+> $MP3 ! micropay bob 10 carol 10 dave 10
+> proc bob SC1 $MP1
+> proc carol SC2 $MP2
+> proc dave SC3 $MP3
+> join GR1 _ SC1 SC2 SC3
+> 
+> # We start with 3 procs/ledgers, each containing $10, joined
+> #                                       [ in a state channel
+> netlist
+  PID      NAME   USER    PEER                 SELF       
+  0^       SC1    bob     ("SC1" "SC2" "SC3")  @micropay@0
+  0procg^  GR1    nobody  (_)                  _          
+  0h^      HOST1  system  (_)                  _          
+  0ph_     phys   system  (_)                  _          
+  1^       SC2    carol   ("SC1" "SC2" "SC3")  @micropay@1
+  2^       SC3    dave    ("SC1" "SC2" "SC3")  @micropay@2
+  6 procs
+> 
+> state SC1
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 10
+      dave = 10
+> 
+> state SC2
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 10
+      dave = 10
+> 
+> state SC3
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 10
+      dave = 10
+> 
+> # Expansion of a replicated call
+> netlist SC1
+  SC1 bob ^
+  in:
+  rl:
+  out:
+> 
+> iam SC1
+> GR1 ^ transfer carol 2
+> step SC1
+> netlist SC1
+  SC1 bob ^
+  in:
+   *<0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> netlist SC2
+  SC2 carol ^
+  in:
+   *<0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+  out:
+> 
+> state SC1
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 10
+      dave = 10
+> 
+> # Initial broadcast
+> step SC1
+> netlist SC1
+  SC1 bob ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> state SC1
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 8
+      carol = 12
+      dave = 10
+> 
+> netlist SC2
+  SC2 carol ^
+  in:
+   *<0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+  out:
+> 
+> netlist SC3
+  SC3 dave ^
+  in:
+   *<0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+  out:
+> 
+> # Replicated eval & ack (1)
+> state SC2
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 10
+      dave = 10
+> 
+> step SC2
+> netlist SC2
+  SC2 carol ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m[39;49m
+  out:
+> 
+> state SC2
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 8
+      carol = 12
+      dave = 10
+> 
+> netlist SC1
+  SC1 bob ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> netlist SC3
+  SC3 dave ^
+  in:
+   *<0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+  rl:
+  out:
+> 
+> # Replicated eval & ack (2)
+> state SC3
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 10
+      dave = 10
+> 
+> step SC3
+> netlist SC3
+  SC3 dave ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m[39;49m
+  out:
+> 
+> state SC3
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 8
+      carol = 12
+      dave = 10
+> 
+> netlist SC1
+  SC1 bob ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> netlist SC2
+  SC2 carol ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m[39;49m
+  out:
+> 
+> # Validation of the local consensus
+> netlist SC1
+  SC1 bob ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> step SC1
+> netlist SC1
+  SC1 bob ^
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> step SC1
+> step SC1
+> netlist SC1
+  SC1 bob ^
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> netlist SC2
+  SC2 carol ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m[39;49m
+  out:
+> 
+> step SC2
+> step SC2
+> netlist SC2
+  SC2 carol ^
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+  out:
+> 
+> netlist SC3
+  SC3 dave ^?
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m[39;49m
+  out:
+> 
+> step SC3
+> step SC3
+> netlist SC3
+  SC3 dave ^
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+  out:
+> 
+> # Second transfer
+> iam SC2
+> GR1 ^ transfer dave 7
+> step* SC2
+> step* SC1
+> step* SC3
+> 
+> step* SC2
+> step* SC1
+> step* SC3
+> 
+> netlist SC1
+  SC1 bob ^
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol bob dave)[31;49m!*[39;49m
+  out:
+    <0 _>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> netlist SC2
+  SC2 carol ^
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol bob)[31;49m!![39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol dave)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol bob dave)[31;49m!*[39;49m
+  out:
+    <0 _>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m[39;49m
+> 
+> netlist SC3
+  SC3 dave ^
+  in:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol bob)[31;49m!![39;49m
+  rl:
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol dave bob)[31;49m!*[39;49m
+  out:
+> 
+> state SC1
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 8
+      carol = 5
+      dave = 17
+> 
+> state SC2
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 8
+      carol = 5
+      dave = 17
+> 
+> state SC3
+  @micropay
+    STATE = Started
+    ACCOUNT = @rexpr
+      bob = 8
+      carol = 5
+      dave = 17
+> 
+> # Quitting
+> q

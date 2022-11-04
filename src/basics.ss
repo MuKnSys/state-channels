@@ -13,7 +13,7 @@
 
 ;; Error
 (define ERRORCATCH #t)
-(define (error . MSG)
+(define (error_ . MSG)
   (for-each (=> (X)
               (display X))
             MSG)
@@ -22,6 +22,7 @@
     (cr)
     (_error)))
   (exit2))
+(set! error error_) ;; FIXME: shitty hack due to the way Guile seems to prevent redefining (error)
 
 (define (catch-all F)
   (if (not ERRORCATCH)
@@ -245,6 +246,15 @@
               (hash-set! H E 1))
             L)
   (reverse RES))
+
+(define (list-copy-until L PTR)
+  (define RES '())
+  (if (or (unspecified? PTR) (nil? PTR))
+    (set! RES (list-copy L))
+    (while (!= L PTR)
+      (set! RES (cons (car L) RES))
+      (set! L (cdr L))))
+  RES)
 
 ;; Queues
 (define (queue)
