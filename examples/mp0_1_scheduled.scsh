@@ -1,5 +1,7 @@
 
 # Initializing everything
+proch system HOST1
+chost HOST1
 $W1 ! wallet bob 15
 $W2 ! wallet carol 14
 proc bob WALLET1 $W1
@@ -18,9 +20,7 @@ state WALLET2
 iam WALLET1
 WALLET1 ^ transfer 2 WALLET2
 
-netlist WALLET1
-
-# Run all
+# Run
 run
 netlist WALLET1
 

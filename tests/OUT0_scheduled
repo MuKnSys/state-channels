@@ -1,0 +1,66 @@
+> 
+> # Initializing everything
+> proch system HOST1
+> chost HOST1
+> $W1 ! wallet bob 15
+> $W2 ! wallet carol 14
+> proc bob WALLET1 $W1
+> proc carol WALLET2 $W2
+> 
+> # We start with 2 procs/wallets, containing $15 and $14,
+> #                                         [ respectively
+> netlist
+  PID   NAME     USER    PEER  SELF     
+  0^    WALLET1  bob     (_)   @wallet@0
+  0h^   HOST1    system  (_)   _        
+  0ph_  phys     system  (_)   _        
+  1^    WALLET2  carol   (_)   @wallet@1
+  4 procs
+> 
+> state WALLET1
+  @wallet
+    USER = bob
+    BALANCE = 15
+> 
+> state WALLET2
+  @wallet
+    USER = carol
+    BALANCE = 14
+> 
+> # Bob sends a transfer() message to his wallet, to tell it to
+> #                                          [ send $2 to Carol
+> iam WALLET1
+> WALLET1 ^ transfer 2 WALLET2
+> 
+> # Run
+> run
+> netlist WALLET1
+  WALLET1 bob ^
+  in:
+    <0 0>transfer WALLET1=>WALLET1 (2 WALLET2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+    <0 0>transfer WALLET1=>WALLET1 (2 WALLET2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  out:
+    <0 _>transfer WALLET1=>WALLET1 (2 WALLET2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <1 _>receive WALLET1=>WALLET2 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+> 
+> netlist WALLET2
+  WALLET2 carol ^
+  in:
+    <1 0>receive WALLET1=>WALLET2 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+  rl:
+    <1 0>receive WALLET1=>WALLET2 (2) ([31;49mS[39;49m bob carol)[31;49m[39;49m
+  out:
+> 
+> state WALLET1
+  @wallet
+    USER = bob
+    BALANCE = 13
+> 
+> state WALLET2
+  @wallet
+    USER = carol
+    BALANCE = 16
+> 
+> # Quitting
+> q
