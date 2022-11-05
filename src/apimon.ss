@@ -62,14 +62,14 @@
     (lstsign SIGN_E) ;;(>> SIGN_E 'Raw)
     (color-red)
     (if (not RESULT)
-      (outraw " FAIL")
+      (outraw " FAIL"))
     (if ACK*
       (outraw "!*")
     (if ACK
       (outraw "!!")
     (if (: C 'REDIR)
       (outraw "!>>")))))
-    (color-white)))
+    (color-white))
 
 (define (lstcalls L . PTR)
   (set! PTR (if (empty? PTR) Nil (car PTR)))

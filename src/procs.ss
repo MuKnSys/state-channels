@@ -231,18 +231,42 @@
     (if (unspecified? SELF)
       (error "proc<" (: PROC 'UID) ">::call : no SELF"))
     (if (fname-isret? FNAME)
-      (let* ((FROM (: PROC 'FROM))
+      (let* ((FROM (: (: PROC 'GROUP) 'PARENT))
              (CALL (car PARM))) ;; FIXME: should ensure the same return is not evaluated 2 times
         (if (unspecified? FROM)
-          (error "proc.call : return without FROM"))
+          (error "proc.call : return without FROM " (: PROC 'UID)))
         (if (string? CALL)
           (set! CALL (string->number CALL)))
-        (set! CALL (copy-tree (list-get (: FROM 'IN!) CALL)))
-        (:= CALL 'PARM (cdr (mvparms (: CALL 'FUNC)
-                                     (cons (: (net-resolve (: CALL 'TO)) 'SELF)
-                                           (: CALL 'PARM)))))
-        (apply ^? `(,FNAME ,SELF . (,CALL))))
+        (let* ((CALL0 CALL))
+          (set! CALL (list-get (: FROM 'IN!) CALL))
+          (if (unspecified? CALL)
+            (error "tproc::call::isret " (: FROM 'UID) ".rl[" CALL0 "] : no such call"))
+          (set! CALL (copy-tree CALL))
+          (:= CALL 'PARM (cdr (mvparms (: CALL 'FUNC)
+                                       (cons (: (net-resolve (: CALL 'TO)) 'SELF)
+                                             (: CALL 'PARM)))))
+          (apply ^? `(,FNAME ,SELF . (,CALL)))))
       (apply ^? `(,FNAME ,SELF . ,PARM))))))
+
+(method! tproc 'sync (=> (PROC)
+  (define RETS (map (=> (CALL)
+                      (number (car (: CALL 'PARM))))
+                    (filter (=> (CALL)
+                              (and (fname-isret? (: CALL 'FUNC))
+                                   (not (: CALL 'ACK))))
+                            (: PROC 'OUT))))
+  (define RL0 Void)
+  (define MASTER (: (: PROC 'GROUP) 'PARENT))
+  (if (and (specified? MASTER) (not (boxed-empty? (: MASTER 'IN!))))
+  (begin
+    (set! RL0 (filter (=> (CALL)
+                        (not (list-in? (cadr CALL) RETS)))
+                      (map (=> (CALL)
+                             `(,(: CALL 'FUNC) ,(: CALL 'INNB)))
+                           (: MASTER 'IN!))))
+    (for-each (=> (CALL)
+                (^ 'send (: PROC 'GROUP) (sy (string+ (string (car CALL)) "/return")) (cadr CALL)))
+              RL0)))))
 
 ;; Map
 (method! tproc 'prog! (=> (PROC O) ;; Set the proc's servlet
@@ -423,7 +447,8 @@
  ;(outraw " to ")
  ;(outraw PEER)
  ;(cr)
-  (if (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when the message was already sent from FROM
+  (if (or (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when message already sent from FROM
+          (not (: MSG 'RESULT))) ;; FIXME: hack to nullify failed replicated messages ; only works in simple cases
   (begin
     (set! MSG (copy-tree MSG))
     (:= MSG 'ACK True)
@@ -444,6 +469,16 @@
 ;;     besoin de forger le message avec INNB, il suffit que le master choisisse le message
 ;;     du player avec qui il collude) ;
 ;; => VÉRIFIER tout ca.
+(define (msg-find Q FROM OUTNB INNB ACK RESULT USER)
+  (list-find (=> (MSG2)
+    (and (or (unspecified? FROM) (== FROM (: MSG2 'FROM)))
+         (or (unspecified? OUTNB) (== OUTNB (: MSG2 'OUTNB)))
+         (or (unspecified? INNB) (== INNB (: MSG2 'INNB)))
+         (or (unspecified? ACK) (== ACK (: MSG2 'ACK)))
+         (or (unspecified? RESULT) (== RESULT (: MSG2 'RESULT)))
+         (or (unspecified? USER) (signed-by? MSG2 USER))))
+    Q))
+
 (define (proc-await-cond PROC MSG PEER)
   (=> (PROC . DOIT)
     (define IN (: PROC 'INPTR)) ;; TODO: verify that searching inside only the non-processed inputs actually always works
@@ -454,14 +489,14 @@
     (for-each (=> (UID)
                 (define PR (net-map UID)) ;; FIXME: how are we sure that PR.USER is not hackeable ???
                 (define ACKM Void)
-                (set! ACKM (list-find (=> (MSG2)
-                             (and (== (: MSG 'FROM) (: MSG2 'FROM))
-                                  (== (: MSG 'OUTNB) (: MSG2 'OUTNB))
-                                  (specified? (: MSG 'INNB))
-                                  (== (: MSG 'INNB) (: MSG2 'INNB))
-                                  (: MSG2 'ACK)
-                                  (signed-by? MSG2 (: PR 'USER))))
-                             IN))
+                (if (specified? (: MSG 'INNB))
+                  (set! ACKM (msg-find IN
+                                       (: MSG 'FROM)
+                                       (: MSG 'OUTNB)
+                                       (: MSG 'INNB)
+                                       True
+                                       Void
+                                       (: PR 'USER))))
                 (if (unspecified? ACKM)
                   (set! RES False)
                   (rcons ACKL ACKM)))
@@ -494,15 +529,21 @@
   (if (procg? PROCG)
   (begin
     (proc-send-acks PROC PROCG MSG)
-    (proc-await-acks PROC PROCG MSG))))
+    (if (: MSG 'RESULT) ;; FIXME: hack to make things simpler ; but in fact, in case of FAIL too, there should be full ACK handshake
+      (proc-await-acks PROC PROCG MSG)))))
 
 (method! tprocl 'core-call-RSM (=> (PROC MSG) ;; TODO: when MSG.TO is a group, verify that PROC belongs to it
   (define DESCR (method-descr (typeof (: PROC 'SELF)) (: MSG 'FUNC)))
-  (^ 'core-call PROC MSG)
-  (if (not (list-in? 'volatile DESCR))
-  (begin
-    (set! MSG (proc-replay-list++ PROC MSG))
-    (proc-RSM-acks PROC MSG)))))
+  (define MSGF (msg-find (: PROC 'IN) (: MSG 'FROM) (: MSG 'OUTNB) Void True False Void))
+  (if (specified? MSGF) ;; FIXME: hack to make failed RSM calls simpler
+    (:= MSG 'RESULT False)
+    (begin
+      (^ 'core-call PROC MSG)
+      (if (not (list-in? 'volatile DESCR))
+      (begin
+        (if (: MSG 'RESULT)
+          (set! MSG (proc-replay-list++ PROC MSG)))
+        (proc-RSM-acks PROC MSG)))))))
 
 ;; Stepping (hosts)
 (method! tproch 'step (=> (PROC)

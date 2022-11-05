@@ -1,5 +1,7 @@
 
 # Initializing everything
+proch system HOST1
+chost HOST1
 $MP0 ! cmicropay bob carol dave
 $MP1 ! micropay bob 0 carol 0 dave 0
 $MP2 ! micropay bob 0 carol 0 dave 0
@@ -13,7 +15,7 @@ proc dave SC3 $MP3
 #           [ channel, with a master process in the blockchain,
 #           [ containing the validated balances (also empty at
 #                                                      [ start)
-join SC0 SC1 SC2 SC3
+join GR1 SC0 SC1 SC2 SC3
 netlist
 
 state SC0
@@ -31,9 +33,9 @@ iam SC2
 SC0 ^ transfer carol 10
 iam SC3
 SC0 ^ transfer dave 10
-step SC0
-step SC0
-step SC0
+step SC1
+step SC2
+step SC3
 
 netlist SC1
 
@@ -43,11 +45,16 @@ netlist SC3
 
 netlist SC0
 
+step SC0
+step SC0
+step SC0
+
 state SC0
 
 # Trying a start action on SC1
 iam SC1
-* ^ start
+GR1 ^ start
+step SC1
 netlist SC1
 
 state SC1
@@ -58,7 +65,8 @@ netlist SC1
 state SC1
 
 # Downloading the players' balances in the state channel (1)
-* ^ transfer/return 0
+GR1 ^ transfer/return 0
+step SC1
 netlist SC1
 
 step SC1
@@ -69,7 +77,34 @@ netlist SC2
 netlist SC3
 
 step SC2
+step SC2
+step SC2
 netlist SC2
+
+state SC1
+
+state SC2
+
+state SC3
+
+netlist SC1
+netlist SC3
+
+step SC1
+step SC3
+step SC3
+step SC3
+step SC3
+step SC3
+step SC1
+step SC1
+step SC1
+step SC2
+step SC2
+
+netlist SC1
+netlist SC2
+netlist SC3
 
 state SC1
 
@@ -79,41 +114,137 @@ state SC3
 
 # Downloading the players' balances in the state channel (2)
 netlist SC1
+ 
+sync SC1
+netlist SC1
+netlist SC2
+netlist SC3
+step SC1
+netlist SC1
+netlist SC2
+netlist SC3
 
 sync SC1
 netlist SC1
-
-sync SC1
-netlist SC1
+netlist SC2
+netlist SC3
 
 # Updating all the balances in SC1
 step SC1
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC1
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC2
+step SC3
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC1
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC2
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC3
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC1
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC2
+step SC3
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC1
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC1
+step SC1
 step SC1
 step SC1
 netlist SC1
+netlist SC2
+netlist SC3
+
+step SC2
+step SC2
+step SC2
+netlist SC1
+netlist SC2
+netlist SC3
+
+step SC3
+step SC3
+step SC3
+netlist SC1
+netlist SC2
+netlist SC3
+
+state SC1
+state SC2
+state SC3
 
 # We can now start
-* ^ start
-state SC1
-
+GR1 ^ start
 step SC1
 netlist SC1
+netlist SC2
+netlist SC3
 
+state SC1
+step SC1
+netlist SC1
 state SC1
 
 netlist SC2
+state SC2
+step SC2
+netlist SC2
+state SC2
 
-# Finishing validating the signatures of transfer/return(0)
 netlist SC3
+state SC3
+step SC3
+netlist SC3
+state SC3
+
+netlist SC1
+
+step SC1 
+step SC1 
+step SC1 
+netlist SC1
+
+# Finishing validating the signatures of start for SC2 & SC3
+netlist SC2
+netlist SC3
+
+step SC2
+step SC2
+netlist SC2
 
 step SC3
 step SC3
 netlist SC3
-
-netlist SC1
-
-step SC1
-netlist SC1
 
 # Quitting
 q
