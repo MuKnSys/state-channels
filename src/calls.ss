@@ -38,6 +38,9 @@
   (:= RES 'REDIR False)
   RES)
 
+(define (call? CALL)
+  (== (typeof CALL) tcall))
+
 ;; Encryption & identities
 (define (sign O UID VAR)
   (if (not (and (list? (: O VAR))
@@ -200,7 +203,7 @@
   (if (proc? NAME)
     (set! NAME (: NAME 'UID)))
   (if (or (not NAME) (unspecified? NAME))
-    (error "net-resolve"))
+    (error "net-resolve " NAME))
   (set! RES (hash-ref (current-network) NAME))
   (if (not RES)
     (set! RES (net-resolve-group NAME)))
@@ -220,7 +223,7 @@
  ;(outraw " ")
  ;(outraw (: PROC 'UID))
  ;(cr)
-  (^ 'post-to PROC (copy-tree MSG))) ;; TODO: send that to the PROC's physical host
+  (^ 'post-to PROC (rexpr-copy MSG))) ;; TODO: send that to the PROC's physical host
 
 (define (net-next)
   Nil)

@@ -420,7 +420,7 @@
               (_lso VAR 1))
             L))
 
-(define (_state . L)
+(define (_statef . L)
   (define FIRST True)
   (for-each (=> (VAR)
               (if FIRST
@@ -431,6 +431,11 @@
                   (rexpr-pretty (: PR 'SELF))
                   (outraw (string+ "Proc " VAR " is not on the net")))))
             L))
+
+(define (_state . L)
+  (set! _PRETTY_OMIT '(WITHDRAW))
+  (apply _statef L)
+  (set! _PRETTY_OMIT '()))
 
 (define (_cobj VAR FUNC . L) ;; Create obj
   (define O Void)
@@ -503,6 +508,7 @@
 (apimon '("lso" "dump") _lso '(str) 'VARGS True)
 (apimon '("lso2" "print") _lso2 '(str) 'VARGS True)
 (apimon "state" _state '(str))
+(apimon "statef" _statef '(str))
 
 (apimon "!" _cobj '(str var any any any any any any any) 'OP True 'VARGS True)
 (apimon "^" _mesg '(str sy any any any any any any any) 'OP True 'VARGS True)

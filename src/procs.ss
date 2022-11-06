@@ -174,6 +174,8 @@
                 (:= PR 'GROUP RES)
               )
               L)
+    (if (proc? FROM)
+      (:= FROM 'GROUP RES)) ;; TODO: hmm, should work, it's unambiguous ... check this
     RES)))
 
 (define (statech . PARM)
@@ -189,7 +191,7 @@
 
 (define (current-proch! PROC)
   (if (not (or (nil? PROC) (== (typeof PROC) tproch)))
-    (error "current-proc! : not a proch" (typeof PROC)))
+    (error "current-proch! : not a proch" (typeof PROC)))
   (set! _CURPROCH PROC))
 
 ;; Current proc
@@ -216,6 +218,16 @@
     (error "sender-proc! : not a proc"))
   (set! _SENDPROC PROC))
 
+;; Current call
+(define _CURCALL Nil)
+(define (current-call)
+  _CURCALL)
+
+(define (current-call! MSG)
+  (if (not (or (nil? MSG) (call? MSG)))
+    (error "current-call! : not a call"))
+  (set! _CURCALL MSG))
+
 ;; Call
 (define (fname-isret? F)
   (set! F (string F))
@@ -237,24 +249,32 @@
           (error "proc.call : return without FROM " (: PROC 'UID)))
         (if (string? CALL)
           (set! CALL (string->number CALL)))
-        (let* ((CALL0 CALL))
+        (let* ((CALL0 CALL)
+               (PR Void))
           (set! CALL (list-get (: FROM 'IN!) CALL))
           (if (unspecified? CALL)
             (error "tproc::call::isret " (: FROM 'UID) ".rl[" CALL0 "] : no such call"))
-          (set! CALL (copy-tree CALL))
+          (set! CALL (rexpr-copy CALL))
+          (set! PR (net-resolve (: CALL 'TO)))
+          (if (procg? PR)
+            (set! PR (car (: PR 'PEER))))
+          (if (not (proc? PR))
+            (set! PR (net-resolve PR)))
+          (if (not (proc? PR))
+            (error "proc.call : no receiver process"))
           (:= CALL 'PARM (cdr (mvparms (: CALL 'FUNC)
-                                       (cons (: (net-resolve (: CALL 'TO)) 'SELF)
+                                       (cons (: PR 'SELF)
                                              (: CALL 'PARM)))))
           (apply ^? `(,FNAME ,SELF . (,CALL)))))
       (apply ^? `(,FNAME ,SELF . ,PARM))))))
 
-(method! tproc 'sync (=> (PROC)
+(method! tproc 'sync (=> (PROC) ;; FIXME: in case of replicated call, all the group's processes should be able to sync
   (define RETS (map (=> (CALL)
                       (number (car (: CALL 'PARM))))
                     (filter (=> (CALL)
                               (and (fname-isret? (: CALL 'FUNC))
                                    (not (: CALL 'ACK))))
-                            (: PROC 'OUT))))
+                            (: PROC 'IN))))
   (define RL0 Void)
   (define MASTER (: (: PROC 'GROUP) 'PARENT))
   (if (and (specified? MASTER) (not (boxed-empty? (: MASTER 'IN!))))
@@ -357,15 +377,20 @@
   (if (not SPROC)
     (error "proc<" (: MSG 'FROM) ">::core-call : no sender proc"))
   (sender-proc! SPROC)
+  (current-call! MSG)
   (set! RES (apply ^ `(call ,PROC ,(: MSG 'FUNC) . ,(: MSG 'PARM))))
   (:= MSG 'RESULT RES)
   (sender-proc! Nil)
+  (current-call! Nil)
   RES))
 
 (method! tproc 'post-to (=> (PROC MSG) ;; TODO: discard duplicated MSGs
-  (^ 'in+ PROC MSG)
-  (^ 'update-state PROC)
-  (^ 'schedule PROC)))
+  (define MSGR (msg-find (: PROC 'IN) (: MSG 'FROM) (: MSG 'OUTNB) Void Void Void Void))
+  (if (or (unspecified? MSGR) (: MSG 'ACK))
+  (begin
+    (^ 'in+ PROC MSG)
+    (^ 'update-state PROC)
+    (^ 'schedule PROC)))))
 
 (method! tproc 'core-call-RSM (=> (PROC MSG)
   (error "tproc::core-call-RSM : abstract")))
@@ -411,6 +436,12 @@
  ;(outraw (: PROC 'UID))
  ;(cr)))
 
+(method! tprocg 'post-to-master (=> (PROC MSG)
+  (net-send MSG (net-resolve (: PROC 'PARENT)))))
+ ;(outraw "post-to-master[group] ")
+ ;(outraw (: PROC 'UID))
+ ;(cr)))
+
 (define (method-descr TYPE FNAME)
   (define SLOTTY Void)
   (define DESCR Void)
@@ -418,6 +449,16 @@
     (error "method-descr::no method " FNAME " in " (: TYPE 'NAME)))
   (set! SLOTTY (: TYPE 'SLOTTY))
   (: SLOTTY (sy FNAME)))
+
+(define (proc-master? PROC)
+  (define GROUP (: PROC 'GROUP))
+  (define PARENT Void)
+  (define RES False)
+  (if (proc? GROUP)
+    (set! PARENT (: GROUP 'PARENT)))
+  (if (proc? PARENT)
+    (set! RES (== (: PARENT 'UID) (: PROC 'UID))))
+  RES)
 
 (define (proc-replay-list++ PROC MSG)
  ;(outraw "RL++ ")
@@ -431,9 +472,11 @@
          (INNB2 (list-length (: PROC 'IN!)))
         )
     (if (and (specified? INNB) (!= INNB INNB2))
-      (error "proc<" (: PROC 'UID) ">::RL++ : wrong INNB"))
+      (if (proc-master? PROC)
+        (noop)
+        (error "proc<" (: PROC 'UID) ">::RL++ : wrong INNB")))
     (:= MSG 'INNB INNB2)
-    (set! MSG (copy-tree MSG)) ;; TODO: verify it's necessary
+    (set! MSG (rexpr-copy MSG)) ;; TODO: verify it's necessary
     (sign MSG (: PROC 'USER) 'SIGN_E)
     (:+ PROC 'IN! MSG)
     MSG))
@@ -450,7 +493,7 @@
   (if (or (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when message already sent from FROM
           (not (: MSG 'RESULT))) ;; FIXME: hack to nullify failed replicated messages ; only works in simple cases
   (begin
-    (set! MSG (copy-tree MSG))
+    (set! MSG (rexpr-copy MSG))
     (:= MSG 'ACK True)
     (for-each (=> (PROC)
                 (set! PROC (net-resolve PROC))
@@ -470,14 +513,18 @@
 ;;     du player avec qui il collude) ;
 ;; => VÉRIFIER tout ca.
 (define (msg-find Q FROM OUTNB INNB ACK RESULT USER)
-  (list-find (=> (MSG2)
-    (and (or (unspecified? FROM) (== FROM (: MSG2 'FROM)))
-         (or (unspecified? OUTNB) (== OUTNB (: MSG2 'OUTNB)))
-         (or (unspecified? INNB) (== INNB (: MSG2 'INNB)))
-         (or (unspecified? ACK) (== ACK (: MSG2 'ACK)))
-         (or (unspecified? RESULT) (== RESULT (: MSG2 'RESULT)))
-         (or (unspecified? USER) (signed-by? MSG2 USER))))
-    Q))
+  (if (boxed-empty? Q)
+    Void
+    (list-find (=> (MSG2)
+      (if (not (call? MSG2))
+        (error "msg-find"))
+      (and (or (unspecified? FROM) (== FROM (: MSG2 'FROM)))
+           (or (unspecified? OUTNB) (== OUTNB (: MSG2 'OUTNB)))
+           (or (unspecified? INNB) (== INNB (: MSG2 'INNB)))
+           (or (unspecified? ACK) (== ACK (: MSG2 'ACK)))
+           (or (unspecified? RESULT) (== RESULT (: MSG2 'RESULT)))
+           (or (unspecified? USER) (signed-by? MSG2 USER))))
+      Q)))
 
 (define (proc-await-cond PROC MSG PEER)
   (=> (PROC . DOIT)
@@ -505,11 +552,14 @@
    ;(outraw (if RES "OK" "FAIL"))
    ;(cr)
     (if (and RES (not (empty? DOIT)) (car DOIT))
-      (let* ((MSG0 (list-get (: PROC 'IN!) (: MSG 'INNB))))
+      (let* ((MSG0 (list-get (: PROC 'IN!) (: MSG 'INNB)))
+             (DESCR (method-descr (typeof (: PROC 'SELF)) (: MSG0 'FUNC))))
         (for-each (=> (MSG)
                     (sign:+ MSG0 MSG))
                   ACKL)
-        (:= MSG0 'ACK* (signed-all? MSG0))))
+        (:= MSG0 'ACK* (signed-all? MSG0))
+        (if (and (: MSG0 'ACK*) (list-in? 'committed DESCR))
+          (^ 'post-to-master (: PROC 'GROUP) MSG0))))
     RES))
 
 (define (proc-await-acks PROC PROCG MSG)
@@ -543,14 +593,19 @@
       (begin
         (if (: MSG 'RESULT)
           (set! MSG (proc-replay-list++ PROC MSG)))
-        (proc-RSM-acks PROC MSG)))))))
+        (if (not (proc-master? PROC))
+          (proc-RSM-acks PROC MSG))))))))
 
 ;; Stepping (hosts)
+(define _STEPNO 0)
 (method! tproch 'step (=> (PROC)
   (define (logit PROC)
     (if (trace-steps)
     (begin
       (outraw "!Stepping ")
+      (outraw _STEPNO)
+      (outraw " ")
+      (set! _STEPNO (+ _STEPNO 1))
       (outraw (: PROC 'UID))
       (cr))))
   (define RES False)

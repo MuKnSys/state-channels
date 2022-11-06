@@ -1,0 +1,143 @@
+
+# Initializing everything
+proch system HOST1
+chost HOST1
+$MP0 ! cmicropay bob carol dave
+$MP1 ! micropay bob 0 carol 0 dave 0
+$MP2 ! micropay bob 0 carol 0 dave 0
+$MP3 ! micropay bob 0 carol 0 dave 0
+proc blockchain SC0 $MP0
+proc bob SC1 $MP1
+proc carol SC2 $MP2
+proc dave SC3 $MP3
+
+# We start with 3 procs/ledgers, each empty, joined in a state
+#           [ channel, with a master process in the blockchain,
+#           [ containing the validated balances (also empty at
+#                                                      [ start)
+join GR1 SC0 SC1 SC2 SC3
+netlist
+
+state SC0
+
+state SC1
+
+state SC2
+
+state SC3
+
+# Initializing the players' balances in the master/contract
+iam SC1
+SC0 ^ transfer bob 10
+iam SC2
+SC0 ^ transfer carol 10
+iam SC3
+SC0 ^ transfer dave 10
+run
+
+netlist SC1
+
+netlist SC2
+
+netlist SC3
+
+netlist SC0
+
+state SC0
+
+# Trying a start action on SC1
+iam SC1
+GR1 ^ start
+run
+netlist SC1
+
+state SC1
+
+# Downloading the players' balances in the state channel (1)
+GR1 ^ transfer/return 0
+run
+netlist SC1
+
+netlist SC2
+
+netlist SC3
+
+state SC1
+
+state SC2
+
+state SC3
+
+# Downloading the players' balances in the state channel (2)
+netlist SC1
+ 
+sync SC1
+netlist SC1
+run
+
+netlist SC1
+
+netlist SC2
+
+netlist SC3
+
+state SC1
+
+state SC2
+
+state SC3
+
+# We can now start
+GR1 ^ start
+run
+netlist SC1
+
+netlist SC2
+
+netlist SC3
+
+state SC1
+
+state SC2
+
+state SC3
+
+# Bob gives 2 euros to Carol
+iam SC1
+GR1 ^ transfer carol 2
+run
+statef SC1
+
+statef SC2
+
+statef SC3
+
+state SC0
+
+# Carol withdraws 2 euros
+iam SC2
+GR1 ^ withdraw 2
+run
+statef SC1
+
+statef SC2
+
+statef SC3
+
+netlist SC0
+
+state SC0
+
+# Sync-ing the onchain withdraw call
+sync SC2
+run
+netlist SC2
+
+statef SC1
+
+statef SC2
+
+statef SC3
+
+# Quitting
+q

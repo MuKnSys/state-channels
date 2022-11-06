@@ -12,7 +12,7 @@
 (import ./llruntime)
 
 ;; Error
-(define ERRORCATCH #t)
+(define ERRORCATCH #f)
 (define (error_ . MSG)
   (for-each (=> (X)
               (display X))

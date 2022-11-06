@@ -33,13 +33,16 @@ diff -q -U2 OUT1 OUT
 $SRC/clish.ss mp0 mp0_1_scheduled > OUT 2> /dev/null
 diff -q -U2 OUT0_scheduled OUT
 
-# 2 following tests done with Guile
-#   due to the behaviour of htables, not exactly the same with Gerbil
+# Following tests done with Guile
+#   due to the behaviour of htables, not exactly the same as Gerbil's output
 #
 $SRC/clish.ss mp1 mp1_3_scheduled > OUT 2> /dev/null
 diff -q -U2 OUT1_scheduled OUT
 
 $SRC/clish.ss mp2 mp2_3_scheduled > OUT 2> /dev/null
 diff -q -U2 OUT2_scheduled OUT
+
+$SRC/clish.ss mp2 mp3_1_scheduled > OUT 2> /dev/null
+diff -q -U2 OUT3_scheduled OUT
 
 rm -f $TESTS/OUT

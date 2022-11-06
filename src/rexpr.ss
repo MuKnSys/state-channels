@@ -214,6 +214,13 @@
   (if (unspecified? V)
     (rexpr-set! O K V0)))
 
+(define (rexpr-copy O) ;; TODO: __improve__ that S$%T !!!
+  (define TYPE (rexpr-get O 'TYPE))
+  (define RES (copy-tree O))
+  (if (specified? TYPE)
+    (rexpr-set! RES 'TYPE TYPE))
+  RES)
+
 (define (rexpr-add! O K V . LV0)
   (define L (rexpr-get O K))
   (if (specified? L)
@@ -222,7 +229,7 @@
       (error "rexpr-add! :: list expected"))
     (begin
       (if (not (empty? LV0))
-        (set! L (rcons (copy-tree (car LV0)) V)) ;; TODO: put aka. (copy-tree) & (list-copy) in basics.ss
+        (set! L (rcons (rexpr-copy (car LV0)) V)) ;; TODO: put aka. (copy-tree) & (list-copy) in basics.ss
         (set! L `(,V)))
       (rexpr-set! O K L))))
 
@@ -285,6 +292,7 @@
 (define >> rexpr-serialize)
 
 ;; Pretty-printing
+(define _PRETTY_OMIT '()) ;; TODO: implement genuine pretty-printing patterns
 (define (rexpr-pretty O)
   (if (list? O)
     (if (empty? O)
@@ -303,7 +311,8 @@
                         (if (and (pair? ELT) (== (list-length ELT) 2)
                                  (strsy? (car ELT)))
                           (if (and (!= (car ELT) ':TYPE)
-                                   (!= (car ELT) ':ID))
+                                   (!= (car ELT) ':ID)
+                                   (not (list-in? (unattr (car ELT)) _PRETTY_OMIT)))
                             (begin
                               (cr)
                               (outraw (unattr (car ELT)))
@@ -370,7 +379,7 @@
 (define (mvparms F PARM)
   (let* ((TYPE (typeof (car PARM)))
          (PROTO (filter (=> (X)
-                          (not (list-in? X '(volatile logged)))
+                          (not (list-in? X '(volatile logged committed)))
                         )
                         (slotty TYPE F))))
     (if (> (list-length PARM) (list-length PROTO))
