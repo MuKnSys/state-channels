@@ -12,7 +12,14 @@
         ./basics
         ./rexpr ./json
         ./aliases
-        ./calls ./procs
+        ./scheds
+        ./procs
+        ./netp2p
+        ./calls
+        ./procg
+        ./procl
+        ./proch
+        ./procph
         ./eth ;; ./ethprocs
         ./cli ./apimon)
 
@@ -22,8 +29,14 @@
   (import: ./rexpr)
   (import: ./json)
   (import: ./aliases)
-  (import: ./calls)
+  (import: ./scheds)
   (import: ./procs)
+  (import: ./netp2p)
+  (import: ./calls)
+  (import: ./procg)
+  (import: ./procl)
+  (import: ./proch)
+  (import: ./procph)
   (import: ./eth)
  ;(import: ./ethprocs)
   (import: ./cli)

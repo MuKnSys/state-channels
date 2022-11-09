@@ -113,7 +113,7 @@
     (outraw CMD)
     (cr)))
   (let* ((PORT (open-input-pipe CMD)) ;; FIXME: seems (open-input-pipe) doesn't exists in Gerbil ; find a way
-         (S  (read-line PORT))
+         (S (read-line PORT))
          (RES '()))
     (while (not (eof-object? S))
       (set! RES (cons S RES))

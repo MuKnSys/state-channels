@@ -10,7 +10,9 @@
 
 (export #t)
 (import ./rexpr)
-(import ./procs)
+(import ./procl)
+(import ./procg)
+(import ./proch)
 (import ./cli)
 
 ;; Calls
@@ -392,7 +394,7 @@
   (if VAR
     (let* ((O (hash-ref OBJS VAR)))
       (if (not O)
-        (set! O (hash-ref _NET VAR)))
+        (set! O (hash-ref (net-procs) VAR)))
       (if O
         ((if PRETTY rexpr-pretty >>) O)
         (begin
@@ -426,7 +428,7 @@
               (if FIRST
                 (set! FIRST False)
                 (cr))
-              (let* ((PR (hash-ref _NET VAR)))
+              (let* ((PR (hash-ref (net-procs) VAR)))
                 (if PR
                   (rexpr-pretty (: PR 'SELF))
                   (outraw (string+ "Proc " VAR " is not on the net")))))
