@@ -18,7 +18,9 @@
                  '(USER   ;; UID user
                    FROM   ;; UID sender (process)
                    OUTNB  ;; Nth call sent by FROM (stored in OUT) ; only _one_ call per OUTNB
-                   TO     ;; UID receiver (process)
+                   TO     ;; UID receiver (process or group)
+                   TO_    ;; UID receiver (process)
+                   PHYSTO ;; Physical address receiver
                    INNB   ;; Nth (side-effecting) call received by TO
                    FUNC   ;; The function's name
                    PARM   ;; Parameters

@@ -10,6 +10,7 @@
 
 (import ./llruntime
         ./basics
+        ./socks
         ./rexpr ./json
         ./aliases
         ./scheds
@@ -26,6 +27,7 @@
 (export
   (import: ./llruntime)
   (import: ./basics)
+  (import: ./socks)
   (import: ./rexpr)
   (import: ./json)
   (import: ./aliases)

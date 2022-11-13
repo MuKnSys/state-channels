@@ -77,10 +77,54 @@
     Void))
 
 ;; Hosts (physical hosts)
-(define (host-send HOSTID MSG) ;; TODO: also be able to send to hosts on another machine
-  (noop))
- ;(define ADDR (network-addr (current-machine) HOSTID))
- ;(sock-write (host-fsock ADDR) MSG))
+(define (proc-hostph PROC)
+  (define HOST PROC)
+  (define FINI False)
+  (if (not (proc? PROC))
+    (error "proc-hostph"))
+  (while (not FINI)
+    (if (or (procph? HOST) (not (proc? HOST)))
+      (set! FINI True)
+      (set! HOST (: PROC 'HOST))))
+  HOST)
+
+(define _HOST-SOCKS
+        (path-normalize (string+ (dirname (path-normalize (_getcf))) "/../sock")))
+(define (host-phys-socks)
+  _HOST-SOCKS)
+
+(define (host-fsock HOSTID)
+  (path-normalize (string+ (host-phys-socks) "/" HOSTID)))
+
+(define (host-phys-send HOSTA MSG) ;; TODO: also be able to send to hosts on another machine (local at the moment)
+  (define SOCKA Void)
+  (define SOCK Void)
+  (if (not (string? HOSTA))
+    (error "host-phys-send"))
+  (set! SOCKA (host-fsock (addr-host HOSTA)))
+  (catch True (=> ()
+                (set! SOCK (sock-cli SOCKA)))
+              (=> (E . OPT)
+                (error "host-phys-send(2)")))
+  (sock-write SOCK (sexpr-serialize MSG))
+  (sock-close SOCK))
+
+(define (host-send PROC MSG)
+  (if (and (proc? PROC) (not (procph? PROC)))
+    (set! PROC (proc-hostph PROC)))
+  (if (and (string? PROC) (== PROC (: (host-proc) 'HOSTID)))
+    (set! PROC (host-proc)))
+  (if (proc? PROC)
+  (begin
+    (if (not (procph? PROC))
+      (error "host-send"))
+    (if (== (: PROC 'ROLE) 'Core)
+      ((: PROC 'HANDLER) MSG)
+      (host-phys-send (network-addr (current-machine) (: PROC 'HOSTID)) MSG)))
+  (begin
+    (if (not (string? PROC))
+      (error "host-send(2)"))
+    (host-phys-send (network-addr (current-machine) PROC) MSG))))
 
 ;; Networks
 (define tnetwork (type "network"
@@ -153,6 +197,8 @@
   (set! RES (hash-ref (net-procs) NAME))
   (if (not RES)
     (set! RES (net-resolve-group NAME)))
+ ;(if (not RES)
+ ;  (host-send "0" `(resolve ,NAME))) ;; FIXME: need an (host-send) which can return a result
   RES)
 
 (define (net-map NAME) ;; TODO: implement (connect) & downloading the mapping of a proc
@@ -169,7 +215,9 @@
  ;(outraw " ")
  ;(outraw (: PROC 'UID))
  ;(cr)
-  (^ 'post-to PROC (rexpr-copy MSG))) ;; TODO: send that to the PROC's physical host
+  (if (== (: PROC 'ROLE) 'Core)
+    (^ 'post-to PROC MSG)
+    (host-send PROC MSG)))
 
 (define (net-next)
   Nil)

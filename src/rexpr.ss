@@ -13,8 +13,8 @@
 (import ./basics)
 
 (export
-   (import: ./llruntime)
-   (import: ./basics))
+  (import: ./llruntime)
+  (import: ./basics))
 
 ;; Heaps
 (define (heap)
@@ -134,7 +134,7 @@
       (set! LS (list-add (: TY 'SLOT) LS))
       (set! TY (: TY 'INHERITS)))
     LS)
-  (define TYPE0 TYPE)  ;; TODO: make :TYPE attribute virtual, i.e., ((:A 1)(:B 2)) is an rexpr
+  (define TYPE0 TYPE) ;; TODO: make :TYPE attribute virtual, i.e., ((:A 1)(:B 2)) is an rexpr
   (define RES Nil)
   (define INSTNO Nil)
   (if (unspecified? TYPE)
@@ -214,11 +214,17 @@
   (if (unspecified? V)
     (rexpr-set! O K V0)))
 
-(define (rexpr-copy O) ;; TODO: __improve__ that S$%T !!!
+(define (rexpr-copy O . OPT) ;; TODO: __improve__ that S$%T !!! (do that recursively, for example ...)
   (define TYPE (rexpr-get O 'TYPE))
-  (define RES (copy-tree O))
-  (if (specified? TYPE)
-    (rexpr-set! RES 'TYPE TYPE))
+  (define RES Void)
+  (if (type? TYPE)
+    (rexpr-set! O 'TYPE (rexpr-get TYPE 'ID)))
+  (set! RES (copy-tree O))
+  (if (type? TYPE)
+  (begin
+    (rexpr-set! O 'TYPE TYPE)
+    (if (empty? OPT)
+      (rexpr-set! RES 'TYPE TYPE))))
   RES)
 
 (define (rexpr-add! O K V . LV0)
@@ -240,6 +246,36 @@
 (define :+ rexpr-add!)
 
 ;; Parse/serialize
+(define (sexpr-serialize O . OPT)
+  (define RES Void)
+  (if (not (list-in? 'no-unlink OPT))
+    (set! O (rexpr-unlink O)))
+  (set! RES (with-output-to-string (=> ()
+                                     (write O))))
+  (if (not (list-in? 'no-unlink OPT))
+    (set! O (rexpr-link O)))
+  (string-replace RES "#<unspecified>" "Unspecified"))
+
+(define (sexpr-parse S . OPT)
+  (define (repl O) ;; FIXME: f$%&/(g s)=??y way, due to the fact that there is no 1st class representation for #<unspecified>
+    (define RES O)
+    (if (pair? O)
+    (while (not (null? O))
+      (if (eq? (car O) 'Unspecified)
+        (set-car! O Unspecified))
+      (repl (car O))
+      (set! O (cdr O))))
+    RES)
+  (define RES Void)
+  (if (not (string? S))
+    (error "sexpr-parse"))
+  (set! RES (with-input-from-string S (=> ()
+                                        (read))))
+  (set! RES (car (repl `(,RES))))
+  (if (not (list-in? 'no-link OPT))
+    (set! RES (rexpr-link RES)))
+  RES)
+
 (define (rexpr-serialize O . OPT) ;; either to the level of the 1st rexprs having IDs, or full
   (define RAW (and (pair? OPT) (== (car OPT) 'Raw)))
   (define INDENT (and (pair? OPT) (== (car OPT) 'Indent))) ;; FIXME: use (contains), instead
@@ -275,6 +311,16 @@
     (if (procedure? O)
       (outraw "proc<>") ;(string+ "proc<" (procedure-name O) ">"))
       ((if RAW outraw out) O)))))) ;; TODO: finish this ; there are other compound datastructs, like e.g. vectors
+
+(define (rexpr-unlink O)
+  (if (pair? O)
+    (if (== (car O) ':TYPE)
+      (if (type? (cadr O))
+        (let* ((TYVAL (rexpr-get (cadr O) 'ID)))
+          (if (specified? TYVAL)
+            (set-car! (cdr O) TYVAL))))
+      (map rexpr-unlink O)))
+  O)
 
 (define (rexpr-link O)
   (if (pair? O)

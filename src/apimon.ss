@@ -84,7 +84,7 @@
     (set! L (cdr L)))))
 
 ;; Procs
-(define (strpid PR)
+(define (strpid PR) ;; FIXME: for physical hosts, display the HOSTID as a name, or as an ID
   (define L (string-split (string (: PR 'ID)) #\@))
   (if (== (list-length L) 1)
     L

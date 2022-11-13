@@ -330,8 +330,6 @@
             HT))
 
 ;; Basic tests & symbols
-;(define => lambda)
-
 (define == equal?) ;; FIXME: equal? works with only one parm ; == should NOT do that !!!
 (define != (=> (X Y) (not (== X Y))))
 
@@ -356,6 +354,9 @@
         (write OBJ)
         ((car WRITE) OBJ))
       (cr))))
+
+(define (file-delete FNAME) ;; TODO: should also work under Gerbil ; verify that it is so
+  (delete-file FNAME))
 
 ;; Paths
 (define (path-normalize FPATH)

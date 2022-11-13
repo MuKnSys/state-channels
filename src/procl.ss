@@ -145,6 +145,7 @@
   (define MSGR (msg-find (: PROC 'IN) (: MSG 'FROM) (: MSG 'OUTNB) Void Void Void Void))
   (if (or (unspecified? MSGR) (: MSG 'ACK))
   (begin
+    (set! MSG (rexpr-copy MSG))
     (^ 'in+ PROC MSG)
     (^ 'update-state PROC)
     (^ 'schedule PROC)))))
