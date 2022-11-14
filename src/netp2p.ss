@@ -85,7 +85,7 @@
   (while (not FINI)
     (if (or (procph? HOST) (not (proc? HOST)))
       (set! FINI True)
-      (set! HOST (: PROC 'HOST))))
+      (set! HOST (: HOST 'HOST))))
   HOST)
 
 (define _HOST-SOCKS
@@ -105,7 +105,7 @@
   (catch True (=> ()
                 (set! SOCK (sock-cli SOCKA)))
               (=> (E . OPT)
-                (error "host-phys-send(2)")))
+                (error "host-phys-send(2) " SOCKA)))
   (sock-write SOCK (sexpr-serialize MSG))
   (sock-close SOCK))
 
@@ -122,22 +122,24 @@
       ((: PROC 'HANDLER) MSG)
       (host-phys-send (network-addr (current-machine) (: PROC 'HOSTID)) MSG)))
   (begin
+    (if (nil? PROC)
+      (set! PROC "0"))
     (if (not (string? PROC))
       (error "host-send(2)"))
     (host-phys-send (network-addr (current-machine) PROC) MSG))))
 
 ;; Networks
 (define tnetwork (type "network"
-                      '(PHYS   ;; UID proc => Physical address
-                        PROC   ;; UID proc => Proc (core) object
-                       )
-                       (empty)
-                 ))
+                       '(PHYS   ;; UID proc => Physical address
+                         PROC   ;; UID proc => Proc (core) object
+                         MAPPED ;; UID proc => Proc (mapped) object
+                        )))
 
 (define (network)
   (define RES (rexpr tnetwork '()))
   (:= RES 'PHYS (make-hashv-table))
   (:= RES 'PROC (make-hashv-table))
+  (:= RES 'MAPPED (make-hashv-table))
   RES)
 
 (define _MACHINE "127.0.0.1")
@@ -153,6 +155,9 @@
 
 (define (net-procs)
   (: (current-network) 'PROC))
+
+(define (net-mapped)
+  (: (current-network) 'MAPPED))
 
 (define (net-enter PROC)
   (define UID (: PROC 'UID))
@@ -188,36 +193,62 @@
     (set! RES False))
   RES)
 
-(define (net-resolve NAME)
+(define (net-map NAME) ;; TODO: implement (connect) & downloading the mapping of a proc
   (define RES Void)
-  (if (proc? NAME)
-    (set! NAME (: NAME 'UID)))
-  (if (or (not NAME) (unspecified? NAME))
-    (error "net-resolve " NAME))
+  (if (not (strsy? NAME))
+    (error "net-map" NAME))
   (set! RES (hash-ref (net-procs) NAME))
   (if (not RES)
-    (set! RES (net-resolve-group NAME)))
- ;(if (not RES)
- ;  (host-send "0" `(resolve ,NAME))) ;; FIXME: need an (host-send) which can return a result
+    (set! RES (hash-ref (net-mapped) NAME)))
+  (if (not RES)
+  (begin
+   ;(host-send "0" `(resolve ,NAME)))
+    (set! RES (proc tproc 'ROLE 'Mapping
+                          'UID NAME
+                          'USER "unknown")) ; NOTE: poor man's mapping
+    (hash-set! (net-mapped) NAME RES)))
   RES)
 
-(define (net-map NAME) ;; TODO: implement (connect) & downloading the mapping of a proc
-  (net-resolve NAME))
+(define (net-resolve NAME)
+  (define RES Void)
+  (if (and (proc? NAME) (^ 'core? NAME))
+    (set! RES NAME)
+    (begin
+      (if (proc? NAME)
+        (set! NAME (: NAME 'UID)))
+      (if (or (not NAME) (unspecified? NAME))
+        (error "net-resolve " NAME))
+      (set! RES (hash-ref (net-procs) NAME))
+      (if (not RES)
+        (set! RES (net-resolve-group NAME)))
+      (if (not RES)
+        (set! RES (net-map NAME)))))
+  RES)
 
+(define _NET_LOG False)
+(define (net-log . B)
+  (if (empty? B)
+    _NET_LOG
+    (set! _NET_LOG (list-in? (car B) '(#t 1 "1")))))
 (define (net-send MSG . PROC) ;; NOTE: PROC is here to be able to send an MSG to a proc which is not MSG.TO
   (if (empty? PROC)
     (set! PROC (net-resolve (: MSG 'TO)))
     (set! PROC (car PROC)))
   (if (not (proc? PROC))
     (error "net-send " PROC))
- ;(outraw "net-send=> ")
- ;(>> MSG)
- ;(outraw " ")
- ;(outraw (: PROC 'UID))
- ;(cr)
+  (if (net-log)
+  (begin
+    (outraw "net-send=> ")
+    (>> MSG)
+    (outraw " ")
+    (outraw (: PROC 'UID))
+    (cr)))
   (if (== (: PROC 'ROLE) 'Core)
     (^ 'post-to PROC MSG)
-    (host-send PROC MSG)))
+    (begin
+      (if (== (proc-hostph PROC) (host-proc))
+        (error "net-send: same hostph"))
+      (host-send PROC MSG))))
 
 (define (net-next)
   Nil)

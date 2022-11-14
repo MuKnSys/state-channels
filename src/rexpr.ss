@@ -246,6 +246,7 @@
 (define :+ rexpr-add!)
 
 ;; Parse/serialize
+;; TODO: add loop protection
 (define (sexpr-serialize O . OPT)
   (define RES Void)
   (if (not (list-in? 'no-unlink OPT))
@@ -392,6 +393,8 @@
 
 (define (method TYPE F)
   (define M Void)
+  (if (not (type? TYPE))
+    (error "method"))
   (while (and (not (nil? TYPE)) (unspecified? M))
     (set! M (: (: TYPE 'METHOD) F))
     (set! TYPE (: TYPE 'INHERITS)))
@@ -407,6 +410,8 @@
   (:= (: TYPE 'SLOTTY) NAME (_valv F)))
 
 (define (mcall F . PARM) ;; TODO: turn that to a macro to be able to give F with no quote
+  (if (empty? PARM)
+    (error "mcall=>" PARM))
   (apply (method (typeof (car PARM)) F) PARM))
 
 (define (mvparmcvt VAL TY)

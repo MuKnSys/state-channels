@@ -3,5 +3,6 @@
 (load "buildlib.scm")
 
 (diff*! "llruntime.ss" ;; TODO: read that directly from DIR's contents
+        "socks.ss"
         "clish.ss"     ;; TODO: for commands, have the launcher automatically generated
         "scm")

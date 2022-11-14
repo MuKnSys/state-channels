@@ -58,6 +58,8 @@
            "ph")
           ((== (typeof PROC) tprocg)
            "g")
+          ((and (^ 'mapping? PROC) (== (typeof PROC) tproc))
+           "m")
           (else
            (error "_procId.postfix"))))
   (define ID (string (: PROC 'ID)))

@@ -9,5 +9,6 @@
 ;; => if directories like $SC_HOME/bin doesn't exists, create them automatically ;
 ;;
 (build "llruntime.ss"
+       "socks.ss"
        "clish.ss"
        "scm")
