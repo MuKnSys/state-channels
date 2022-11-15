@@ -110,23 +110,32 @@
   (sock-close SOCK))
 
 (define (host-send PROC MSG)
-  (if (and (proc? PROC) (not (procph? PROC)))
-    (set! PROC (proc-hostph PROC)))
-  (if (and (string? PROC) (== PROC (: (host-proc) 'HOSTID)))
-    (set! PROC (host-proc)))
+  (define SENT False)
   (if (proc? PROC)
+    (let* ((ADDR (hash-ref (net-phys) (: PROC 'UID))))
+      (if (and ADDR (!= (addr-host ADDR) (: (host-proc) 'HOSTID)))
+      (begin
+        (host-phys-send ADDR MSG)
+        (set! SENT True)))))
+  (if (not SENT) ;; FIXME: messy code
   (begin
-    (if (not (procph? PROC))
-      (error "host-send"))
-    (if (== (: PROC 'ROLE) 'Core)
-      ((: PROC 'HANDLER) MSG)
-      (host-phys-send (network-addr (current-machine) (: PROC 'HOSTID)) MSG)))
-  (begin
-    (if (nil? PROC)
-      (set! PROC "0"))
-    (if (not (string? PROC))
-      (error "host-send(2)"))
-    (host-phys-send (network-addr (current-machine) PROC) MSG))))
+    (if (and (proc? PROC) (not (procph? PROC)))
+      (set! PROC (proc-hostph PROC)))
+    (if (and (string? PROC) (== PROC (: (host-proc) 'HOSTID)))
+      (set! PROC (host-proc)))
+    (if (proc? PROC)
+    (begin
+      (if (not (procph? PROC))
+        (error "host-send"))
+      (if (== (: PROC 'ROLE) 'Core)
+        ((: PROC 'HANDLER) MSG)
+        (host-phys-send (network-addr (current-machine) (: PROC 'HOSTID)) MSG)))
+    (begin
+      (if (nil? PROC)
+        (set! PROC "0"))
+      (if (not (string? PROC))
+        (error "host-send(2)"))
+      (host-phys-send (network-addr (current-machine) PROC) MSG))))))
 
 ;; Networks
 (define tnetwork (type "network"
@@ -170,6 +179,7 @@
      ;(out (: PROC 'ID))
      ;(outraw " as ")
      ;(outraw UID)
+     ;(cr)
       (hash-set! (net-phys) UID ADDR)
       (hash-set! (net-procs) UID PROC)
       (host-send "0" `(enter ,UID ,ADDR)))))
@@ -211,9 +221,7 @@
 
 (define (net-resolve NAME)
   (define RES Void)
-  (if (and (proc? NAME) (^ 'core? NAME))
-    (set! RES NAME)
-    (begin
+  (define ISCORE (and (proc? NAME) (^ 'core? NAME)))
       (if (proc? NAME)
         (set! NAME (: NAME 'UID)))
       (if (or (not NAME) (unspecified? NAME))
@@ -221,8 +229,8 @@
       (set! RES (hash-ref (net-procs) NAME))
       (if (not RES)
         (set! RES (net-resolve-group NAME)))
-      (if (not RES)
-        (set! RES (net-map NAME)))))
+      (if (and (not RES) (not ISCORE))
+        (set! RES (net-map NAME)))
   RES)
 
 (define _NET_LOG False)

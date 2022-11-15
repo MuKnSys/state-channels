@@ -154,7 +154,7 @@
   (define UID (: PR 'UID))
   (define SELF (: PR 'SELF))
   (outraw (strpid PR))
-  (outraw (if (net-resolve PR) "^" "_"))
+  (outraw (if (and (not (procph? PR)) (net-resolve PR)) "^" "_"))
   (tab)
   (outraw (if (specified? UID) UID "_"))
   (tab)
