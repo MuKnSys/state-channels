@@ -88,11 +88,6 @@
       (set! HOST (: HOST 'HOST))))
   HOST)
 
-(define _HOST-SOCKS
-        (path-normalize (string+ (dirname (path-normalize (_getcf))) "/../sock")))
-(define (host-phys-socks)
-  _HOST-SOCKS)
-
 (define (host-fsock HOSTID)
   (path-normalize (string+ (host-phys-socks) "/" HOSTID)))
 

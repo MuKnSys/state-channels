@@ -40,12 +40,19 @@
     (and (> LF LP)
          (== (substring F (- LF LP) LF) "/return"))))
 
+(define (call-switchin SELF NAME)
+  (define F (method (typeof SELF) NAME))
+  (if (specified? F)
+    (^ NAME SELF)))
+
 (method! tproc 'call (=> (PROC FNAME . PARM)
   (let* ((SELF (: PROC 'SELF)) ;; TODO: add what to do if HANDLER is set (is HANDLER necessary ?)
         )
     Void ;; TODO: context-switch to SELF.HEAP
     (if (unspecified? SELF)
       (error "proc<" (: PROC 'UID) ">::call : no SELF"))
+    (call-switchin SELF '_enter)
+    (call-switchin SELF '_switchin)
     (if (fname-isret? FNAME)
       (let* ((FROM (: (: PROC 'GROUP) 'PARENT))
              (CALL (car PARM))) ;; FIXME: should ensure the same return is not evaluated 2 times
@@ -70,7 +77,9 @@
                                        (cons (: PR 'SELF)
                                              (: CALL 'PARM)))))
           (apply ^? `(,FNAME ,SELF . (,CALL)))))
-      (apply ^? `(,FNAME ,SELF . ,PARM))))))
+      (apply ^? `(,FNAME ,SELF . ,PARM)))
+    (call-switchin SELF '_switchout)
+    (call-switchin SELF '_leave))))
 
 (method! tproc 'sync (=> (PROC) ;; FIXME: in case of replicated call, all the group's processes should be able to sync
   (define RETS (map (=> (CALL)
@@ -129,6 +138,7 @@
             (net-send MSG)))))
 
 (method! tproc 'core-call (=> (PROC MSG)
+  (define OPROC (current-proc))
   (define SPROC Void)
   (define RES Void)
   (if (not (^ 'core? PROC))
@@ -136,10 +146,12 @@
   (set! SPROC (net-resolve (: MSG 'FROM)))
   (if (not SPROC)
     (error "proc<" (: MSG 'FROM) ">::core-call : no sender proc"))
+  (current-proc! PROC)
   (sender-proc! SPROC)
   (current-call! MSG)
   (set! RES (apply ^ `(call ,PROC ,(: MSG 'FUNC) . ,(: MSG 'PARM))))
   (:= MSG 'RESULT RES)
+  (current-proc! OPROC)
   (sender-proc! Nil)
   (current-call! Nil)
   RES))

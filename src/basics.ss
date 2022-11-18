@@ -93,6 +93,14 @@
     (symbol->string O)
     O))))
 
+(define (string-digits? S) ;; TODO: do more functions like this, e.g. that recognize the format of floating numbers
+  (define RES (string? S))
+  (define I 0)
+  (while (and RES (< I (string-length S)))
+    (set! RES (and RES (char-digit? (string-ref S I))))
+    (set! I (+ I 1)))
+  RES)
+
 (define string-get string-ref)
 ;(define string-set! string-set!) ;; Does nothing ; FIXME: find why, in Gerbil, that says that string-set! is unspecified
 
@@ -393,6 +401,59 @@
          (evp (list-add HOME (cdr FPATH))))
         (else
          (evp FPATH))))
+
+;; Network paths
+(define _HOST-SOCKS
+        (path-normalize (string+ (dirname (path-normalize (_getcf))) "/../sock")))
+(define (host-phys-socks)
+  _HOST-SOCKS)
+
+(define (_npath-port? ADDRE)
+  (string-digits? ADDRE))
+
+(define (_npath-path? ADDRE)
+  (define A0 (if (and (string? ADDRE) (> (string-length ADDRE) 0))
+                 (string-get ADDRE 0)
+                 Void))
+  (if (char? A0)
+    (or (eq? A0 #\.) (eq? A0 #\/))
+    False))
+
+(define (_npath-machine? ADDRE)
+  (and (not (_npath-port? ADDRE))
+       (not (_npath-path? ADDRE))))
+
+(define (npath-machine ADDR)
+  (if (string? ADDR)
+    (let* ((L (string-split ADDR #\:)))
+      (if (_npath-machine? (car L))
+        (car L)
+        Void))
+    Void))
+
+(define (npath-port ADDR)
+  (if (number? ADDR)
+    (string ADDR)
+  (if (string? ADDR)
+    (let* ((L (string-split ADDR #\:))
+           (S (if (<= (list-length L) 1)
+                (car L) (cadr L))))
+      (if (_npath-port? S)
+        S
+        Void))
+    Void)))
+
+(define (npath-path ADDR)
+  (if (string? ADDR)
+    (let* ((L (string-split ADDR #\:))
+           (S (if (<= (list-length L) 1)
+                (car L) (cadr L))))
+      (if (_npath-path? S)
+        (if (eq? (string-get S 0) #\.)
+          (string+ (host-phys-socks) "/" S)
+          S)
+        Void))
+    Void))
 
 ;; Basic I/O
 (define _OUTP False)

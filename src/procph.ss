@@ -136,6 +136,7 @@
   (define RES2 Void)
   (define SRV Void)
   (define ONCE (list-in? 'Once HOST)) ;; FIXME: improve this (1)
+  (define ONCENB (if (> (list-length HOST) 1) (cadr HOST) 0)) ;; FIXME: doesn't work if there is a proc parm
   (define FINI False)
   (define SRVA Void)
   (set! HOST (filter (=> (X) ;; FIXME: improve this (2)
@@ -163,13 +164,15 @@
     (if (and (not RES) PREVRES)
       (blockio))
     (set! PREVRES RES)
-    (if (and ONCE (not RES))
+    (if (and ONCE (<= ONCENB 0) (not RES))
       (begin
         (set! SOCK False)
         (set! FINI True))
       (set! SOCK (sock-accept SRV)))
     (if (!= SOCK False)
     (begin
+      (if (and ONCE (> ONCENB 0))
+        (set! ONCENB (- ONCENB 1)))
      ;(outraw "New client: ")
      ;(out (sock-details SOCK))
      ;(cr)
@@ -185,3 +188,16 @@
 
 ;(if (== _HOSTID "0")
 ;  (start))
+
+;; Init main
+(define (init USER UID SELF)
+  (define RES Void)
+  (define HOST (proch 'USER 'system
+                      'UID "HOST1"))
+  (current-proch! HOST)
+  (set! RES (procl 'USER USER
+                   'UID (string+ UID (: (host-proc) 'HOSTID))
+                   'SELF SELF))
+  (net-enter RES)
+  (current-proc! RES)
+  RES)
