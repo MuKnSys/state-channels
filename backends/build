@@ -8,7 +8,14 @@
 ;; => for commands, have the launcher automatically generated ;
 ;; => if directories like $SC_HOME/bin doesn't exists, create them automatically ;
 ;;
-(build "llruntime.ss"
-       "socks.ss"
-       "clish.ss"
-       "scm")
+(define BACKEND (list-ref (command-line) 1))
+
+(if (or (equal? BACKEND "guile")
+        (equal? BACKEND "gerbil"))
+  (build "llruntime.ss"
+         "socks.ss"
+         "clish.ss"
+         "scm"))
+
+(if (equal? BACKEND "libp2p_mockup")
+  (build "libp2p.ss"))
