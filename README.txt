@@ -6,7 +6,8 @@ backends/build guile
 Or alternatively:
 backends/build gerbil
 
-Additionally, the bin/ directory must exist, before you run the build.
+Additionally, the bin/ directory must exist, before you run the build, and
+the sock/ directory must exist, before you run programs that open sockets.
 
 
 2) Examples (.ss files)
@@ -33,3 +34,19 @@ src/clish.ss mp2 mp2_3
 src/clish.ss mp0 mp0_1_0
 src/clish.ss mp1 mp1_3_0
 src/clish.ss mp2 mp2_3_0
+
+
+3) Sockets
+
+bin/scm examples/srv1.ss
+bin/scm examples/cli1.ss
+
+bin/scm examples/srvping.ss
+bin/scm examples/cliping.ss
+
+bin/scm examples/srvping.ss
+bin/scm examples/echo_cli.ss
+
+export LIBP2PD_ADDR=127.0.0.1:1234
+bin/scm examples/libp2pd.ss
+bin/scm examples/libp2p_cli1.ss
