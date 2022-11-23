@@ -12,13 +12,13 @@
 (import ./rexpr)
 (import ./scheds)
 (import ./procs)
-(import ./netp2p)
+(import ./ipc)
 (import ./calls)
 
 (export
   (import: ./scheds)
   (import: ./procs)
-  (import: ./netp2p)
+  (import: ./ipc)
   (import: ./calls))
 
 ;; Proc groups

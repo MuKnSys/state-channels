@@ -11,7 +11,7 @@
 (export #t)
 (import ./rexpr)
 (import ./procs)
-(import ./netp2p)
+(import ./ipc)
 
 ;; Calls
 (set! tcall (type "call" 

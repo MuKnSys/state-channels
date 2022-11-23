@@ -1,4 +1,4 @@
-; libp2pd.ss
+; netp2pd.ss
 ;
 ;  Copyright (C) 2022, MUKN
 ;
@@ -19,30 +19,41 @@
 ;;
 (export #t)
 (import ../src/runtime)
-(import ./libp2p)
+(import ./netp2p)
 
-;; LibP2P-based API to handle messaging
-;; => the _real_ use of libp2p to handle messaging is implemented below
-(define (_libp2p-net-enter UID PEERID)
-  (libp2p-DHT-put UID PEERID))
+;; DHT
+(define DHT (make-hashv-table)) ;; TODO: implement that as the actual LibP2P's DHT
 
-(define (_libp2p-net-leave UID) ;; NOTE: dunno if we can do that on the real LibP2P's DHT
-  (libp2p-DHT-forget UID))
+(define (netp2p-DHT-get KEY)
+  (hash-ref DHT KEY))
 
-(define (_libp2p-net-resolve UID)
-  (libp2p-DHT-get UID))
+(define (netp2p-DHT-put KEY VAL)
+  (hash-set! DHT KEY VAL))
 
-;; LibP2P-based naming daemon et al.
+(define (netp2p-DHT-forget KEY)
+  (hash-remove! DHT KEY))
+
+;; 
+(define (_netp2p-net-enter UID ADDR)
+  (hash-set! (net-phys) UID ADDR))
+
+(define (_netp2p-net-leave UID) ;; NOTE: dunno if we can do that on the DHT directly
+  (hash-remove! (net-phys) UID))
+
+(define (_netp2p-net-resolve UID)
+  (hash-ref (net-phys) UID))
+
+;; NetP2P-based naming daemon et al.
 (define (handler MSG)
   (define RES Void)
   (out MSG)
   (cr)
   (set! RES (cond ((== (car MSG) 'net-enter)
-                   (_libp2p-net-enter (cadr MSG) (caddr MSG)))
+                   (_netp2p-net-enter (cadr MSG) (caddr MSG)))
                   ((== (car MSG) 'net-leave)
-                   (_libp2p-net-enter (cadr MSG)))
+                   (_netp2p-net-enter (cadr MSG)))
                   ((== (car MSG) 'net-resolve)
-                   (_libp2p-net-resolve (cadr MSG)))
+                   (_netp2p-net-resolve (cadr MSG)))
                   (else
                     Void)))
   (outraw "=> ")
@@ -50,7 +61,7 @@
   (cr)
   RES)
 
-(define ADDR (libp2pd-addr))
+(define ADDR (netp2pd-addr))
 (define SRV (sock-srv ADDR))
 (while True
   (let* ((SOCK (sock-accept SRV)))

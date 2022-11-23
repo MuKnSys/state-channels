@@ -15,7 +15,7 @@
         ./aliases
         ./scheds
         ./procs
-        ./netp2p
+        ./ipc
         ./calls
         ./procg
         ./procl
@@ -33,7 +33,7 @@
   (import: ./aliases)
   (import: ./scheds)
   (import: ./procs)
-  (import: ./netp2p)
+  (import: ./ipc)
   (import: ./calls)
   (import: ./procg)
   (import: ./procl)
