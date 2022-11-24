@@ -67,6 +67,9 @@
 (define (addr-machine ADDR)
   (car (string-split ADDR #\:)))
 
+(define (addr-netm ADDR)
+  (car (string-split (addr-machine ADDR) #\/)))
+
 (define (addr-subm ADDR)
   (define L (string-split (addr-machine ADDR) #\/))
   (if (> (list-length L) 1)
@@ -98,7 +101,7 @@
   HOST)
 
 (define (host-fsock HOSTID)
-  (path-normalize (string+ (host-phys-socks) "/" HOSTID)))
+  (path-normalize (string+ (host-phys-socks) "/" (addr-subm (current-machine)) "/" HOSTID)))
 
 (define (host-phys-send HOSTA MSG) ;; TODO: also be able to send to hosts on another machine (local at the moment)
   (define SOCKA Void)

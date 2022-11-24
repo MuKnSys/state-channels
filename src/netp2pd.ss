@@ -21,28 +21,6 @@
 (import ../src/runtime)
 (import ./netp2p)
 
-;; DHT
-(define DHT (make-hashv-table)) ;; TODO: implement that as the actual LibP2P's DHT
-
-(define (netp2p-DHT-get KEY)
-  (hash-ref DHT KEY))
-
-(define (netp2p-DHT-put KEY VAL)
-  (hash-set! DHT KEY VAL))
-
-(define (netp2p-DHT-forget KEY)
-  (hash-remove! DHT KEY))
-
-;; 
-(define (_netp2p-net-enter UID ADDR)
-  (hash-set! (net-phys) UID ADDR))
-
-(define (_netp2p-net-leave UID) ;; NOTE: dunno if we can do that on the DHT directly
-  (hash-remove! (net-phys) UID))
-
-(define (_netp2p-net-resolve UID)
-  (hash-ref (net-phys) UID))
-
 ;; NetP2P-based naming daemon et al.
 (define (handler MSG)
   (define RES Void)
@@ -61,17 +39,21 @@
   (cr)
   RES)
 
-(define ADDR (netp2pd-addr))
-(define SRV (sock-srv ADDR))
-(while True
-  (let* ((SOCK (sock-accept SRV)))
-    (outraw "New client: ")
-    (out (sock-details SOCK))
-    (cr)
-    (outraw "Address: ")
-    (out (sock-address SOCK))
-    (cr)
-    (sock-write SOCK (sexpr-serialize
-                       (handler
-                         (sexpr-parse (sock-read SOCK)))))
-    (sock-close SOCK)))
+(define (netp2pd-main)
+  (define ADDR (netp2pd-addr))
+  (define SRV (sock-srv ADDR))
+  (while True
+    (let* ((SOCK (sock-accept SRV)))
+     ;(outraw "New client: ")
+     ;(out (sock-details SOCK))
+     ;(cr)
+     ;(outraw "Address: ")
+     ;(out (sock-address SOCK))
+     ;(cr)
+      (sock-write SOCK (sexpr-serialize
+                         (handler
+                           (sexpr-parse (sock-read SOCK)))))
+      (sock-close SOCK))))
+
+(netp2p-connect _NETP2PD-ADDR)
+(netp2pd-main)

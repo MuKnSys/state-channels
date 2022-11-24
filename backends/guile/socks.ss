@@ -27,7 +27,11 @@
  ;(bind SOCK AF_INET (inet-pton AF_INET "127.0.0.1") PORT) ;; Specific address?
   (if (== FAM PF_INET)
     (bind SOCK AF_INET INADDR_ANY PORT)
-    (bind SOCK AF_UNIX PORT))
+    (begin
+      (if (not (file-exists? (dirname PORT)))
+       ;(error "sock-srv: directory " (dirname PORT) " not found"))
+        (mkdir (path-normalize (dirname PORT))))
+      (bind SOCK AF_UNIX PORT)))
   (listen SOCK 5)
   (if (== FAM PF_INET)
     `(socksrvi ,SOCK False)
@@ -58,7 +62,11 @@
   (set! SOCK (socket FAM SOCK_STREAM 0))
   (if (== FAM PF_INET)
     (connect SOCK AF_INET (inet-pton AF_INET ADDR) PORT)
-    (connect SOCK AF_UNIX FPATH))
+    (begin
+      (if (not (file-exists? (dirname FPATH)))
+       ;(error "sock-cli: directory " (dirname FPATH) " not found"))
+        (mkdir (path-normalize (dirname FPATH))))
+      (connect SOCK AF_UNIX FPATH)))
  `(sock ,SOCK False))
 
 (define (sock-read SOCK)
