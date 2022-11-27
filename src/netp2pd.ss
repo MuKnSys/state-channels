@@ -17,9 +17,7 @@
 ;;  => when linked to a real libp2p library, should run on a local port, and
 ;;     act as a gateway to a real libp2p peer network ;
 ;;
-(export #t)
-(import ../src/runtime)
-(import ./netp2p)
+(import ./runtime)
 
 ;; NetP2P-based naming daemon et al.
 (define (handler MSG)
@@ -32,6 +30,10 @@
                    (_netp2p-net-enter (cadr MSG)))
                   ((== (car MSG) 'net-resolve)
                    (_netp2p-net-resolve (cadr MSG)))
+                  ((== (car MSG) 'net-send)
+                   (_netp2p-net-send (cadr MSG)))
+                  ((== (car MSG) 'net-dispatch)
+                   (_netp2p-net-dispatch (cadr MSG) (caddr MSG)))
                   (else
                     Void)))
   (outraw "=> ")

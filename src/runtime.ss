@@ -17,6 +17,7 @@
         ./procs
         ./ipc
         ./calls
+        ./netp2p
         ./procg
         ./procl
         ./proch

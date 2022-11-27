@@ -586,6 +586,18 @@
 (define (color-white)
   (outraw (string-append (string #\esc) "[39;49m")))
 
+(define (cursor-move DIRN . N)
+  (set! N (if (empty? N) 1 (car N)))
+  (set! DIRN (cond ((== DIRN 'Left) "D")
+                   ((== DIRN 'Right) "C")
+                   ((== DIRN 'Down) "B")
+                   ((== DIRN 'Up) "A")
+                   (else (error "cursor-move"))))
+  (outraw (string+ (string #\esc) "[" (string N) DIRN)))
+
+(define (clreol)
+  (outraw (string+ (string #\esc) "[0K")))
+
 ;; Shell
 (define (sh-cmd-log B)
   (set! _SH_CMD_LOG B)) ;; FIXME: _SH_CMD_LOG has to be defined inside llruntime

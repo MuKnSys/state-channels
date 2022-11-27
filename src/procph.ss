@@ -14,6 +14,7 @@
 (import ./procs)
 (import ./ipc)
 (import ./calls)
+(import ./netp2p)
 
 (export
   (import: ./scheds)
@@ -87,18 +88,30 @@
           ;(cr)
            (hash-set! (net-phys) UID ADDR)
           ;(hash-set! (net-procs) UID PROC) ; TODO: create a mapping (?)
+           (netp2p-net-enter UID)
            Void))
         ((and (pair? MSG) (== (car MSG) 'leave))
          (_handler-log MSG)
          Void)
+        ((and (pair? MSG) (== (car MSG) 'dispatch))
+         (set! MSG (cadr MSG))
+         (let* ((ADDR (hash-ref (net-phys) (: MSG 'TO))))
+           (if (not ADDR)
+             (begin
+               (outraw "Proc ")
+               (outraw (: MSG 'TO))
+               (outraw " is unknown [can't redispatch]")
+               (cr))
+             (_handler1 MSG))))
         (else
          (let* ((ADDR (hash-ref (net-phys) (: MSG 'TO))))
            (if (not ADDR)
              (begin
                (outraw "Proc ")
                (outraw (: MSG 'TO))
-               (outraw " is unknown")
-               (cr))
+               (outraw " is being resent")
+               (cr)
+               (netp2p-net-send MSG))
              (_handler1 MSG))
            Void))))
 
@@ -120,21 +133,21 @@
                       'HANDLER _handler1)))
 
 ;; Start
+(define _START-SRV Void) ;; FIXME: doesn't work with multiple hosts
+(define _START-OFLAGS Void)
 (define (start . HOST)
   (define (the-srv)
-    (cadr SRV))
-  (define OFLAGS Void)
+    (cadr _START-SRV))
   (define (blockio)
    ;(outraw "Blocking !!!\n")
-    (fcntl (the-srv) F_SETFL OFLAGS)) ;; TODO: improve this, by means of really changing the bit on the current state
+    (fcntl (the-srv) F_SETFL _START-OFLAGS)) ;; TODO: improve this, by means of really changing the bit on the current state
   (define (nonblockio)
    ;(outraw "Nonblocking !!!\n")
-    (fcntl (the-srv) F_SETFL (logior O_NONBLOCK OFLAGS)))
+    (fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
   (define SOCK Void)
   (define PREVRES False)
   (define RES True)
   (define RES2 Void)
-  (define SRV Void)
   (define ONCE (list-in? 'Once HOST)) ;; FIXME: improve this (1)
   (define ONCENB (if (> (list-length HOST) 1) (cadr HOST) 0)) ;; FIXME: doesn't work if there is a proc parm
   (define FINI False)
@@ -147,11 +160,13 @@
                (car HOST)))
   (if (not (procph? HOST))
     (error "start"))
-  (set! SRVA (host-fsock (: HOST 'HOSTID)))
-  (if (file-exists? SRVA)
-    (file-delete SRVA))
-  (set! SRV (sock-srv SRVA))
-  (set! OFLAGS (fcntl (the-srv) F_GETFL))
+  (set! SRVA (host-fsock (: HOST 'HOSTID))) ;; FIXME: doesn't work for if we call (start) several times with different hosts
+  (if (unspecified? _START-SRV)
+    (begin
+      (if (file-exists? SRVA)
+        (file-delete SRVA))
+      (set! _START-SRV (sock-srv SRVA))
+      (set! _START-OFLAGS (fcntl (the-srv) F_GETFL))))
   (while (not FINI)
   (begin
     (set! RES (^ 'step (host-proc)))
@@ -168,7 +183,7 @@
       (begin
         (set! SOCK False)
         (set! FINI True))
-      (set! SOCK (sock-accept SRV)))
+      (set! SOCK (sock-accept _START-SRV)))
     (if (!= SOCK False)
     (begin
       (if (and ONCE (> ONCENB 0))

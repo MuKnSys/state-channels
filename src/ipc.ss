@@ -103,12 +103,21 @@
 (define (host-fsock HOSTID)
   (path-normalize (string+ (host-phys-socks) "/" (addr-subm (current-machine)) "/" HOSTID)))
 
+(define (host-fsock2 ADDR) ;; TODO: to be reunited with the previous one
+  (define SUBM (addr-subm ADDR))
+  (define HOST (addr-host ADDR))
+  (if (unspecified? HOST)
+    (error "host-fsock2::no host"))
+  (if (!= (addr-netm ADDR) (addr-netm (current-machine)))
+    (error "host-fsock2" ADDR " " (current-machine)))
+  (path-normalize (string+ (host-phys-socks) "/" SUBM "/" HOST)))
+
 (define (host-phys-send HOSTA MSG) ;; TODO: also be able to send to hosts on another machine (local at the moment)
   (define SOCKA Void)
   (define SOCK Void)
   (if (not (string? HOSTA))
     (error "host-phys-send"))
-  (set! SOCKA (host-fsock (addr-host HOSTA)))
+  (set! SOCKA (host-fsock2 HOSTA))
   (catch True (=> ()
                 (set! SOCK (sock-cli SOCKA)))
               (=> (E . OPT)
@@ -230,7 +239,7 @@
     (hash-set! (net-mapped) NAME RES)))
   RES)
 
-(define (net-resolve NAME)
+(define (net-resolve NAME) ;; TODO: resolve (and then physically send) globally ???
   (define RES Void)
   (define ISCORE (and (proc? NAME) (^ 'core? NAME)))
       (if (proc? NAME)

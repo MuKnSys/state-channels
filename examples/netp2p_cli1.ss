@@ -1,5 +1,4 @@
 (import ../src/runtime)
-(import ../src/netp2p)
 
 (define UID "PR1")
 (define L (command-line))

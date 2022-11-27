@@ -12,10 +12,20 @@
 (define S Void)
 
 (^ 'send PING 'attach)
-(start 'Once 1)
+(start 'Once)
 
+(define PREVS Void)
 (while True
+  (if (specified? PREVS)
+  (begin
+    (outraw "> ")
+    (outraw PREVS)
+    (cr)))
+  (outraw "> ")
   (set! S (read-line (current-input-port)))
+  (cursor-move 'Up)
+  (clreol)
   (^ 'send PING 'echo S)
-  (start 'Once 1)
+  (start 'Once)
+  (set! PREVS S)
 )

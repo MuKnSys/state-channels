@@ -10,9 +10,7 @@
 
 (define PING (net-map "PING"))
 (^ 'send PING 'attach)
-(start 'Once 1)
-;(while True
- ;(^ 'send PING 'ping)
-  (^ 'send PING 'echo "Coucou")
-  (start 'Once 1)
-;)
+(start 'Once)
+;(^ 'send PING 'ping)
+(^ 'send PING 'echo "Coucou")
+(start) ;; TODO: make it able to wait some time, and then exit
