@@ -21,7 +21,7 @@
   (define ADDR Void)
   (set! WHERE (if (empty? WHERE) 'Local
                                  (car WHERE)))
-  (set! ADDR (getenv (if (== WHERE 'Local) "NET2PD_LOCAL"
+  (set! ADDR (getenv (if (== WHERE 'Local) "NETP2PD_LOCAL"
                                            "NETP2PD_GLOBAL")))
   (if (and (not (string? ADDR)) (== WHERE 'Local))
     (set! ADDR (addr-netm (current-machine))))
