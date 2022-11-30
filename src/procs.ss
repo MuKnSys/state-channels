@@ -204,6 +204,15 @@
 (define (statech? PROC)
   (== (typeof PROC) tstatech))
 
+;; (define)s for Ethereum-related procs & accounts
+(define taccount Void)
+(define (account? PROC)
+  (== (typeof PROC) taccount))
+
+(define tproceth Void)
+(define (proceth? PROC)
+  (== (typeof PROC) tproceth))
+
 ;; (define)s for calls
 (define tcall Void)
 (define (call? CALL)

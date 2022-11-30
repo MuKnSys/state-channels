@@ -22,7 +22,9 @@
         ./procl
         ./proch
         ./procph
-        ./eth ;; ./ethprocs
+        ./eth
+        ./accounts
+        ./proceth
         ./cli ./apimon)
 
 (export
@@ -41,6 +43,7 @@
   (import: ./proch)
   (import: ./procph)
   (import: ./eth)
- ;(import: ./ethprocs)
+  (import: ./accounts)
+  (import: ./proceth)
   (import: ./cli)
   (import: ./apimon))

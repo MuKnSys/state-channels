@@ -16,6 +16,7 @@
 (import ./calls)
 
 ;; Address
+(define _NETP2PD-PORT 10002) ;; TODO: read that from the environment
 (define _NETP2PD-ADDR Void)
 (define (netp2pd-addr . WHERE)
   (define ADDR Void)
@@ -30,7 +31,7 @@
   (if (not (string? ADDR))
    ;(set! ADDR "./NETP2PD") TODO: should be (current-machine) on a default port
     (error "netp2pd-addr"))
-  (set! ADDR (string+ ADDR ":1234"))
+  (set! ADDR (string+ ADDR ":" (string _NETP2PD-PORT)))
   ADDR)
 
 (set! _NETP2PD-ADDR (netp2pd-addr))
@@ -66,9 +67,10 @@
             (catch True (=> ()
                           (set! SOCK (sock-cli SOCKA)))
                         (=> (E . OPT)
-                          (outraw "Can't connect to ")
-                          (outraw (netp2pd-addr))
-                          (cr)))
+                         ;(outraw "Can't connect to ")
+                         ;(outraw (netp2pd-addr))
+                         ;(cr)
+                         (noop)))
             (if (unspecified? SOCK)
               (empty)
               (begin
@@ -134,7 +136,7 @@
         (outraw (addr-subm ADDR))
         (cr)
         (host-phys-send (network-addr ADDR "0") MSG))
-      (netp2pd `(net-dispatch ,MSG ,ADDR) (string+ (addr-netm ADDR) ":1234"))) ;; TODO: test this one
+      (netp2pd `(net-dispatch ,MSG ,ADDR) (string+ (addr-netm ADDR) ":" (string _NETP2PD-PORT)))) ;; TODO: test this one
     (error "_netp2p-net-dispatch")))
 
 (define (_netp2p-net-send MSG)
