@@ -45,12 +45,13 @@
                               (<- (: A 'ALIAS) (: (: A 'ADDR) ADDR)))
                             (:= (: A 'ADDR) ADDR NAME)))
 
-(method! taliases 'new! (=> (A R ADDR)
+(method! taliases 'new! (=> (A R ADDR . OPT)
                           (define N (: (: A 'ROOT) R))
+                          (define SEP (if (empty? OPT) "@" (car OPT)))
                           (if (unspecified? N)
                             (^ 'root! A R))
                           (set! N (: (: A 'ROOT) R))
-                          (^ 'alias! A (strsy+ R "@" N) ADDR)
+                          (^ 'alias! A (strsy+ R SEP N) ADDR)
                           (:= (: A 'ROOT) R (+ N 1))))
 
 (method! taliases 'save (=> (A)

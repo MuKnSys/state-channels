@@ -58,6 +58,8 @@
            "ph")
           ((== (typeof PROC) tprocg)
            "g")
+          ((== (typeof PROC) tproceth)
+           "eth")
           ((and (^ 'mapping? PROC) (== (typeof PROC) tproc))
            "m")
           (else

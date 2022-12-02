@@ -71,6 +71,10 @@
   (define RES (: (geth "eth_blockNumber" "[]") 'result))
   (string->number (substring RES 2 (string-length RES)) 16))
 
+;; Accounts
+(define (eth-accounts)
+  (: (geth "eth_accounts" "[]") 'result))
+
 ;; Create an instance
 (define (eth-createInstance ABI CODE)
   (define RCPT (car (eth-execcmd "runtime" (string+ "createInstanceHashOf(" ABI ",\"" CODE "\")"))))
@@ -92,7 +96,10 @@
 (define (eth-addr NAME)
   (^ 'addr _ETHALIASES NAME))
 
-(define (eth-abi CNAME)
+(define (eth-cname ADDR)
+  (car (string-split (^ 'alias _ETHALIASES ADDR) #\@)))
+
+(define (eth-abi CNAME) ;; TODO: memoize this
   (car (file-read (path-normalize (string+ _ETHCODEDIR "/" CNAME ".abi")) 1)))
 
 (define (eth-bin CNAME)

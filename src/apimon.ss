@@ -15,6 +15,17 @@
 (import ./proch)
 (import ./cli)
 
+;; Aliases
+(define _APIMONALIASES (aliases))
+(define (pralias! UID APREF)
+  (if (proc? UID)
+    (set! UID (: UID 'UID)))
+  (^ 'new! _APIMONALIASES APREF UID ""))
+
+(define (pralias UID)
+  (define ALIAS (^ 'alias _APIMONALIASES UID))
+  (if (unspecified? ALIAS) UID ALIAS))
+
 ;; Calls
 (define (lstsign S)
   (if (unspecified? S)
@@ -47,15 +58,15 @@
         )
     (outraw (if OPT "*" " "))
     (outraw "<")
-    (outraw OUTNB)
+    (outraw (if (specified? OUTNB) OUTNB "_"))
     (outraw " ")
     (>> INNB)
     (outraw ">")
     (outraw FUNC)
     (outraw " ")
-    (outraw FROM)
+    (outraw (pralias FROM))
     (outraw "=>")
-    (outraw TO)
+    (outraw (pralias TO))
     (outraw " ")
     (>> PARM 'Raw)
   ;;(outraw " ")
@@ -94,6 +105,7 @@
                 ((and (== TY "proc") (^ 'mapping? PR)) "m")
                 ((== TY "proch") "h")
                 ((== TY "procph") "ph")
+                ((== TY "proceth") "eth")
                 (else
                   TY)))
       (string+ (car (list-last L)) TY))))
@@ -120,7 +132,7 @@
     (outraw (strpid PR))
     (outraw (if (net-resolve PR) "^" "_"))
     (outraw " ")))
-  (outraw (if (specified? UID) UID "_"))
+  (outraw (if (specified? UID) (pralias UID) "_"))
   (outraw " ")
   (outraw (: PR 'USER))
   (outraw " ")
@@ -156,7 +168,7 @@
   (outraw (strpid PR))
   (outraw (if (and (not (procph? PR)) (net-resolve PR)) "^" "_"))
   (tab)
-  (outraw (if (specified? UID) UID "_"))
+  (outraw (if (specified? UID) (pralias UID) "_"))
   (tab)
   (outraw (: PR 'USER))
   (tab)
@@ -516,3 +528,10 @@
 (apimon "!" _cobj '(str var any any any any any any any) 'OP True 'VARGS True)
 (apimon "^" _mesg '(str sy any any any any any any any) 'OP True 'VARGS True)
 (apimon "sync" _sync '(str))
+
+;; Init
+(define _APIMONEthAccounts (eth-accounts)) ;; Accounts
+(if (pair? _APIMONEthAccounts)
+  (for-each (=> (ACC)
+              (pralias! ACC "ACC"))
+            _APIMONEthAccounts))

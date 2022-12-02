@@ -10,10 +10,7 @@
 
 (export #t)
 (import ./rexpr)
-(import ./scheds)
 (import ./procs)
-(import ./ipc)
-(import ./calls)
 
 ;; Account
 (set! taccount (type `("account" ,tproc)  ;; Account (SSH, Ethereum-based, etc.)
@@ -27,6 +24,7 @@
 ;; Constructor
 (define (account . PARM)
   (define RES (apply proc `(,taccount . ,PARM)))
+  (:? RES 'CATEG 'Ethereum)
   RES)
 
 ;; Step
