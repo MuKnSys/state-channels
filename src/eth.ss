@@ -143,6 +143,7 @@
 ;; Geth (ABI) => TODO: needs to involve the actual ABI into that
 (define (eth-decode-parms X)
   (define L '())
+  (define PTR Void)
   (set! X (substring X 2 (string-length X)))
   (while (> (string-length X) 0)
     (set! L (cons (substring X 0 64) L))
@@ -150,4 +151,9 @@
   (set! L (reverse L))
   (set-car! L (bytes32->string (car L)))          ;; 1st parm (method name) => TODO: make that general (1)
   (set-car! (cdr L) (string->number (cadr L) 16)) ;; 2nd parm (an int)      => TODO: make that general (2)
+  (set! PTR (cddr L))
+  (for-each (=> (VAL)
+              (set-car! PTR (bytes32->string (car PTR))) ;; other parms (strings) => TODO: make that general (3)
+              (set! PTR (cdr PTR)))
+            (cddr L))
   L)

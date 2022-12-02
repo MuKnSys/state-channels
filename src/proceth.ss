@@ -33,9 +33,15 @@
 
 ;; Send
 (method! tproceth 'send (=> (PROC FNAME . PARM)
- ;(define FROM (current-proc))
+  (define FROM (current-proc))
   (define CNAME (eth-cname (: PROC 'UID)))
-  (eth-callMethod CNAME (: PROC 'UID) (string FNAME) PARM)
+  (eth-callMethod CNAME (: PROC 'UID)
+                        (string FNAME)
+                        (list-add PARM `(,(: FROM 'UID) ,(string+ "x"
+                                                                  (string (list-length (: FROM 'OUT)))))))
+                                                                  ;; FIXME: the shitty "x" stems from the fact that "0" is
+                                                                  ;;        turned to an empty string by web3.js when in fact,
+                                                                  ;;        rather than this, it should be encoded as "30000..."
  ;(^ 'out+ FROM CALL)
   (noop)))
 
@@ -62,13 +68,26 @@
     (set! LOGS (eth-getFilterLogs (+ (: PROC 'LASTBLOCK) 1) UID))
     (set! LOGS (proc-log LOGS))
     (for-each (=> (X)
-                (set! CALLS (cons (call 'USER 'unknown
-                                        'FROM (car X)
-                                        'TO (cadr X)
-                                        'FUNC (sy (caddr X))
-                                        'PARM (cdddr X)
-                                        'INNB INNB)
-                                  CALLS))
+                (define SIGNA (car X))
+                (define FROMI0 (list-tail (cdddr X) (- (list-length (cdddr X)) 3))) ;; FIXME: crappy encoding of FROM info at the end of the listparms
+                (define FROMI Void)
+                (define OUTNB Void)
+                (define CALL Void)
+                (set! FROMI (cdr FROMI0))
+                (set-cdr! FROMI0 Nil)
+                (set! OUTNB (cadr FROMI))
+                (set! OUTNB (if (and (string? OUTNB) (> (string-length OUTNB) 1) (== (substring OUTNB 0 1) "x"))
+                              (number (substring OUTNB 1 (string-length OUTNB)))
+                              Void)) ;; FIXME: shitty "x" at the beginning of the nonce (see comment in method (send) above)
+                (set! CALL (call 'USER 'unknown
+                                 'FROM (car FROMI)
+                                 'OUTNB OUTNB
+                                 'TO (cadr X)
+                                 'INNB INNB
+                                 'FUNC (sy (caddr X))
+                                 'PARM (cdddr X)))
+                (set! CALLS (cons CALL CALLS))
+               ;(sign CALL SIGNA SIGN_B)
                 (set! INNB (+ INNB 1)))
               LOGS)
     (for-each (=> (CALL)

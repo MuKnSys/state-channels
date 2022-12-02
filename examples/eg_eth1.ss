@@ -8,7 +8,7 @@
 
 ;; Creating the procs
 (define PR0 (proceth 'USER "dupont"
-                     'UID (eth-addr "SimpleStorage@27")))
+                     'UID (eth-addr "SimpleStorage@30")))
 (pralias! PR0 "PR")
 (define PR1 (procl 'USER "durand"
                    'UID "PR1"))
@@ -30,7 +30,8 @@
 
 ;; Sending a message to PR0
 (current-proc! PR1)
-;(^ 'send PR0 'set 1234567891011)
+;(^ 'send PR0 'set 5678)
+;(^ 'send PR0 'set2 5678910)
 (exit 0)
 (lstp)
 
