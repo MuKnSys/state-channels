@@ -252,7 +252,8 @@
   (set! RES (hash-ref (net-procs) NAME))
   (if (not RES)
     (set! RES (net-resolve-group NAME)))
-  (if (proceth? PROC) ;; TODO: improve this
+  (if (or (proceth? PROC)
+          (account? PROC)) ;; TODO: improve this
     (set! RES PROC)
     (if (and (not RES) (not ISCORE))
       (set! RES (net-map NAME))))

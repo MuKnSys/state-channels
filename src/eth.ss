@@ -113,7 +113,7 @@
   ADDR)
 
 ;; Call a method
-(define (_eth-callMethod ABI ADDR FNAME PARM . LOGIN)
+(define (_eth-callMethod ABI ADDR FNAME PARM . LOGIN) ;; TODO: _BULLET_ _PROOF_ the parameter checking (indeed there is none, at the moment), otherwise transactions are simply ignored, it's super hard to find what's going on
   (if (null? LOGIN)
     (set! LOGIN "")
     (let* ((USER (car LOGIN))

@@ -36,8 +36,13 @@
       (outraw "S")
       (color-white)
       (for-each (=> (U)
+                  (define ACC Void)
+                  (define NAME (pralias U))
+                  (set! ACC (hash-ref (allaccounts) U))
+                  (if ACC
+                    (set! NAME (: ACC 'NAME)))
                   (outraw " ")
-                  (outraw U))
+                  (outraw NAME))
                 (cdr S))
       (outraw ")"))))
 
@@ -106,6 +111,7 @@
                 ((== TY "proch") "h")
                 ((== TY "procph") "ph")
                 ((== TY "proceth") "eth")
+                ((== TY "account") "acc")
                 (else
                   TY)))
       (string+ (car (list-last L)) TY))))
@@ -122,6 +128,10 @@
         (else
           (outraw "??"))))
 
+(define (lstuser PR)
+  (define NAME (: PR (if (account? PR) 'NAME 'USER)))
+  (outraw (if (specified? NAME) NAME "_")))
+
 (define (lstproc PR . SHORT)
   (define UID (: PR 'UID))
   (define SELF (: PR 'SELF))
@@ -134,7 +144,7 @@
     (outraw " ")))
   (outraw (if (specified? UID) (pralias UID) "_"))
   (outraw " ")
-  (outraw (: PR 'USER))
+  (lstuser PR)
   (outraw " ")
   (outraw (if (: PR 'STOPPED) "_" "^"))
   (outraw (if (== (: PR 'STATE) 'Waiting) "?" ""))
@@ -170,7 +180,7 @@
   (tab)
   (outraw (if (specified? UID) (pralias UID) "_"))
   (tab)
-  (outraw (: PR 'USER))
+  (lstuser PR)
   (tab)
   (lstprocg (: PR 'GROUP))
   (tab)

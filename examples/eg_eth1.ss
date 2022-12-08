@@ -1,5 +1,4 @@
 (import ../src/runtime)
-(import ./mp1)
 
 ;; Creating the host
 (define HOST1 (proch 'USER 'system
@@ -12,6 +11,11 @@
 (pralias! PR0 "PR")
 (define PR1 (procl 'USER "durand"
                    'UID "PR1"))
+
+;; Creating the accounts
+(account 'NAME 'durand
+         'UID "0xa16979a982b94200d61aede91f6cf2a0c0ac3613")
+
 ;; lstp
 (define (lstp)
   (outraw "---\n")
@@ -31,9 +35,9 @@
 ;; Sending a message to PR0
 (current-proc! PR1)
 ;(^ 'send PR0 'set 5678)
-;(^ 'send PR0 'set2 5678910)
-(exit 0)
+;(^ 'send PR0 'set2 0123456789)
 (lstp)
+(exit 0)
 
 ;; Syncing PR0 (2)
 ;(^ 'sync PR0)

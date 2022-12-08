@@ -105,16 +105,11 @@
               RL0)))))
 
 ;; Proc send
-(method! tproc 'send (=> (PROC FNAME . PARM) ;; NOTE: PROC is the _target_ (i.e., the TO)
+(define (proc-send0 PROC FNAME . PARM) ;; NOTE: PROC is the _target_ (i.e., the TO)
   (let* ((FROM (current-proc))
-         (STATE Void)
          (CALL Void))
     (if (nil? FROM)
-      (error "proc::send : no current proc"))
-    (set! STATE (: FROM 'STATE))
-    (if (not (or (== STATE 'Idle) (== STATE 'Active)))
-      (error "proc::send=> " STATE))
-    (:= FROM 'STATE 'Active)
+      (error "proc-send0 : no current proc"))
     (set! CALL (call 'USER (: FROM 'USER)
                      'FROM (: FROM 'UID)
                      'OUTNB (^ 'outnb FROM)
@@ -122,7 +117,16 @@
                      'FUNC FNAME
                      'PARM PARM))
     (sign CALL (: FROM 'USER) 'SIGN_B) ;; TODO: verify that it's necessary (cf. (sign) step in (out-step))
-    (^ 'out+ FROM CALL)
+    (^ 'out+ FROM CALL)))
+
+(method! tproc 'send (=> (PROC FNAME . PARM) ;; NOTE: PROC is the _target_ (i.e., the TO)
+  (let* ((FROM (current-proc))
+         (STATE Void))
+    (apply proc-send0 `(,PROC ,FNAME . ,PARM))
+    (set! STATE (: FROM 'STATE))
+    (if (not (or (== STATE 'Idle) (== STATE 'Active)))
+      (error "proc::send=> " STATE))
+    (:= FROM 'STATE 'Active)
     (^ 'schedule FROM))))
 
 ;; Stepping

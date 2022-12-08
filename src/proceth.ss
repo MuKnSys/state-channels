@@ -31,18 +31,31 @@
 (define (ethuid? UID)
   (== (substring UID 0 2) "0x"))
 
-;; Send
-(method! tproceth 'send (=> (PROC FNAME . PARM)
+;; Fetch
+(method! tproceth 'fetch (=> (PROC FNAME . PARM) ;; NOTE: for calling views (synchronous, direct result)
   (define FROM (current-proc))
   (define CNAME (eth-cname (: PROC 'UID)))
   (eth-callMethod CNAME (: PROC 'UID)
                         (string FNAME)
+                        PARM)))
+
+;; Send
+(method! tproceth 'send (=> (PROC FNAME . PARM)
+  (define FROM (current-proc))
+  (define CNAME (eth-cname (: PROC 'UID)))
+  (define ACC Void)
+  (set! ACC (hash-ref (allaccounts 1) (sy (: FROM 'USER))))
+  (if (not ACC)
+    (error "eth.send::ACC"))
+  (eth-callMethod CNAME (: PROC 'UID)
+                        (string FNAME)
                         (list-add PARM `(,(: FROM 'UID) ,(string+ "x"
-                                                                  (string (list-length (: FROM 'OUT)))))))
+                                                                  (string (list-length (: FROM 'OUT))))))
                                                                   ;; FIXME: the shitty "x" stems from the fact that "0" is
                                                                   ;;        turned to an empty string by web3.js when in fact,
                                                                   ;;        rather than this, it should be encoded as "30000..."
- ;(^ 'out+ FROM CALL)
+                        (: ACC 'ACCNO) "1234")
+  (apply proc-send0 `(,PROC ,FNAME . ,PARM))
   (noop)))
 
 ;; Update
@@ -54,12 +67,11 @@
            ,(eth-decode-parms (: X 'data))))
        L))
 
-(method! tproceth 'sync (=> (PROC) ;; TODO: set OUTNB, INNB & signatures
+(method! tproceth 'sync (=> (PROC)
   (define UID (: PROC 'UID))
   (define LOGS Void)
   (define CALLS '())
   (define BLOCKNO (eth-blockNumber))
- ;(define OUTNB ???) TODO: there should always be an OUTNB, because messages should never be sent directly from an account, but from an impersonating (local) proc, mentioned in the Solidity parms as "uidSender", or something like that ; accounts are only used for signing, and it should be verified somehow that the UID of the sender proc is actually owned by the user having the account from where he signs.
   (define INNB (list-length (: PROC 'IN!)))
   (if (not (ethuid? UID))
     (error "tproceth::UID"))
@@ -75,7 +87,11 @@
                 (define CALL Void)
                 (set! FROMI (cdr FROMI0))
                 (set-cdr! FROMI0 Nil)
-                (set! OUTNB (cadr FROMI))
+                (set! OUTNB (cadr FROMI)) ;; NOTE: there is always an OUTNB, because messages are never be sent directly from
+                                          ;;   an account, but from an impersonating (local) proc, mentioned in the Solidity
+                                          ;;   parms as "uidSender", or something like that ; accounts are only used for signing,
+                                          ;;   and it should be verified somehow that the UID of the sender proc is actually owned
+                                          ;;   by the user having the account from where he signs.
                 (set! OUTNB (if (and (string? OUTNB) (> (string-length OUTNB) 1) (== (substring OUTNB 0 1) "x"))
                               (number (substring OUTNB 1 (string-length OUTNB)))
                               Void)) ;; FIXME: shitty "x" at the beginning of the nonce (see comment in method (send) above)
@@ -86,8 +102,8 @@
                                  'INNB INNB
                                  'FUNC (sy (caddr X))
                                  'PARM (cdddr X)))
+                (sign CALL SIGNA 'SIGN_E)
                 (set! CALLS (cons CALL CALLS))
-               ;(sign CALL SIGNA SIGN_B)
                 (set! INNB (+ INNB 1)))
               LOGS)
     (for-each (=> (CALL)

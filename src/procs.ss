@@ -60,6 +60,8 @@
            "g")
           ((== (typeof PROC) tproceth)
            "eth")
+          ((== (typeof PROC) taccount)
+           "acc")
           ((and (^ 'mapping? PROC) (== (typeof PROC) tproc))
            "m")
           (else
