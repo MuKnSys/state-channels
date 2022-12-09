@@ -9,10 +9,19 @@
   tcmicropay
   (type "cmicropay" '(STATE ACCOUNT) `(
 
-    transfer ;; We suppose it works all the time ; model wallets, later
-    (cmicropay sy num
-    ,(=> (MP USER AMOUNT)
+    deposit ;; We suppose it works all the time ; model wallets, later
+    (cmicropay num
+    ,(=> (MP AMOUNT)
+       (define MSG (current-call))
+       (define PR Void)
        (define ACCOUNT (: MP 'ACCOUNT))
+       (define USER Void)
+       (if (nil? MSG)
+         (error "cmicropay.deposit : no current call"))
+       (set! PR (net-resolve (: MSG 'FROM)))
+       (if (not (proc? PR))
+         (error "cmicropay.deposit : no sender"))
+       (set! USER (sy (: PR 'USER)))
        (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT))))
 
     withdraw ;; We suppose it works all the time ; model wallets, later

@@ -61,11 +61,11 @@
 > 
 > # Initializing the players' balances in the master/contract
 > iam SC1
-> SC0 ^ transfer bob 10
+> SC0 ^ deposit 10
 > iam SC2
-> SC0 ^ transfer carol 10
+> SC0 ^ deposit 10
 > iam SC3
-> SC0 ^ transfer dave 10
+> SC0 ^ deposit 10
 > run
 > 
 > netlist SC1
@@ -73,32 +73,32 @@
   in:
   rl:
   out:
-    <0 _>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 _>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
 > 
 > netlist SC2
   SC2 carol ^
   in:
   rl:
   out:
-    <0 _>transfer SC2=>SC0 (carol 10) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 _>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol)[31;49m[39;49m
 > 
 > netlist SC3
   SC3 dave ^
   in:
   rl:
   out:
-    <0 _>transfer SC3=>SC0 (dave 10) ([31;49mS[39;49m dave)[31;49m[39;49m
+    <0 _>deposit SC3=>SC0 (10) ([31;49mS[39;49m dave)[31;49m[39;49m
 > 
 > netlist SC0
   SC0 blockchain ^
   in:
-    <0 0>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <0 1>transfer SC2=>SC0 (carol 10) ([31;49mS[39;49m carol)[31;49m[39;49m
-    <0 2>transfer SC3=>SC0 (dave 10) ([31;49mS[39;49m dave)[31;49m[39;49m
+    <0 0>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 1>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 2>deposit SC3=>SC0 (10) ([31;49mS[39;49m dave)[31;49m[39;49m
   rl:
-    <0 0>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob blockchain)[31;49m[39;49m
-    <0 1>transfer SC2=>SC0 (carol 10) ([31;49mS[39;49m carol blockchain)[31;49m[39;49m
-    <0 2>transfer SC3=>SC0 (dave 10) ([31;49mS[39;49m dave blockchain)[31;49m[39;49m
+    <0 0>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob blockchain)[31;49m[39;49m
+    <0 1>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol blockchain)[31;49m[39;49m
+    <0 2>deposit SC3=>SC0 (10) ([31;49mS[39;49m dave blockchain)[31;49m[39;49m
   out:
 > 
 > state SC0
@@ -120,7 +120,7 @@
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
   rl:
   out:
-    <0 _>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 _>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
 > 
 > state SC1
@@ -132,45 +132,45 @@
       dave = 0
 > 
 > # Downloading the players' balances in the state channel (1)
-> GR1 ^ transfer/return 0
+> GR1 ^ deposit/return 0
 > run
 > netlist SC1
   SC1 bob ^
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 _>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 _>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 _>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
 > 
 > netlist SC2
   SC2 carol ^
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC2=>SC0 (carol 10) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 _>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol)[31;49m[39;49m
 > 
 > netlist SC3
   SC3 dave ^
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC3=>SC0 (dave 10) ([31;49mS[39;49m dave)[31;49m[39;49m
+    <0 _>deposit SC3=>SC0 (10) ([31;49mS[39;49m dave)[31;49m[39;49m
 > 
 > state SC1
   @micropay
@@ -202,15 +202,15 @@
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 _>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 _>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 _>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
 >  
 > sync SC1
 > netlist SC1
@@ -218,17 +218,17 @@
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 _>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 _>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-   *<3 _>transfer/return SC1=>GR1 (1) _[31;49m[39;49m
-    <4 _>transfer/return SC1=>GR1 (2) _[31;49m[39;49m
+    <2 _>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+   *<3 _>deposit/return SC1=>GR1 (1) _[31;49m[39;49m
+    <4 _>deposit/return SC1=>GR1 (2) _[31;49m[39;49m
 > run
 > 
 > netlist SC1
@@ -236,60 +236,60 @@
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 _>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 _>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 _>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 _>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 _>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 _>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 _>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
 > 
 > netlist SC2
   SC2 carol ^
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC2=>SC0 (carol 10) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 _>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol)[31;49m[39;49m
 > 
 > netlist SC3
   SC3 dave ^
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC3=>SC0 (dave 10) ([31;49mS[39;49m dave)[31;49m[39;49m
+    <0 _>deposit SC3=>SC0 (10) ([31;49mS[39;49m dave)[31;49m[39;49m
 > 
 > state SC1
   @micropay
@@ -323,71 +323,71 @@
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob carol)[31;49m!![39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC1=>SC0 (bob 10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 _>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 _>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 _>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 _>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 _>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 _>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 _>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
     <5 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
 > 
 > netlist SC2
   SC2 carol ^
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob dave)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC2=>SC0 (carol 10) ([31;49mS[39;49m carol)[31;49m[39;49m
+    <0 _>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol)[31;49m[39;49m
 > 
 > netlist SC3
   SC3 dave ^
   in:
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL[39;49m
     <1 _>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m FAIL!![39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob)[31;49m[39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob carol)[31;49m!![39;49m
   rl:
-    <2 0>transfer/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
-    <3 1>transfer/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
-    <4 2>transfer/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <2 0>deposit/return SC1=>GR1 (0) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <3 1>deposit/return SC1=>GR1 (1) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
+    <4 2>deposit/return SC1=>GR1 (2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
     <5 3>start SC1=>GR1 Nil ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
   out:
-    <0 _>transfer SC3=>SC0 (dave 10) ([31;49mS[39;49m dave)[31;49m[39;49m
+    <0 _>deposit SC3=>SC0 (10) ([31;49mS[39;49m dave)[31;49m[39;49m
 > 
 > state SC1
   @micropay

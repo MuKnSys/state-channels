@@ -540,7 +540,11 @@
 (apimon "sync" _sync '(str))
 
 ;; Init
-(define _APIMONEthAccounts (eth-accounts)) ;; Accounts
+(define _APIMONEthAccounts Void)
+(catch True (=> ()
+              (set! _APIMONEthAccounts (eth-accounts))) ;; Accounts
+            (=> (E . OPT)
+              False))
 (if (pair? _APIMONEthAccounts)
   (for-each (=> (ACC)
               (pralias! ACC "ACC"))

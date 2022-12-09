@@ -28,11 +28,11 @@ state SC3
 
 # Initializing the players' balances in the master/contract
 iam SC1
-SC0 ^ transfer bob 10
+SC0 ^ deposit 10
 iam SC2
-SC0 ^ transfer carol 10
+SC0 ^ deposit 10
 iam SC3
-SC0 ^ transfer dave 10
+SC0 ^ deposit 10
 run
 
 netlist SC1
@@ -54,7 +54,7 @@ netlist SC1
 state SC1
 
 # Downloading the players' balances in the state channel (1)
-GR1 ^ transfer/return 0
+GR1 ^ deposit/return 0
 run
 netlist SC1
 

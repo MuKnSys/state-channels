@@ -18,13 +18,16 @@
        (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT))
        (:= ACCOUNT GIVER (- (: ACCOUNT GIVER) AMOUNT))))
 
-    transfer/return ;; Return from the blockchain
+    deposit/return ;; Return from a (blockchain) deposit
     (tmicropay lst
     ,(=> (MP CALL)
        (define ACCOUNT (: MP 'ACCOUNT))
+       (define PR (sender-proc))
+       (if (nil? PR)
+         (error "micropay.deposit/return : no sender"))
        (let* ((PARM (: CALL 'PARM))
-              (USER (car PARM))
-              (AMOUNT (cadr PARM)))
+              (USER (sy (cadr (: CALL 'SIGN_E)))) ;; TODO: probably do the same kind of thing in withdraw/return
+              (AMOUNT (car PARM)))
          (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT)))))
 
     withdraw ;; Withdrawing money from the state channel

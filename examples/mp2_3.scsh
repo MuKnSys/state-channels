@@ -1,4 +1,4 @@
-
+# [BROKEN]
 # Initializing everything
 proch system HOST1
 chost HOST1
@@ -203,7 +203,7 @@ state SC1
 state SC2
 state SC3
 
-# We can now start
+# We can now start [BROKEN]
 GR1 ^ start
 step SC1
 netlist SC1

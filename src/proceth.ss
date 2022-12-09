@@ -54,7 +54,7 @@
                                                                   ;; FIXME: the shitty "x" stems from the fact that "0" is
                                                                   ;;        turned to an empty string by web3.js when in fact,
                                                                   ;;        rather than this, it should be encoded as "30000..."
-                        (: ACC 'ACCNO) "1234")
+                        (: ACC 'ACCNO) "1234") ;; FIXME: use the account's password, not an hardwired "1234"
   (apply proc-send0 `(,PROC ,FNAME . ,PARM))
   (noop)))
 
