@@ -2,9 +2,9 @@
 (import ./console)
 
 ;; Main
-(outraw "I am process #")
-(outraw (: (host-proc) 'HOSTID))
-(cr)
+;(outraw "I am process #")
+;(outraw (: (host-proc) 'HOSTID))
+;(cr)
 
 (init "durand" "PR" (console))
 

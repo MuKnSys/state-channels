@@ -22,7 +22,7 @@
 ;; NetP2P-based naming daemon et al.
 (define (handler MSG)
   (define RES Void)
-  (out MSG)
+  (>> MSG)
   (cr)
   (set! RES (cond ((== (car MSG) 'net-enter)
                    (_netp2p-net-enter (cadr MSG) (caddr MSG)))

@@ -52,6 +52,13 @@
 (define (netp2pd-global?)
   (== _NETP2P-PEERID _NETP2PD-GLOBAL))
 
+(outraw "NETP2PD_ROOT=")
+(outraw _NETP2PD-GLOBAL)
+(cr)
+(outraw "NETP2PD=")
+(outraw _NETP2PD-ADDR)
+(cr)
+
 (define (netp2pd MSG . SOCKA0)
   (define RES '())
   (define L False)
@@ -61,16 +68,18 @@
                     _NETP2PD-ADDR)
                   (car SOCKA0)))
   (define SOCK Void)
+(errlog "netp2pd")
+(errlog SOCKA)
   (set! RES
         (if SOCKA
           (begin
             (catch True (=> ()
                           (set! SOCK (sock-cli SOCKA)))
                         (=> (E . OPT)
-                         ;(outraw "Can't connect to ")
-                         ;(outraw (netp2pd-addr))
-                         ;(cr)
-                         (noop)))
+                          (outraw "Can't connect to ")
+                          (outraw (netp2pd-addr))
+                          (cr)
+                          (noop)))
             (if (unspecified? SOCK)
               (empty)
               (begin
@@ -102,9 +111,9 @@
 
 ;; API (used by root & local servers)
 (define (_netp2p-net-enter UID ADDR)
- ;(outraw "enter ")(outraw UID)
- ;(outraw "=>")(outraw ADDR)
- ;(cr)
+  (outraw "enter ")(outraw UID)
+  (outraw "=>")(outraw ADDR)
+  (cr)
   (if (netp2pd?)
     (hash-set! (net-phys) UID ADDR))
   (car (netp2pd `(net-enter ,UID ,ADDR))))
@@ -163,6 +172,9 @@
   (if (specified? _NETP2P-PEERID)
     (error "netp2p-connect"))
   (set! _NETP2P-PEERID PEERID)
+  (outraw "NETP2P_PEERID=")
+  (outraw _NETP2P-PEERID)
+  (cr)
   (netp2p-net-enter PEERID))
 
 (define (netp2p-net-leave UID)

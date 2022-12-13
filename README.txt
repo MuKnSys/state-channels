@@ -47,6 +47,6 @@ bin/scm examples/cliping.ss
 bin/scm examples/srvping.ss
 bin/scm examples/echo_cli.ss
 
-export LIBP2PD_ADDR=127.0.0.1:1234
-bin/scm examples/libp2pd.ss
-bin/scm examples/libp2p_cli1.ss
+export NETP2PD_ADDR=127.0.0.1:1234
+bin/scm src/netp2pd.ss
+bin/scm examples/netp2p_cli1.ss

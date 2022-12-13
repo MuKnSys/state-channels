@@ -14,9 +14,9 @@
 ;(netlist 1)(cr)
 
 ;; Main
-(outraw "I am process #")
-(outraw (: (host-proc) 'HOSTID))
-(cr)
+;(outraw "I am process #")
+;(outraw (: (host-proc) 'HOSTID))
+;(cr)
 
 ;(net-log 1)
 (start)

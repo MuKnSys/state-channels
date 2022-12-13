@@ -12,6 +12,7 @@
         ./basics
         ./socks
         ./rexpr ./json
+        ./inits
         ./aliases
         ./scheds
         ./procs
@@ -33,6 +34,7 @@
   (import: ./socks)
   (import: ./rexpr)
   (import: ./json)
+  (import: ./inits)
   (import: ./aliases)
   (import: ./scheds)
   (import: ./procs)
