@@ -88,6 +88,13 @@
     (caddr L)
     Void))
 
+;; Net logs
+(define _NET_LOG False)
+(define (net-log . B) ;; FIXME: clean & organize the net logging system, with levels
+  (if (empty? B)
+    _NET_LOG
+    (set! _NET_LOG (list-in? (car B) '(#t 1 "1")))))
+
 ;; Hosts (physical hosts)
 (define (proc-hostph PROC)
   (define HOST PROC)
@@ -183,9 +190,11 @@
                    ADDR))
 (define (current-machine)
   _MACHINE)
-(outraw "MACHINE=")
-(outraw (current-machine))
-(cr)
+(if (net-log)
+(begin
+  (outraw "MACHINE=")
+  (outraw (current-machine))
+  (cr)))
 
 (define _NET (network))
 (define (current-network)
@@ -202,19 +211,25 @@
 
 (define (net-enter PROC)
   (define UID (: PROC 'UID))
+  (if (not (proc? PROC))
+    (error "net-enter")
+  (if (^ 'mapping? PROC)
+    (hash-set! (net-mapped) UID PROC)
   (if (not (^ 'core? PROC))
-    (error "net-enter"))
+    (error "net-enter(2)")
   (if (string? UID)
     (let* ((ADDR (network-addr (current-machine)
                                (: (host-proc) 'HOSTID))))
-      (outraw "nenter=> ") ;; TODO: turn that to debug logs
-      (out (: PROC 'ID))
-      (outraw " as ")
-      (outraw UID)
-      (cr)
+      (if (net-log)
+      (begin
+        (outraw "nenter=> ") ;; TODO: turn that to (clean) debug logs
+        (out (: PROC 'ID))
+        (outraw " as ")
+        (outraw UID)
+        (cr)))
       (hash-set! (net-phys) UID ADDR)
       (hash-set! (net-procs) UID PROC)
-      (host-send "0" `(enter ,UID ,ADDR)))))
+      (host-send "0" `(enter ,UID ,ADDR))))))))
 
 (define (net-leave PROC)
   (define UID (: PROC 'UID))
@@ -251,7 +266,7 @@
     (hash-set! (net-mapped) NAME RES)))
   RES)
 
-(define (net-resolve NAME) ;; TODO: resolve (and then physically send) globally ???
+(define (net-resolve NAME . OPT) ;; TODO: resolve (and then physically send) globally ???
   (define RES Void)
   (define ISCORE (and (proc? NAME) (^ 'core? NAME)))
   (define PROC Void)
@@ -267,15 +282,10 @@
   (if (or (proceth? PROC)
           (account? PROC)) ;; TODO: improve this
     (set! RES PROC)
-    (if (and (not RES) (not ISCORE))
+    (if (and (not RES) (not ISCORE) (empty? OPT)) ;; TODO: populate & test OPT
       (set! RES (net-map NAME))))
   RES)
 
-(define _NET_LOG False)
-(define (net-log . B)
-  (if (empty? B)
-    _NET_LOG
-    (set! _NET_LOG (list-in? (car B) '(#t 1 "1")))))
 (define (net-send MSG . PROC) ;; NOTE: PROC is here to be able to send an MSG to a proc which is not MSG.TO
   (if (empty? PROC)
     (set! PROC (net-resolve (: MSG 'TO)))

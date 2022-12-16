@@ -339,6 +339,7 @@
 (define >> rexpr-serialize)
 
 ;; Pretty-printing
+;; TODO: add loop protection
 (define _PRETTY_OMIT '()) ;; TODO: implement genuine pretty-printing patterns
 (define (rexpr-pretty O)
   (if (list? O)

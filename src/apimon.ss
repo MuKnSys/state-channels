@@ -17,14 +17,36 @@
 
 ;; Aliases
 (define _APIMONALIASES (aliases))
-(define (pralias! UID APREF)
+(define (pralias! UID APREF . RAW)
   (if (proc? UID)
     (set! UID (: UID 'UID)))
-  (^ 'new! _APIMONALIASES APREF UID ""))
+  (if (empty? RAW)
+    (^ 'new! _APIMONALIASES APREF UID "")
+    (^ 'alias! _APIMONALIASES APREF UID)))
 
-(define (pralias UID)
+(define (pralias UID . RAW)
   (define ALIAS (^ 'alias _APIMONALIASES UID))
-  (if (unspecified? ALIAS) UID ALIAS))
+  (if (unspecified? ALIAS) (if (empty? RAW) UID Void) ALIAS))
+
+(define (praliasa A)
+  (^ 'addr _APIMONALIASES A))
+
+(define (netrsv UID)
+  (define UID0 UID)
+  (define PROC Void)
+  (if (strsy? UID)
+  (begin
+    (set! UID (praliasa UID))
+    (if (unspecified? UID)
+      (set! UID UID0))))
+  (if (proc? UID)
+    (set! PROC UID))
+  (if (and UID (specified? UID) (not (proc? UID)))
+  (begin
+    (set! PROC (net-resolve UID 1))
+    (if (or (unspecified? PROC) (not PROC)) 
+      (set! PROC (hash-ref (net-mapped) UID)))))
+  PROC)
 
 ;; Calls
 (define (lstsign S)
@@ -190,6 +212,11 @@
 )
 
 ;; Net
+(define _NETLIST-ACCOUNTS False)
+(define (netlist-acc . B)
+  (if (empty? B)
+    _NETLIST-ACCOUNTS
+    (set! _NETLIST-ACCOUNTS (car B))))
 (define (netlist . SHORT) ;; FIXME: doesn't always lists the procs ordered by their PIDs
   (define N 0)
   (define FIRST True)
@@ -209,11 +236,13 @@
     (outraw "SELF")
     (cr)))
   (hash-for-each-in-order (=> (UID PR)
-                            (if FIRST
-                              (set! FIRST False)
-                              (cr))
-                            ((if SHORT lstproc2 lstproc) PR 0 INDENT)
-                            (set! N (+ N 1)))
+                            (if (or (netlist-acc) (and (not (netlist-acc)) (not (account? PR))))
+                            (begin
+                              (if FIRST
+                                (set! FIRST False)
+                                (cr))
+                              ((if SHORT lstproc2 lstproc) PR 0 INDENT)
+                              (set! N (+ N 1)))))
                           (allprocs))
   (if SHORT
   (begin
@@ -325,12 +354,81 @@
       (outraw " not found")))
   (_npr PR))
 
+(define (_proce USER UID CNAME)
+  (define PROC Void)
+  (if (netrsv UID)
+    (outraw (string+ "Proc " UID " already exists"))
+    (begin
+      (if (not (string-contains CNAME "@" 0))
+        (let* ((NEXTID (if (unspecified? (: (: _ETHALIASES 'ROOT) CNAME))
+                           0
+                           (eth-nextId CNAME))))
+          (outraw (eth-create CNAME))
+          (set! CNAME (string+ CNAME "@" (string NEXTID)))
+          (indent+ -2) ;; FIXME: crappy reindenting due to not being able to save & restore output contexts
+          (^ 'save _ETHALIASES)
+          (indent+ 2)
+          (atcol0 0)))
+      (if (specified? (pralias (eth-addr CNAME) 1))
+        (outraw (string+ "Contract " CNAME " already mapped"))
+        (begin
+          (set! PROC (proceth 'USER USER
+                              'UID (eth-addr CNAME)))
+          (pralias! PROC UID 1)
+          (net-enter PROC)))))
+  PROC)
+
+(define (_hash-lst HLIST)
+  (hash-for-each (=> (UID PR)
+                   (outraw UID)(outraw " ")
+                   (outraw (: PR 'ID))(cr))
+                 HLIST))
+
+(define (_proce! UID . USER)
+  (define UID0 UID)
+  (set! USER (map account-byName USER))
+  (set! USER (map (=> (ACC)
+                    (if (account? ACC)
+                       (: ACC 'UID)
+                       ACC))
+                  USER))
+  (set! USER (filter (=> (UID)
+                       UID)
+                     USER))
+  (if (not (proc? UID))
+    (set! UID (netrsv UID)))
+  (if (not UID)
+    (outraw (string+ "Proc " UID0 " is not on the net"))
+    (if (proceth? UID)
+      (^ 'send UID 'init USER))))
+
+(define (_ethblock)
+  (outraw (eth-blockNumber)))
+
+(define (_ethprocs)
+  (define FIRST True)
+  (for-each (=> (A)
+              (if (string? (car A))
+              (begin
+                (if (not FIRST) (cr))
+                (set! FIRST False)
+                (outraw (unattr (car A)))
+                (outraw " ")
+                (outraw (cadr A)))))
+            (: _ETHALIASES 'ROOT)))
+
+(define (_ethwait N)
+  (define BN (eth-blockNumber))
+ ;(outraw (string+ "Waiting " (string N) " blocks, starting at "))(outraw BN)(cr)
+  (eth-waitNBlocks N)
+  (outraw (string+ "Waited " (string N) " blocks: " (string BN) " => " (string (eth-blockNumber)))))
+
 (define (_cpr . UID)
   (set! UID (if (empty? UID)
               Void
               (car UID)))
   (if (specified? UID)
-    (let* ((PR (net-resolve UID)))
+    (let* ((PR (netrsv UID)))
       (if PR
         (current-proc! PR)
         (outraw (string+ "Proc " UID " is not on the net"))))
@@ -345,7 +443,7 @@
               Void
               (car UID)))
   (if (specified? UID)
-    (let* ((PR (net-resolve UID)))
+    (let* ((PR (netrsv UID)))
       (if PR
         (current-proch! PR)
         (outraw (string+ "Host proc " UID " is not on the net"))))
@@ -360,7 +458,7 @@
                       (if (specified? NAME)
                         (if (== NAME "_")
                           Void
-                          (let* ((P (net-resolve NAME)))
+                          (let* ((P (netrsv NAME)))
                             (if P
                               P
                               (outraw (string+ "Proc " NAME " is not on the net")))))))
@@ -371,7 +469,7 @@
     RES))
 
 (define (_prstop UID)
-  (define PR (net-resolve UID))
+  (define PR (netrsv UID))
   (if PR
     (begin
      ;(outraw (string+ "Stopping process " (: PR 'UID)))
@@ -379,7 +477,7 @@
     (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_prunstop UID)
-  (define PR (net-resolve UID))
+  (define PR (netrsv UID))
   (if PR
     (begin
      ;(outraw (string+ "Restarting process " (: PR 'UID)))
@@ -387,13 +485,13 @@
     (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_prs UID)
-  (define PR (net-resolve UID))
+  (define PR (netrsv UID))
   (if PR
     (^ 'step PR)
     (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_prs* UID)
-  (define PR (net-resolve UID))
+  (define PR (netrsv UID))
   (if PR
     (while (and (step PR) (== (: PR 'STATE) 'Active))
       (noop))
@@ -405,7 +503,7 @@
 (define (_lsp2 . UID)
   (set! UID (if (empty? UID) False (car UID)))
   (if UID
-  (let* ((PR (net-resolve UID)))
+  (let* ((PR (netrsv UID)))
     (if PR
       (lstproc PR 1 1)
       (outraw (string+ "Proc " UID " is not on the net"))))
@@ -445,15 +543,37 @@
               (_lso VAR 1))
             L))
 
+(define (_statef-eth PR)
+  (define STATE (^ 'fetch PR 'state))
+  (define ACCS (map account-byUID (^ 'fetch PR 'accounts)))
+  (define BALS (^ 'fetch PR 'balances))
+  (define I 0)
+  (define N Void)
+  (outraw "@proceth")
+  (cr)
+  (outraw "  STATE = ")
+  (out STATE)(cr)
+  (outraw "  ACCOUNT = @rexpr")
+  (set! N (list-length ACCS))
+  (while (< I N)
+    (cr)
+    (outraw "    ")
+    (outraw (: (list-get ACCS I) 'NAME))
+    (outraw " = ")
+    (outraw (list-get BALS I))
+    (set! I (+ I 1))))
+
 (define (_statef . L)
   (define FIRST True)
   (for-each (=> (VAR)
               (if FIRST
                 (set! FIRST False)
                 (cr))
-              (let* ((PR (hash-ref (net-procs) VAR)))
+              (let* ((PR (netrsv VAR)))
                 (if PR
-                  (rexpr-pretty (: PR 'SELF))
+                  (if (proceth? PR)
+                    (_statef-eth PR)
+                    (rexpr-pretty (: PR 'SELF)))
                   (outraw (string+ "Proc " VAR " is not on the net")))))
             L))
 
@@ -486,7 +606,7 @@
         (outraw " not found"))))
   (begin ;; Message to proc
     (let* ((MULTI (== VAR "*"))
-           (PR (if MULTI (current-proc) (net-resolve VAR))))
+           (PR (if MULTI (current-proc) (netrsv VAR))))
       (if PR
         (begin
           (set! PARM (cons FUNC PARM))
@@ -499,10 +619,37 @@
     ))))
 
 (define (_sync UID)
-  (let* ((PR (net-resolve UID)))
+  (let* ((PR (netrsv UID)))
     (if PR
       (^ 'sync PR)
       (outraw (string+ "Proc " UID " is not on the net")))))
+
+;; Accounts
+(define (_acc . OPT)
+  (define I 0)
+  (define N (accounts-length))
+  (define ACC Void)
+  (if (empty? OPT)
+    (begin
+      (tabsep " ")
+      (tabs 'Start)
+      (while (< I N) ;; TODO: do it with tabs
+        (set! ACC (account-byNo I))
+        (outraw (: ACC 'ACCNO))
+        (tab)
+        (outraw (if (unspecified? (: ACC 'NAME)) "_" (: ACC 'NAME)))
+        (tab)
+        (outraw (: ACC 'UID))
+        (if (< (+ I 1) N) (cr))
+        (set! I (+ I 1)))
+      (outraw (tabs 'End)))
+    (begin
+      (set! ACC (account-byNo (car OPT)))
+      (account-name! ACC (cadr OPT)))))
+
+;; Aliases
+(define (_alias)
+  (>> _APIMONALIASES 'Indent))
 
 ;; CLI commands (declarations)
 (apimon "h" _help '())
@@ -518,8 +665,15 @@
 (apimon "npr-" _npr- '(str))
 (apimon "proc" _proc '(str str str))
 (apimon "proch" _proch '(str str))
+(apimon "proce" _proce '(str str str))
+(apimon "proce!" _proce! '(str sy sy sy sy sy sy sy) 'VARGS True)
 (apimon '("cpr" "iam" "whoami") _cpr '(str) 'VARGS True)
 (apimon "chost" _cprh '(str) 'VARGS True)
+(apimon "acc" _acc '(num sy) 'VARGS True)
+(apimon "alias" _alias '())
+(apimon "ethblock" _ethblock '())
+(apimon "ethprocs" _ethprocs '())
+(apimon "ethwait" _ethwait '(num))
 
 (apimon '("_sc!" "join") _sc '(str str str str str) 'VARGS True)
 (apimon "stop" _prstop '(str))
@@ -530,6 +684,7 @@
 
 (apimon "lsp" _lsp '())
 (apimon '("lsp2" "netlist") _lsp2 '(str) 'VARGS True)
+(apimon "netlist-acc" netlist-acc '(bool) 'VARGS True)
 (apimon '("lso" "dump") _lso '(str) 'VARGS True)
 (apimon '("lso2" "print") _lso2 '(str) 'VARGS True)
 (apimon "state" _state '(str))
@@ -546,6 +701,10 @@
             (=> (E . OPT)
               False))
 (if (pair? _APIMONEthAccounts)
-  (for-each (=> (ACC)
-              (pralias! ACC "ACC"))
-            _APIMONEthAccounts))
+  (let* ((I 0))
+    (for-each (=> (ACC)
+                (pralias! ACC "ACC")
+                (account 'ACCNO I
+                         'UID ACC)
+                (set! I (+ I 1)))
+              _APIMONEthAccounts)))

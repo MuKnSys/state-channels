@@ -1,0 +1,154 @@
+> 
+> # Initializing everything
+> proch system HOST1
+> chost HOST1
+> proce blockchain SC0 Micropay # Contract creation
+  0x19653421051cadf0a76cf8ebf648aef361cb6fbe
+> #proce blockchain SC0 SimpleStorage@40 # Linking to a preexisting contract
+> $MP1 ! micropay bob 0 carol 0
+> $MP2 ! micropay bob 0 carol 0
+> proc bob SC1 $MP1
+> proc carol SC2 $MP2
+> netlist-acc 1
+> 
+> # Initializing the accounts
+> netlist
+  PID    NAME   USER        PEER  SELF       
+  0^     SC1    bob         (_)   @micropay@0
+  0acc^  ACC0   _           (_)   _          
+  0eth^  SC0    blockchain  (_)   _          
+  0h^    HOST1  system      (_)   _          
+  0ph_   phys   system      (_)   _          
+  1^     SC2    carol       (_)   @micropay@1
+  1acc^  ACC1   _           (_)   _          
+  2acc^  ACC2   _           (_)   _          
+  8 procs
+> 
+> acc
+  0 _ 0xa16979a982b94200d61aede91f6cf2a0c0ac3613
+  1 _ 0xfe9d3038aa1e064e4bca147fa978dece561b91f1
+  2 _ 0x51569535b832588d346d80af67c3341088cfd8fc
+> 
+> acc 0 bob
+> acc 1 carol
+> acc 2 dave # unused
+> 
+> acc
+  0 bob   0xa16979a982b94200d61aede91f6cf2a0c0ac3613
+  1 carol 0xfe9d3038aa1e064e4bca147fa978dece561b91f1
+  2 dave  0x51569535b832588d346d80af67c3341088cfd8fc
+> 
+> netlist
+  PID    NAME   USER        PEER  SELF       
+  0^     SC1    bob         (_)   @micropay@0
+  0acc^  ACC0   bob         (_)   _          
+  0eth^  SC0    blockchain  (_)   _          
+  0h^    HOST1  system      (_)   _          
+  0ph_   phys   system      (_)   _          
+  1^     SC2    carol       (_)   @micropay@1
+  1acc^  ACC1   carol       (_)   _          
+  2acc^  ACC2   dave        (_)   _          
+  8 procs
+> 
+> # Initializing the contract
+> netlist SC0
+  SC0 blockchain ^
+  in:
+  rl:
+  out:
+> 
+> state SC0
+  @proceth
+    STATE = 0
+    ACCOUNT = @rexpr
+> 
+> sync SC0 # Contract mapping
+> 
+> netlist SC0
+  SC0 blockchain ^
+  in:
+  rl:
+  out:
+> 
+> state SC0
+  @proceth
+    STATE = 0
+    ACCOUNT = @rexpr
+> 
+> iam SC1
+> #SC0 ^ init bob carol # FIXME: can't do that yet, due to non-decoding of the ABI (=> can't translate account names to UIDs)
+> proce! SC0 bob carol
+> state SC0
+  @proceth
+    STATE = 0
+    ACCOUNT = @rexpr
+> 
+> ethwait 1 # Waiting until 1 block has been added to the blockchain
+  0 1 2 3 4 5 6 7 8 9 10 11 12 13 
+  Waited 1 blocks: 25874 => 25875
+> state SC0
+  @proceth
+    STATE = 1
+    ACCOUNT = @rexpr
+      bob = 0
+      carol = 0
+> 
+> # Initializing the players' balances in the contract
+> SC0 ^ deposit 10
+> iam SC2
+> SC0 ^ deposit 10
+> 
+> netlist SC1
+  SC1 bob ^
+  in:
+  rl:
+  out:
+    <0 _>init SC1=>SC0 ((0xa16979a982b94200d61aede91f6cf2a0c0ac3613 0xfe9d3038aa1e064e4bca147fa978dece561b91f1)) _[31;49m[39;49m
+    <1 _>deposit SC1=>SC0 (10) _[31;49m[39;49m
+> 
+> netlist SC2
+  SC2 carol ^
+  in:
+  rl:
+  out:
+    <0 _>deposit SC2=>SC0 (10) _[31;49m[39;49m
+> 
+> netlist SC0
+  SC0 blockchain ^
+  in:
+  rl:
+  out:
+> 
+> state SC0
+  @proceth
+    STATE = 1
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 0
+> 
+> ethwait 1
+  0 1 2 3 
+  Waited 1 blocks: 25876 => 25877
+> 
+> sync SC0
+> netlist SC0
+  SC0 blockchain ^
+  in:
+    <0 0>state SC1=>SC0 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <1 1>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 2>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol)[31;49m[39;49m
+  rl:
+    <0 0>state SC1=>SC0 (1) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <1 1>deposit SC1=>SC0 (10) ([31;49mS[39;49m bob)[31;49m[39;49m
+    <0 2>deposit SC2=>SC0 (10) ([31;49mS[39;49m carol)[31;49m[39;49m
+  out:
+> 
+> state SC0
+  @proceth
+    STATE = 1
+    ACCOUNT = @rexpr
+      bob = 10
+      carol = 10
+> 
+> # Quitting
+> q

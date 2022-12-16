@@ -57,6 +57,8 @@
   (define (cmd CMD PARM)
     (define (cvt VAL TY)
       (cond
+        ((== TY 'bool)
+         (boolean VAL))
         ((== TY 'num)
          (number VAL))
         ((== TY 'sy)
@@ -98,7 +100,13 @@
           (set-car! PARM CMD0))
         (set! FUNC Void))))
     (if (specified? FUNC)
-      (begin
+      (let* ((PREV Nil)
+             (PTR PARM))
+        (while (and (!= PTR Nil) (!= (car PTR) "#"))
+          (set! PREV PTR)
+          (set! PTR (cdr PTR)))
+        (if (and (pair? PREV) (pair? PTR) (== (car PTR) "#"))
+          (set-cdr! PREV Nil))
         (exec FUNC PARM)
         (if (: FUNC 'QUIT)
           (set! FINISHED True)))

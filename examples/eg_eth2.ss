@@ -13,15 +13,9 @@
                    'UID "PR1"))
 
 ;; Creating the accounts
-(account 'NAME 'smith
-         'ACCNO 0 ;; FIXME: remove this and make that better
-         'UID "0xa16979a982b94200d61aede91f6cf2a0c0ac3613")
-(account 'NAME 'dupont
-         'ACCNO 1
-         'UID "0xfe9d3038aa1e064e4bca147fa978dece561b91f1")
-(account 'NAME 'durand
-         'ACCNO 2
-         'UID "0x51569535b832588d346d80af67c3341088cfd8fc")
+(account-name! (account-byNo 0) 'smith)
+(account-name! (account-byNo 1) 'dupont)
+(account-name! (account-byNo 2) 'durand)
 
 ;; lstp
 (define (lstp)
@@ -30,6 +24,7 @@
   (_lsp2 PR1)(cr))
 
 (net-enter PR1)
+(netlist-acc 1)
 (netlist 1)(cr)
 (lstp)
 
@@ -40,13 +35,13 @@
 ;; Sending a message to PR0
 (current-proc! PR1)
 (outraw "---\n")
-(outraw (^ 'fetch PR0 'get))
+(out (^ 'fetch PR0 'get))
 (cr)
-(outraw (^ 'fetch PR0 'state))
+(out (^ 'fetch PR0 'state))
 (cr)
-(outraw (^ 'fetch PR0 'accounts))
+(out (^ 'fetch PR0 'accounts))
 (cr)
-(outraw (^ 'fetch PR0 'balances))
+(out (^ 'fetch PR0 'balances))
 (cr)
 ;(^ 'send PR0 'set 5678)
 ;(^ 'send PR0 'set2 0123456789)

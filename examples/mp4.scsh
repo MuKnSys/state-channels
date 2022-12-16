@@ -1,0 +1,66 @@
+
+# Initializing everything
+proch system HOST1
+chost HOST1
+proce blockchain SC0 Micropay # Contract creation
+#proce blockchain SC0 SimpleStorage@40 # Linking to a preexisting contract
+$MP1 ! micropay bob 0 carol 0
+$MP2 ! micropay bob 0 carol 0
+proc bob SC1 $MP1
+proc carol SC2 $MP2
+netlist-acc 1
+
+# Initializing the accounts
+netlist
+
+acc
+
+acc 0 bob
+acc 1 carol
+acc 2 dave # unused
+
+acc
+
+netlist
+
+# Initializing the contract
+netlist SC0
+
+state SC0
+
+sync SC0 # Contract mapping
+
+netlist SC0
+
+state SC0
+
+iam SC1
+#SC0 ^ init bob carol # FIXME: can't do that yet, due to non-decoding of the ABI (=> can't translate account names to UIDs)
+proce! SC0 bob carol
+state SC0
+
+ethwait 1 # Waiting until 1 block has been added to the blockchain
+state SC0
+
+# Initializing the players' balances in the contract
+SC0 ^ deposit 10
+iam SC2
+SC0 ^ deposit 10
+
+netlist SC1
+
+netlist SC2
+
+netlist SC0
+
+state SC0
+
+ethwait 1
+
+sync SC0
+netlist SC0
+
+state SC0
+
+# Quitting
+q

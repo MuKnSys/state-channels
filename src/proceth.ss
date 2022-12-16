@@ -35,14 +35,14 @@
 (method! tproceth 'fetch (=> (PROC FNAME . PARM) ;; NOTE: for calling views (synchronous, direct result)
   (define FROM (current-proc))
   (define CNAME (eth-cname (: PROC 'UID)))
-  (eth-callMethod CNAME (: PROC 'UID)
-                        (string FNAME)
-                        PARM)))
+  (json-parse (eth-callMethod CNAME (: PROC 'UID)
+                                    (string FNAME)
+                                    PARM))))
 
 ;; Send
-(method! tproceth 'send (=> (PROC FNAME . PARM)
-  (define FROM (current-proc))
-  (define CNAME (eth-cname (: PROC 'UID)))
+(method! tproceth 'send (=> (PROC FNAME . PARM) ;; TODO: use the ABI to decide between (fetch) and (send)
+  (define FROM (current-proc))                  ;; TODO: have a SELF & its methods in a proceth, and use (mvparms) to convert parms
+  (define CNAME (eth-cname (: PROC 'UID)))      ;;       => use also this do decide between (fetch) and (send) (?)
   (define ACC Void)
   (set! ACC (hash-ref (allaccounts 1) (sy (: FROM 'USER))))
   (if (not ACC)
@@ -56,6 +56,7 @@
                                                                   ;;        rather than this, it should be encoded as "30000..."
                         (: ACC 'ACCNO) "1234") ;; FIXME: use the account's password, not an hardwired "1234"
   (apply proc-send0 `(,PROC ,FNAME . ,PARM))
+  (:= FROM 'OUTPTR Nil) ;; FIXME: remove this and make scheduling of messages sent to proceths work exactly the same as with procls
   (noop)))
 
 ;; Update

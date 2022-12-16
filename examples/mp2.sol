@@ -1,6 +1,6 @@
 pragma solidity >=0.4.0 <0.7.0;
 
-contract SimpleStorage {
+contract Micropay {
   uint storedData=1234;
 
 // get/set

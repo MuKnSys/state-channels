@@ -56,6 +56,15 @@
 (define True #t)
 (define False #f)
 
+(define (boolean O)
+  (if (boolean? O)
+    O
+  (if (number? O)
+    (!= O 0)
+  (if (string? O)
+    (!= O "0")
+    True))))
+
 (define (ifTrue TEST FN)
   (if TEST
   (begin

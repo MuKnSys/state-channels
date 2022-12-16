@@ -24,8 +24,20 @@
 ;; Constructor
 (define _ACCOUNT (make-hashv-table))
 (define _ACCOUNTByName (make-hashv-table))
+(define _ACCOUNTByNo (make-hashv-table))
 (define (allaccounts . BYNAME) ;; NOTE: we keep that at the moment ; see if (or how) we should separate accounts from procs
-  (if (empty? BYNAME) _ACCOUNT _ACCOUNTByName))
+  (if (empty? BYNAME) _ACCOUNT (if (== (car BYNAME) 1)
+                                   _ACCOUNTByName
+                                   _ACCOUNTByNo)))
+(define (account-byUID UID)
+  (hash-ref (allaccounts) UID))
+(define (account-byName NAME)
+  (hash-ref (allaccounts 1) NAME))
+(define (account-byNo NO)
+  (hash-ref (allaccounts 2) NO))
+
+(define (accounts-length)
+  (hash-count (const True) (allaccounts 2)))
 
 (define (account . PARM)
   (define RES (apply proc `(,taccount . ,PARM)))
@@ -38,7 +50,14 @@
   (set! NAME (: RES 'NAME))
   (if (specified? NAME)
     (hash-set! (allaccounts 1) (sy NAME) RES))
+  (if (specified? (: RES 'ACCNO))
+    (hash-set! (allaccounts 2) (: RES 'ACCNO) RES))
   RES)
+
+(define (account-name! ACC NAME)
+  (:= ACC 'NAME NAME)
+  (hash-remove! (allaccounts 1) (sy NAME))
+  (hash-set! (allaccounts 1) (sy NAME) ACC))
 
 ;; Step
 (method! taccount 'step (=> (PROC)

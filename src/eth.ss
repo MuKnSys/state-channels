@@ -71,6 +71,36 @@
   (define RES (: (geth "eth_blockNumber" "[]") 'result))
   (string->number (substring RES 2 (string-length RES)) 16))
 
+(define (eth-waitNBlocks N) ;; FIXME: shitty (?) ; make that work with an interrupt (?)
+  (define GOTIT False)
+  (define BN0 (eth-blockNumber))
+  (define BN1 Void)
+  (define I 0)
+ ;(outraw "Starting from ")
+ ;(outraw BN0)
+ ;(cr)
+  (while (not GOTIT)
+    (set! BN1 (eth-blockNumber))
+    (outraw I)
+    (outraw " ")
+   ;(outraw I)
+   ;(outraw ": Block ")
+   ;(outraw BN1)
+   ;(outraw " reached [")
+   ;(outraw BN1)
+   ;(outraw " ")
+   ;(outraw (+ BN0 N))
+   ;(outraw " ")
+   ;(outraw (>= BN1 (+ BN0 N)))
+   ;(outraw "]")
+   ;(cr)
+    (set! I (+ I 1))
+    (if (>= BN1 (+ BN0 N))
+      (begin
+        (set! GOTIT True)
+        (cr))
+      (sleep 1))))
+
 ;; Accounts
 (define (eth-accounts)
   (: (geth "eth_accounts" "[]") 'result))
@@ -98,6 +128,9 @@
 
 (define (eth-cname ADDR)
   (car (string-split (^ 'alias _ETHALIASES ADDR) #\@)))
+
+(define (eth-nextId CNAME)
+  (: (: _ETHALIASES 'ROOT) CNAME))
 
 (define (eth-abi CNAME) ;; TODO: memoize this
   (car (file-read (path-normalize (string+ _ETHCODEDIR "/" CNAME ".abi")) 1)))
