@@ -66,7 +66,7 @@
     True))))
 
 (define (ifTrue TEST FN)
-  (if TEST
+  (if (and TEST (not (unspecified? TEST)))
   (begin
     (FN)
     True)
@@ -94,13 +94,15 @@
 
 ;; Strings
 (define (string O)
+  (if (boolean? O)
+    (if O "#t" "#f")
   (if (number? O)
     (number->string O)
   (if (char? O)
     (_string O)
   (if (symbol? O)
     (symbol->string O)
-    O))))
+    O)))))
 
 (define (string-digits? S) ;; TODO: do more functions like this, e.g. that recognize the format of floating numbers
   (define RES (string? S))

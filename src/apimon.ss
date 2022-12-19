@@ -423,6 +423,13 @@
   (eth-waitNBlocks N)
   (outraw (string+ "Waited " (string N) " blocks: " (string BN) " => " (string (eth-blockNumber)))))
 
+(define (_procm UID USER)
+  (define PR (net-map UID))
+  (:= PR 'USER USER))
+
+(define (_autorun AUTO)
+  (^ 'autorun APIMON AUTO))
+
 (define (_cpr . UID)
   (set! UID (if (empty? UID)
               Void
@@ -614,6 +621,15 @@
           (set! PARM (cons (if MULTI 'send* 'send) PARM))
          ;(out PARM)
           (apply ^ PARM)
+          (if (^ 'autorun APIMON)
+          (let* ((BLK _START-ISBLOCK)) ;; TODO: clean that mess of (relative) hacks
+            (step)
+            (usleep 100000)
+            (nonblockio)
+            (set! _START-NEVERBLOCK True)
+            (start 'Once 5)
+            (set! _START-NEVERBLOCK False)
+            (if BLK (blockio) (nonblockio))))
         )
         (outraw (string+ "Proc " VAR " is not on the net")))
     ))))
@@ -674,6 +690,7 @@
 (apimon "ethblock" _ethblock '())
 (apimon "ethprocs" _ethprocs '())
 (apimon "ethwait" _ethwait '(num))
+(apimon "procm" _procm '(str str))
 
 (apimon '("_sc!" "join") _sc '(str str str str str) 'VARGS True)
 (apimon "stop" _prstop '(str))
@@ -681,6 +698,7 @@
 (apimon '("prs" "step") _prs '(str))
 (apimon '("prs*" "step*") _prs* '(str))
 (apimon "run" step '())
+(apimon "autorun" _autorun '(bool))
 
 (apimon "lsp" _lsp '())
 (apimon '("lsp2" "netlist") _lsp2 '(str) 'VARGS True)
@@ -708,3 +726,6 @@
                          'UID ACC)
                 (set! I (+ I 1)))
               _APIMONEthAccounts)))
+
+;; Start
+(start 'Once)

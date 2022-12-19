@@ -95,7 +95,7 @@
          Void)
         ((and (pair? MSG) (== (car MSG) 'dispatch))
          (set! MSG (cadr MSG))
-         (let* ((ADDR (hash-ref (net-phys) (: MSG 'TO))))
+         (let* ((ADDR (hash-ref (net-phys) (: MSG (if (: MSG 'ACK) 'FROM 'TO)))))
            (if (not ADDR)
              (begin
                (outraw "Proc ")
@@ -104,7 +104,7 @@
                (cr))
              (_handler1 MSG))))
         (else
-         (let* ((ADDR (hash-ref (net-phys) (: MSG 'TO))))
+         (let* ((ADDR (hash-ref (net-phys) (: MSG (if (: MSG 'ACK) 'FROM 'TO)))))
            (if (not ADDR)
              (begin
                (outraw "Proc ")
@@ -116,7 +116,7 @@
            Void))))
 
 (define (_handler1 MSG)
- ;(_handler-log MSG)
+ ;(outraw "[H1]")(_handler-log MSG)
   (net-send MSG)
  ;(lstproc (net-resolve (: MSG 'TO)))
  ;(cr)
@@ -135,15 +135,21 @@
 ;; Start
 (define _START-SRV Void) ;; FIXME: doesn't work with multiple hosts
 (define _START-OFLAGS Void)
+(define _START-ISBLOCK True)
+(define _START-NEVERBLOCK False)
+(define (the-srv)
+  (cadr _START-SRV))
+(define (blockio)
+ ;(outraw "Blocking !!!\n")
+  (if (not _START-NEVERBLOCK)
+  (begin
+    (set! _START-ISBLOCK True)
+    (fcntl (the-srv) F_SETFL _START-OFLAGS)))) ;; TODO: improve this, by means of really changing the bit on the current state
+(define (nonblockio)
+ ;(outraw "Nonblocking !!!\n")
+  (set! _START-ISBLOCK False)
+  (fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
 (define (start . HOST)
-  (define (the-srv)
-    (cadr _START-SRV))
-  (define (blockio)
-   ;(outraw "Blocking !!!\n")
-    (fcntl (the-srv) F_SETFL _START-OFLAGS)) ;; TODO: improve this, by means of really changing the bit on the current state
-  (define (nonblockio)
-   ;(outraw "Nonblocking !!!\n")
-    (fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
   (define SOCK Void)
   (define PREVRES False)
   (define RES True)
@@ -179,11 +185,15 @@
     (if (and (not RES) PREVRES)
       (blockio))
     (set! PREVRES RES)
-    (if (and ONCE (<= ONCENB 0) (not RES))
+    (if (and ONCE (<= ONCENB 0)) ; (not RES))
       (begin
         (set! SOCK False)
         (set! FINI True))
-      (set! SOCK (sock-accept _START-SRV)))
+      (begin
+     ;(errlog _START-ISBLOCK)
+      (set! SOCK (sock-accept _START-SRV))))
+    (if (and ONCE (> ONCENB 0) (not SOCK))
+      (set! ONCENB (- ONCENB 1)))
     (if (!= SOCK False)
     (begin
       (if (and ONCE (> ONCENB 0))
@@ -196,6 +206,9 @@
      ;(cr)
       (set! RES2 (sock-read SOCK))
       (set! RES2 (sexpr-parse RES2))
+     ;(outraw "Message: ")
+     ;(out RES2)
+     ;(cr)
       (set! RES2 ((: (host-proc) 'HANDLER) RES2))
       (if (specified? RES2)
         (sock-write SOCK RES2))

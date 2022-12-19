@@ -165,8 +165,11 @@
 
 (method! tproc 'post-to (=> (PROC MSG) ;; TODO: discard duplicated MSGs
   (define MSGR (msg-find (: PROC 'IN) (: MSG 'FROM) (: MSG 'OUTNB) Void Void Void Void))
+ ;(outraw "post-to\n")
+ ;(errlog MSG)
   (if (or (unspecified? MSGR) (: MSG 'ACK))
   (begin
+   ;(outraw "posted\n")
     (set! MSG (rexpr-copy MSG))
     (^ 'in+ PROC MSG)
     (^ 'update-state PROC)
@@ -201,11 +204,19 @@
            (:= PROC 'STATE 'Active))))))
 
 (method! tproc 'step (=> (PROC)
-  (ifTrue (or (^ 'out-step PROC)
-              (^ 'in-step PROC))
-          (=> ()
-            (^ 'update-state PROC)
-            (^ 'schedule PROC)))))
+  (define RES
+          (ifTrue (or (^ 'out-step PROC)
+                      (^ 'in-step PROC))
+                  (=> ()
+                    (^ 'update-state PROC)
+                    (^ 'schedule PROC))))
+  (if RES
+  (begin
+   ;(outraw (string+ "Proc " (: PROC 'UID) " fired[" (string RES) "]\n"))
+   ;(errlog PROC)
+    (noop)
+  ))
+  RES))
 
 ;; RSM
 (define (method-descr TYPE FNAME)
@@ -247,6 +258,10 @@
     (:+ PROC 'IN! MSG)
     MSG))
 
+(define (_incmsgno MSG)
+  (define NO (if (unspecified? (: MSG 'MSGNO)) 0 (+ (: MSG 'MSGNO) 1)))
+  (:= MSG 'MSGNO NO))
+
 (define (proc-send-acks PROC PROCG MSG)
   (define PEER (filter (=> (UID)
                          (!= UID (: PROC 'UID)))
@@ -256,14 +271,24 @@
  ;(outraw " to ")
  ;(outraw PEER)
  ;(cr)
-  (if (or (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when message already sent from FROM
+  (if True
+      (or (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when message already sent from FROM
           (not (: MSG 'RESULT))) ;; FIXME: hack to nullify failed replicated messages ; only works in simple cases
   (begin
+   ;(outraw "Send ACKs (the real thing)")
+   ;(cr)
     (set! MSG (rexpr-copy MSG))
     (:= MSG 'ACK True)
     (for-each (=> (PROC)
                 (set! PROC (net-resolve PROC))
-                (net-send MSG PROC))
+               ;(outraw "Send ACKs (the real thing)(2)")
+                (_incmsgno MSG)
+                (if (not (^ 'core? PROC))
+                  (begin
+                    (:= MSG '_TO (: PROC 'UID))
+                    (net-send MSG PROC)
+                    (<- MSG '_TO))
+                  (net-send MSG PROC)))
               PEER))))
 
 ;; ATTENTION: __UNICITÉ DE LA REPLAY LIST__
@@ -279,17 +304,30 @@
 ;;     du player avec qui il collude) ;
 ;; => VÉRIFIER tout ca.
 (define (msg-find Q FROM OUTNB INNB ACK RESULT USER)
+  (define (log MSG2 A B)
+    (out A)(outraw " ")(out (: MSG2 B))(cr))
+
   (if (boxed-empty? Q)
     Void
     (list-find (=> (MSG2)
+      (define RES Void)
       (if (not (call? MSG2))
         (error "msg-find"))
-      (and (or (unspecified? FROM) (== FROM (: MSG2 'FROM)))
-           (or (unspecified? OUTNB) (== OUTNB (: MSG2 'OUTNB)))
-           (or (unspecified? INNB) (== INNB (: MSG2 'INNB)))
-           (or (unspecified? ACK) (== ACK (: MSG2 'ACK)))
-           (or (unspecified? RESULT) (== RESULT (: MSG2 'RESULT)))
-           (or (unspecified? USER) (signed-by? MSG2 USER))))
+     ;(log MSG2 FROM 'FROM)
+     ;(log MSG2 OUTNB 'OUTNB)
+     ;(log MSG2 INNB 'INNB)
+     ;(log MSG2 ACK 'ACK)
+     ;(log MSG2 RESULT 'RESULT)
+     ;(log MSG2 USER 'USER)
+      (set! RES
+            (and (or (unspecified? FROM) (== FROM (: MSG2 'FROM)))
+                 (or (unspecified? OUTNB) (== OUTNB (: MSG2 'OUTNB)))
+                 (or (unspecified? INNB) (== INNB (: MSG2 'INNB)))
+                 (or (unspecified? ACK) (== ACK (: MSG2 'ACK)))
+                 (or (unspecified? RESULT) (== RESULT (: MSG2 'RESULT)))
+                 (or (unspecified? USER) (signed-by? MSG2 USER))))
+     ;(outraw "=>")(out RES)(cr)
+      RES)
       Q)))
 
 (define (proc-await-cond PROC MSG PEER)

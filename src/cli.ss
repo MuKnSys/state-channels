@@ -13,7 +13,7 @@
 (import ./procs)
 
 ;; CLI API & methods
-(define tcli (type "cli" '(API) (empty)))
+(define tcli (type "cli" '(API AUTORUN) (empty)))
 (define tclif (type "clif" '(FUNC OP VARGS TYPES QUIT)))
 
 (define (make-cli . API)
@@ -21,7 +21,7 @@
     (set! API (car API)))
   (if (empty? API)
     (set! API (rexpr '@rexpr '()))) ;; Should work as well with simply (empty) instead of (rexpr ...)
-  (rexpr tcli `(API ,API)))
+  (rexpr tcli `(API ,API AUTORUN ,False)))
 
 (define (clif FUNC TYPES . OPT)
   (define RES (rexpr tclif `(FUNC ,FUNC OP ,False VARGS ,False TYPES ,TYPES QUIT ,False)))
@@ -40,9 +40,28 @@
 (method! tcli 'method! (=> (CLI NAME CLIF)
   (:= (: CLI 'API) NAME CLIF)))
 
+(method! tcli 'autorun (=> (CLI . OPT)
+  (if (empty? OPT)
+    (: CLI 'AUTORUN)
+    (:= CLI 'AUTORUN (if (car OPT) True False)))))
+
 ;; CLI
 (method! tcli 'run (=> (CLI PROMPT . SCRIPT)
   (define (read-cmd)
+    (define DOIT True)
+    (define PORT Void)
+    (while (and (not SCRIPT) (^ 'autorun CLI) DOIT)
+    (begin
+      (set! PORT (select `(,(current-input-port)
+                           ,(cadr _START-SRV)) '() '()))
+     ;(out PORT)(cr)
+      (set! PORT (caar PORT))
+     ;(outraw "Select fired[")
+     ;(outraw (if (== PORT (cadr _START-SRV)) "STDIN" "KBD"))
+     ;(outraw "]!\n")
+      (if (== PORT (cadr _START-SRV))
+        (start 'Once 1)
+        (set! DOIT False))))
     (filter (=> (X) (!= X ""))
             (string-split
               (string-trim
@@ -116,12 +135,15 @@
   (if (not (empty? SCRIPT))
     (set! SCRIPT (car SCRIPT))
     (set! SCRIPT False))
+  (start 'Once)
   (while (not FINISHED)
     (if (and SCRIPT (empty? SCRIPT))
       (set! SCRIPT False) ;;(set! FINISHED True)
       (begin
         (outraw PROMPT)
         (set! CMD (read-cmd))
+        (if (^ 'autorun CLI)
+          (start 'Once))
         (if (or (empty? CMD)
                 (== (string-length (car CMD)) 0)
                 (== (string-get (car CMD) 0) (char "#")))

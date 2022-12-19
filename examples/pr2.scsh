@@ -1,0 +1,34 @@
+
+# Initializing everything
+autorun 1
+proch system HOST2
+chost HOST2
+$MP2 ! sc0 Hello2
+proc carol SC2 $MP2
+procm SC1 bob
+
+# Sending a message to SC1
+netlist
+
+netlist SC1
+
+state SC1
+
+netlist SC2
+
+state SC2
+
+iam SC2
+#SC1 ^ set Coucou
+
+#step SC1
+
+#netlist SC2
+
+#state SC2
+
+# Replicated call
+join GR1 _ SC1 SC2
+
+# Quitting
+#q

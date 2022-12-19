@@ -69,11 +69,20 @@
 ;; RSM
 (method! tprocg 'post-to (=> (PROC MSG)
   (for-each (=> (PR)
-              (net-send MSG (net-resolve PR)))
-            (: PROC 'PEER))))
+             ;(outraw "Sendto ")(outraw PR)(cr)
+              (set! PR (net-resolve PR))
+              (_incmsgno MSG)
+              (if (not (^ 'core? PR))
+                (begin
+                  (:= MSG '_TO (: PR 'UID))
+                  (net-send MSG PR)
+                  (<- MSG '_TO))
+                (net-send MSG PR)))
+            (: PROC 'PEER))
  ;(outraw "post-to[group] ")
  ;(outraw (: PROC 'UID))
- ;(cr)))
+ ;(cr)
+  (noop)))
 
 (method! tprocg 'post-to-master (=> (PROC MSG)
   (net-send MSG (net-resolve (: PROC 'PARENT)))))

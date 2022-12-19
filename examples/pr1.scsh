@@ -1,0 +1,25 @@
+
+# Initializing everything
+autorun 1
+proch system HOST1
+chost HOST1
+$MP1 ! sc0 Hello
+proc bob SC1 $MP1
+
+# We start with 3 procs/ledgers, each containing $10, joined
+#                                       [ in a state channel
+netlist
+
+netlist SC1
+
+state SC1
+
+# Replicated call
+procm SC2 carol
+join GR1 _ SC1 SC2
+iam SC1
+
+#GR1 ^ set Salut
+
+# Quitting
+#q
