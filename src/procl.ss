@@ -272,8 +272,10 @@
  ;(outraw PEER)
  ;(cr)
   (if True
-      (or (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when message already sent from FROM
-          (not (: MSG 'RESULT))) ;; FIXME: hack to nullify failed replicated messages ; only works in simple cases
+     ;(or (!= (: PROC 'UID) (: MSG 'FROM)) ;; CHECK: no need for an additional ACK from FROM when message already sent from FROM
+     ;    (not (: MSG 'RESULT))) ;; FIXME: hack to nullify failed replicated messages ; only works in simple cases
+     ; NOTE: the above (or) does nothing useful ; it removes some ACK messages in in-process mode, and makes the consensus fail in inter-process (due to the lack of these ACKs)
+     ; TODO: once things will have been a bit more surveyed, remove it.
   (begin
    ;(outraw "Send ACKs (the real thing)")
    ;(cr)

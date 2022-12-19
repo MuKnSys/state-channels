@@ -10,25 +10,12 @@ procm SC1 bob
 # Looking at things
 netlist
 
-netlist SC1
-
-state SC1
-
 netlist SC2
 
 state SC2
 
-# Sending a message to SC1
-iam SC2
-#SC1 ^ set Coucou
-
-netlist SC1
-
-step SC1
-
-netlist SC2
-
-state SC2
+# Replicated call
+join GR1 _ SC1 SC2
 
 # Quitting
 #q

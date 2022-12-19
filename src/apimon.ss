@@ -596,6 +596,16 @@
   (set! O (apply FUNC L))
   (hash-set! OBJS VAR O))
 
+(define (_fetchin . N)
+  (define BLK _START-ISBLOCK) ;; TODO: clean that mess of (relative) hacks
+  (set! N (if (empty? N) 1 (car N))) 
+  (usleep 100000)
+  (nonblockio)
+  (set! _START-NEVERBLOCK True)
+  (start 'Once N)
+  (set! _START-NEVERBLOCK False)
+  (if BLK (blockio) (nonblockio)))
+
 (define (_mesg VAR FUNC . PARM) ;; Message
   (if (== "$" (string (string-get VAR 0))) ;; Message to obj
   (let* ((OBJ Void))
@@ -622,14 +632,9 @@
          ;(out PARM)
           (apply ^ PARM)
           (if (^ 'autorun APIMON)
-          (let* ((BLK _START-ISBLOCK)) ;; TODO: clean that mess of (relative) hacks
+          (begin
             (step)
-            (usleep 100000)
-            (nonblockio)
-            (set! _START-NEVERBLOCK True)
-            (start 'Once 5)
-            (set! _START-NEVERBLOCK False)
-            (if BLK (blockio) (nonblockio))))
+            (_fetchin 5)))
         )
         (outraw (string+ "Proc " VAR " is not on the net")))
     ))))
@@ -710,6 +715,7 @@
 
 (apimon "!" _cobj '(str var any any any any any any any) 'OP True 'VARGS True)
 (apimon "^" _mesg '(str sy any any any any any any any) 'OP True 'VARGS True)
+(apimon "fetchin" _fetchin '(num) 'VARGS True)
 (apimon "sync" _sync '(str))
 
 ;; Init

@@ -72,6 +72,7 @@
   in:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m!![39;49m
   rl:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
   out:
@@ -81,6 +82,7 @@
   in:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m!![39;49m
   rl:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
   out:
@@ -121,6 +123,7 @@
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m[39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol dave)[31;49m!![39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m!![39;49m
   rl:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol dave)[31;49m!*[39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol bob dave)[31;49m!*[39;49m
@@ -132,6 +135,7 @@
   in:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m!![39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m[39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol dave)[31;49m!![39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol bob)[31;49m!![39;49m
@@ -146,8 +150,10 @@
   in:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m[39;49m
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob carol)[31;49m!![39;49m
+    <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob)[31;49m!![39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m[39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol bob)[31;49m!![39;49m
+    <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol)[31;49m!![39;49m
   rl:
     <0 0>transfer SC1=>GR1 (carol 2) ([31;49mS[39;49m bob dave carol)[31;49m!*[39;49m
     <0 1>transfer SC2=>GR1 (dave 7) ([31;49mS[39;49m carol dave bob)[31;49m!*[39;49m

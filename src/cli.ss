@@ -147,7 +147,7 @@
         (if (or (empty? CMD)
                 (== (string-length (car CMD)) 0)
                 (== (string-get (car CMD) 0) (char "#")))
-          (noop)
+          (if (empty? CMD) (atcol0 1))
           (begin
             (catch-all (=> ()
               (indent+ 2)
