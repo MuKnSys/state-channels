@@ -10,9 +10,10 @@
 
 (import ./llruntime
         ./basics
-        ./socks
         ./rexpr ./json
         ./inits
+        ./socks
+        ./channels
         ./aliases
         ./scheds
         ./procs
@@ -31,10 +32,11 @@
 (export
   (import: ./llruntime)
   (import: ./basics)
-  (import: ./socks)
   (import: ./rexpr)
   (import: ./json)
   (import: ./inits)
+  (import: ./socks)
+  (import: ./channels)
   (import: ./aliases)
   (import: ./scheds)
   (import: ./procs)

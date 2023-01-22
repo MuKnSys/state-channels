@@ -50,4 +50,9 @@
   (^ 'get _INITS VAR))
 
 ;; BOOT.ini
-(init-conf "~/StateChannels/BOOT.ini")
+(define _BOOTF (let* ;; TODO: should be (most of the time) the machine's _public_ IP
+                 ((FNAME (getenv "SC_BOOT")))
+                 (if (not (string? FNAME))
+                   (set! FNAME "~/StateChannels/BOOT.ini"))
+                 FNAME))
+(init-conf _BOOTF)

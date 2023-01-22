@@ -64,24 +64,6 @@
     (string+ RES ":" UID)
     RES))
 
-(define (addr-machine ADDR)
-  (car (string-split ADDR #\:)))
-
-(define (addr-netm ADDR)
-  (car (string-split (addr-machine ADDR) #\/)))
-
-(define (addr-subm ADDR)
-  (define L (string-split (addr-machine ADDR) #\/))
-  (if (> (list-length L) 1)
-    (cadr L)
-    "0"))
-
-(define (addr-host ADDR)
-  (define L (string-split ADDR #\:))
-  (if (> (list-length L) 1)
-    (cadr L)
-    Void))
-
 (define (addr-proc ADDR)
   (define L (string-split ADDR #\:))
   (if (> (list-length L) 2)
@@ -116,7 +98,7 @@
   (if (unspecified? HOST)
     (error "host-fsock2::no host"))
   (if (!= (addr-netm ADDR) (addr-netm (current-machine)))
-    (error "host-fsock2" ADDR " " (current-machine)))
+    (error "host-fsock2 " ADDR " " (current-machine)))
   (path-normalize (string+ (host-phys-socks) "/" SUBM "/" HOST)))
 
 (define (host-phys-send HOSTA MSG) ;; TODO: also be able to send to hosts on another machine (local at the moment)

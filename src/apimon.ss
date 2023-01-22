@@ -734,4 +734,5 @@
               _APIMONEthAccounts)))
 
 ;; Start
-(start 'Once)
+(if (not (defined? '__STANDALONE__)) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
+  (start 'Once))

@@ -466,6 +466,11 @@
         Void))
     Void))
 
+;; Own IP
+(define (ownip)
+  (define IP (sh-cmd (path-normalize "~/StateChannels/bin/ownip")))
+  (if (pair? IP) (car IP) "127.0.0.255"))
+
 ;; Basic I/O
 (define _OUTP False)
 (define (outopen MODE)

@@ -34,17 +34,18 @@
       (bind SOCK AF_UNIX PORT)))
   (listen SOCK 5)
   (if (== FAM PF_INET)
-    `(socksrvi ,SOCK False)
-    `(socksrvf ,SOCK ,PORT)))
+    `(socksrvi ,SOCK False False)
+    `(socksrvf ,SOCK ,PORT False)))
 
 (define (sock-accept SRV)
   (define TAG (if (== (car SRV) 'socksrvi) 'socksrvclii 'socksrvclif))
   (define SOCK (accept (cadr SRV)))
   (if SOCK
-   `(,TAG ,(car SOCK) ,(if (== TAG 'socksrvclii) (cdr SOCK) (caddr SRV)))
+   `(,TAG ,(car SOCK) ,(if (== TAG 'socksrvclii) (cdr SOCK) (caddr SRV)) False)
     False))
 
 (define (sock-cli ADDR . PORT)
+  (define ADDR0 ADDR)
   (define FAM Void)
   (define SOCK Void)
   (define FPATH Void)
@@ -67,12 +68,17 @@
        ;(error "sock-cli: directory " (dirname FPATH) " not found"))
         (mkdir (path-normalize (dirname FPATH))))
       (connect SOCK AF_UNIX FPATH)))
- `(sock ,SOCK False))
+ `(sock ,SOCK False ,ADDR0))
 
 (define (sock-read SOCK)
   (read-line (cadr SOCK)))
 
 (define (sock-write SOCK MSG)
+ ;(outraw MSG)
+ ;(outraw " [=>")
+ ;(outraw (cadddr SOCK))
+ ;(outraw "]")
+ ;(cr)
   (display (string-append MSG "\n") (cadr SOCK)))
 
 (define (sock-close SOCK)

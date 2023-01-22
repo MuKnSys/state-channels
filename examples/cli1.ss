@@ -1,4 +1,4 @@
-(import ../src/runtime)
+(load "./runtime.ss")
 
 (netlist 1)(cr)
 
