@@ -418,7 +418,7 @@
 
 ;; Network paths
 (define _HOST-SOCKS
-        (path-normalize (string+ SC_PATH "/../sock")))
+        (path-normalize (string+ SC_PATH "/sock")))
 (define (host-phys-socks)
   _HOST-SOCKS)
 
