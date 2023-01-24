@@ -413,6 +413,9 @@
         (else
          (evp FPATH))))
 
+;; Self path
+(define SC_PATH (dirname (dirname (path-normalize (_getcf)))))
+
 ;; Network paths
 (define _HOST-SOCKS
         (path-normalize (string+ (dirname (path-normalize (_getcf))) "/../sock")))
