@@ -4,7 +4,19 @@ SC_HOME=`dirname $0`
 cd $SC_HOME
 
 case $1 in
-  eth)
+  guile|gerbil|"")
+    if [[ $1 == "" ]]; then
+      SCM="guile"
+    else
+      SCM=$1
+    fi
+    chmod 755 backends/build
+    chmod 755 backends/$SCM/scm
+    chmod 755 backends/$SCM/clish.ss
+    backends/build $SCM
+    gcc src/ownip.c bin/ownip
+    ;;
+  eth_dev)
     chmod 755 backends/geth_dev/eth
     chmod 755 backends/geth_dev/solc
    #backends/build geth_dev
@@ -19,18 +31,7 @@ case $1 in
       echo "a.out already exists"
     fi
     ;;
-  guile|gerbil|"")
-    if [[ $1 == "" ]]; then
-      SCM="guile"
-    else
-      SCM=$1
-    fi
-    chmod 755 backends/build
-    chmod 755 backends/$SCM/scm
-    chmod 755 backends/$SCM/clish.ss
-    backends/build $SCM
-    ;;
   *)
-    echo "build <guile|gerbil|eth> expected"
+    echo "build <guile|gerbil|eth_dev> expected"
     ;;
 esac

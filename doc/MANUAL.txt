@@ -1,0 +1,42 @@
+  State Channels
+
+    Henri Lesourd, 2022
+    (C) MUKN  2022, 2023
+
+
+1) Introduction
+
+Principes de base, comment tout ca fonctionne, qu'est-ce qu'il y a.
+
+
+2) Main classes
+
+proc, call,
+procl, procg, proceth,
+proch, procph,
+procph0
+
+API de base
+
+Les différentes opérations
+
+accounts
+ini files, scheduler, etc.
+
+
+3) Scripting
+
+apimon.ss
+
+commandes dans bin (esp., scm & cli, plus solc & eth)
+
+Résumé des différentes commandes principales
+
+Autres programmes qui utilisent l'API
+
+
+Appendix A: basics, rexpr
+
+Appendix B: communications layer
+
+Appendix C: INI files
