@@ -11,11 +11,16 @@
 (export #t)
 (import ./basics)
 
-(define (sock-srv PORT)
+(define (sock-srv PORT . IP) ;; FIXME: no need for IP ; PORT is an npath, so IP <=> (npath-machine PORT)
   (define FAM (npath-port PORT))
   (define SOCK Void)
+  (define IP Void)
   (if (string? FAM)
-    (set! PORT (number FAM))
+    (begin
+      (set! IP (npath-machine PORT))
+      (if (unspecified? IP)
+        (set! IP (addr-netm _VMACHINE_GADDR)))
+      (set! PORT (number FAM)))
     (begin
       (set! FAM (npath-path PORT))
       (if (not (string? FAM))
@@ -24,9 +29,9 @@
   (set! FAM (if (number? PORT) PF_INET PF_UNIX))
   (set! SOCK (socket FAM SOCK_STREAM 0))
   (setsockopt SOCK SOL_SOCKET SO_REUSEADDR 1)
- ;(bind SOCK AF_INET (inet-pton AF_INET "127.0.0.1") PORT) ;; Specific address?
   (if (== FAM PF_INET)
-    (bind SOCK AF_INET INADDR_ANY PORT)
+   ;(bind SOCK AF_INET INADDR_ANY PORT) ;; All interfaces
+    (bind SOCK AF_INET (inet-pton AF_INET IP) PORT) ;; Specific address
     (begin
       (if (not (file-exists? (dirname PORT)))
        ;(error "sock-srv: directory " (dirname PORT) " not found"))
@@ -62,7 +67,9 @@
   (set! FAM (if (specified? FPATH) PF_UNIX PF_INET))
   (set! SOCK (socket FAM SOCK_STREAM 0))
   (if (== FAM PF_INET)
-    (connect SOCK AF_INET (inet-pton AF_INET ADDR) PORT)
+    (let* ((IP (npath-machine (gaddr-npath (string+ _VMACHINE_GADDR ":00")))))
+      (bind SOCK AF_INET (inet-pton AF_INET IP) 0) ;; TODO: bind to the address corresponding to the current SUBM
+      (connect SOCK AF_INET (inet-pton AF_INET ADDR) PORT))
     (begin
       (if (not (file-exists? (dirname FPATH)))
        ;(error "sock-cli: directory " (dirname FPATH) " not found"))
@@ -88,7 +95,10 @@
   (caddr SOCK))
 
 (define (sock-address SOCK)
-  (define TAG (car SOCK))
-  (if (== TAG 'socksrvclii) 
-    (gethostbyaddr (sockaddr:addr (sock-details SOCK)))
-    (caddr SOCK)))
+  (caddr SOCK))
+
+(define (sock-ip-address SOCK)
+  (define A (sock-address SOCK))
+  (if (string? A)
+    Void
+    (vector-ref A 1)))

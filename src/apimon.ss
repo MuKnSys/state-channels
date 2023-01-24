@@ -64,7 +64,7 @@
                   (if ACC
                     (set! NAME (: ACC 'NAME)))
                   (outraw " ")
-                  (outraw NAME))
+                  (outraw (if (unspecified? NAME) U NAME)))
                 (cdr S))
       (outraw ")"))))
 
@@ -556,6 +556,7 @@
   (define BALS (^ 'fetch PR 'balances))
   (define I 0)
   (define N Void)
+  (define NAME Void)
   (outraw "@proceth")
   (cr)
   (outraw "  STATE = ")
@@ -565,7 +566,10 @@
   (while (< I N)
     (cr)
     (outraw "    ")
-    (outraw (: (list-get ACCS I) 'NAME))
+    (set! NAME (: (list-get ACCS I) 'NAME))
+    (if (unspecified? NAME)
+      (set! NAME (: (list-get ACCS I) 'UID)))
+    (outraw NAME)
     (outraw " = ")
     (outraw (list-get BALS I))
     (set! I (+ I 1))))
