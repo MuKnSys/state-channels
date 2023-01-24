@@ -1,0 +1,19 @@
+#!/bin/bash
+
+SC_HOME=`dirname $0`/..
+cd $SC_HOME
+
+case $1 in
+  start)
+    geth --nodiscover --http --mine --miner.threads 1 --allow-insecure-unlock --unlock 0 --datadir ./chain/data console 2>>chain/geth.log
+    ;;
+  log)
+    tail -f chain/geth.log
+    ;;
+  logs)
+    bin/scm examples/eth_logs.ss $2
+    ;;
+  *)
+    echo "eth <start|log|logs> expected"
+    ;;
+esac

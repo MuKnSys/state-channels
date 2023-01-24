@@ -1,0 +1,7 @@
+#!/bin/bash
+
+SC_HOME=`dirname $0`/..
+
+solc --overwrite --abi -o $SC_HOME/a.out $1
+solc --overwrite --bin -o $SC_HOME/a.out $1
+solc --overwrite --asm -o $SC_HOME/a.out $1

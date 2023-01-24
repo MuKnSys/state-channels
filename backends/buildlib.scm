@@ -42,15 +42,24 @@
          "bin")
         ((equal? EXT "ss")
          "src")
+        ((equal? EXT "txt") ;; FIXME: crappy way
+         "")
         (else
           (error "destdir"))))
+
+(define (proceed? FNAME) ;; FIXME: really, really crappy way
+  (and (not (equal? (destdir FNAME) ""))
+       (equal? (stat:type (stat (string-append DIR "/" FNAME))) 'regular)))
 
 (define (diff FNAME)
   (let* ((SRC (string-append DIR "/" FNAME))
          (DEST (string-append "../" (destdir FNAME) "/" FNAME))
         )
-   ;(display (string-append "Diffing " SRC " => " DEST "\n"))
-    (sh-cmd (string-append "diff -q " SRC " " DEST))))
+    (if (proceed? FNAME) ;; FIXME: crappy way
+      (begin
+       ;(display (string-append "Diffing " SRC " => " DEST "\n"))
+        (sh-cmd (string-append "diff -q " SRC " " DEST)))
+      '())))
              
 (define (diff* . LF)
   (map (lambda (FN)
@@ -61,8 +70,10 @@
   (let* ((SRC (string-append DIR "/" FNAME))
          (DEST (string-append "../" (destdir FNAME) "/" FNAME))
         )
-    (display (string-append "Copying " SRC " => " DEST "\n"))
-    (copy-file SRC DEST)))
+    (if (proceed? FNAME) ;; FIXME: crappy way
+    (begin
+      (display (string-append "Copying " SRC " => " DEST "\n"))
+      (copy-file SRC DEST)))))
              
 (define (cp* . LF)
   (for-each (lambda (FN)

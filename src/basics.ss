@@ -378,6 +378,14 @@
   (delete-file FNAME))
 
 ;; Paths
+(define (path-abs? FPATH)
+  (and (> (string-length FPATH) 1) (== (string-ref FPATH 0) #\/)))
+
+(define (path-noseps? FPATH)
+  (define L (string->list FPATH))
+  (and (not (list-in? #\. L))
+       (not (list-in? #\/ L))))
+
 (define (path-normalize FPATH)
   (define (p2l PATH)
     (set! PATH (string-split PATH #\/))
@@ -398,9 +406,13 @@
              (push (car L))))
       (set! L (cdr L)))
     (string+ "/" (string-join (reverse RES) "/")))
+  (define FPATH0 Void)
   (define HOME (p2l (getenv "HOME")))
   (define CWD (p2l (getcwd)))
+  (define ABS Void)
   (set! FPATH (string-trim FPATH #\space))
+  (set! FPATH0 FPATH)
+  (set! ABS (path-abs? FPATH))
   (if (== FPATH "")
     (set! FPATH "."))
   (set! FPATH (p2l FPATH))
@@ -411,14 +423,17 @@
         ((== (car FPATH) "~")
          (evp (list-add HOME (cdr FPATH))))
         (else
-         (evp FPATH))))
+         (set! FPATH (evp FPATH))
+         (if (and (not ABS) (path-abs? FPATH) (!= FPATH0 "/"))
+           (set! FPATH (substring FPATH 1 (string-length FPATH))))
+         FPATH)))
 
 ;; Self path
 (define SC_PATH (dirname (dirname (path-normalize (_getcf)))))
 
 ;; Network paths
 (define _HOST-SOCKS
-        (path-normalize (string+ SC_PATH "/sock")))
+        (string+ SC_PATH "/sock"))
 (define (host-phys-socks)
   _HOST-SOCKS)
 
@@ -471,7 +486,7 @@
 
 ;; Own IP
 (define (ownip)
-  (define IP (sh-cmd (path-normalize "~/StateChannels/bin/ownip")))
+  (define IP (sh-cmd (string+ SC_PATH "/bin/ownip")))
   (if (pair? IP) (car IP) "127.0.0.255"))
 
 ;; Basic I/O

@@ -118,5 +118,5 @@
   (error "proceth::step")))
 
 ;; Init
-(eth-init "~/StateChannels/chain")
-(eth-create-init "~/StateChannels/a.out")
+(eth-init (string+ SC_PATH "/chain"))
+(eth-create-init (string+ SC_PATH "/a.out"))

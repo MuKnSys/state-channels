@@ -1,8 +1,7 @@
   Backends
 
-The backends are loaded from llruntime.scm, and
-contain all the low-level functions the library's
-code depends on.
+The backends are replaceable components that contain
+various functionalities the library's code depends on.
 
 => communications ;
 => crypto ;
@@ -22,23 +21,33 @@ When we change the langage (e.g. to Javascript), there
 is also only to reimplement the backends, then translate
 the Scheme code of the library to Javascript.
 
+Additionally, for a given set of functionalities, there
+can be several backends providing different implementations
+of the same thing (including implementations that are pure
+mockups).
 
-Basic backends (should word out-of-the box in Guile):
 
-a) Guile Scheme backend : provides communications based
-     on filesockets ; mock crypto, ethereum-like process,
-     mock atomic broadcast (a simple token ring) ;
+Basic backends:
 
-b) Geth basic backend : provides an extension of the ethereum-like
-     process, that connect to geth ;
+a) Guile Scheme backend : provides a compatibility layer
+     that implements a number of usual Scheme functions
+     and datastructures that are not very well standardized
+     across Schemes, plus a simple socket API ;
 
-Other backends (only available in Gerbil Scheme):
+b) Gerbil Scheme backend : same as the previous one, but
+     for Gerbil Scheme ;
 
-c) LibP2P : provides a wrapper to LibP2P ;
+Production backends:
 
-d) Zab : provides a solid implementation of atomic broadcast, by
-     means of Zab (using the appropriate components of Zookeeper) ;
+c) Geth dev backend : very simple implementation of the API
+     that we use to connect to geth ;
 
-e) Gerbil Ethereum : a more extended wrapper to Geth ;
+d) Gerbil Ethereum-based geth backend : an implementation
+     of the same API on top of Gerbil Ethereum ;
 
-f) A real public/private key cryptographic library ;
+e) A real public/private key cryptographic library ;
+
+Other backends:
+
+f) NetP2P : wrapper to implement inter-machine communications in
+     a genuine P2P fashion (probably by means of LibP2P) ;

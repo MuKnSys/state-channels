@@ -1,0 +1,177 @@
+GEth (local testnet)
+====================
+
+1) Installs
+
+snap install solc
+
+add-apt-repository ppa:ethereum/ethereum
+apt-get install geth
+apt-get install pcscd
+
+
+2) Compiling a Solidity program (in the "a.out" directory)
+
+solc --overwrite --abi -o ./a.out snippets/var0.sol
+solc --overwrite --bin -o ./a.out snippets/var0.sol
+solc --overwrite --asm -o ./a.out snippets/var0.sol
+
+
+3) Creating an account (in the directory that contains the chain):
+
+~chain>/usr/bin/geth account list --datadir ./data
+INFO [09-12|02:02:42.568] Maximum peer count                       ETH=50 LES=0 total=50
+INFO [09-12|02:02:42.570] Set global gas cap                       cap=50,000,000
+
+~chain>/usr/bin/geth account new --datadir ./data
+INFO [09-12|02:02:53.861] Maximum peer count                       ETH=50 LES=0 total=50
+Your new account is locked with a password. Please give a password. Do not forget this password.
+Password: 
+Repeat password: 
+
+Your new key was generated
+
+Public address of the key:   0xa16979a982b94200D61aEDe91F6CF2a0c0aC3613
+Path of the secret key file: data/keystore/UTC--2022-09-12T00-02-58.509735912Z--a16979a982b94200d61aede91f6cf2a0c0ac3613
+
+- You can share your public address with anyone. Others need it to interact with you.
+- You must NEVER share the secret key with anyone! The key controls access to your funds!
+- You must BACKUP your key file! Without the key, it's impossible to access account funds!
+- You must REMEMBER your password! Without the password, it's impossible to decrypt the key!
+
+
+~chain>/usr/bin/geth account list --datadir ./data
+INFO [09-12|02:03:03.987] Maximum peer count                       ETH=50 LES=0 total=50
+INFO [09-12|02:03:03.988] Set global gas cap                       cap=50,000,000
+Account #0: {a16979a982b94200d61aede91f6cf2a0c0ac3613} keystore:///home/henri/chain/data/keystore/UTC--2022-09-12T00-02-58.509735912Z--a16979a982b94200d61aede91f6cf2a0c0ac3613
+
+
+4) Generating the local chain
+
+cd ~/chain
+touch geth.log
+
+mkdir data
+=> data/keystore contains the created accounts for the EOAs (created by means of geth account new).
+
+
+genesis.json:
+<<
+{
+  "config": {
+    "chainId": 10,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "ethash": {}
+  },
+  "nonce": "0x0",
+  "timestamp": "0x5e4a53b2",
+  "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "gasLimit": "0x47b760",
+  "difficulty": "0x80000",
+  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "alloc": {
+    "a16979a982b94200D61aEDe91F6CF2a0c0aC3613": {
+  // ^^^ key's public address obtained with geth account new
+      "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "number": "0x0",
+  "gasUsed": "0x0",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
+>>
+
+
+To create the chain:
+/usr/bin/geth --datadir "./data" init genesis.json
+
+
+5) Running the local chain:
+
+geth --nodiscover --http --mine --miner.threads 1 --allow-insecure-unlock --unlock 0 --datadir ./data
+
+See the running process:
+netstat -a | grep 'localhost:8545' // Dev
+netstat -a | grep 'localhost:8551' // Authenticated
+
+
+To get logs independently:
+geth --datadir ./data --networkid 1114 console 2>>geth.log
+tail -f geth.log
+
+
+Attaching a console:
+geth attach ~/chain0/data/geth.ipc
+
+
+6) Some console commands with web3
+
+eth.coinbase
+eth.accounts
+eth.getBalance(eth.coinbase)
+
+eth.blockNumber
+eth.pendingTransactions
+
+
+Login (already taken care of above by means of --allow-insecure-unlock --unlock 0):
+eth.defaultAccount=eth.accounts[0]
+personal.unlockAccount(eth.coinbase,"1234",0)
+
+Start mining (already taken care of above by means of --mine --miner.threads 1):
+miner.setEtherbase(eth.accounts[0])
+miner.start()
+
+
+Creating a contract:
+{{
+var C=eth.contract([{"constant":true,"inputs":[],"name":"get","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"x","type":"uint256"}],"name":"set","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}])
+
+var B='0x60806040526104d260005534801561001657600080fd5b5060c6806100256000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c806360fe47b11460375780636d4ce63c146062575b600080fd5b606060048036036020811015604b57600080fd5b8101908080359060200190929190505050607e565b005b60686088565b6040518082815260200191505060405180910390f35b8060008190555050565b6000805490509056fea265627a7a72315820108664ed4bb80143390d5e282e0a7aed02bbb04dc31d5d7b29f9cdb0aec49a2364736f6c63430005100032'
+
+var D={from:eth.coinbase, data:B, gas: 2000000}
+
+var PI=C.new("Bliblablo",D)
+E=eth.getTransactionReceipt(PI.transactionHash)
+
+var I=C.at(PI.address) // Doesn't work
+var I=C.at(E.contractAddress)
+
+I.get()     // => 1234
+I.set(5678) // OK
+I.get()     // => 5678
+}}
+
+
+Calling a preexisting contract:
+{{
+var C=eth.contract([{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"_from","type":"address"},{"indexed":false,"internalType":"uint256","name":"x","type":"uint256"}],"name":"Set","type":"event"},{"constant":true,"inputs":[],"name":"get","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"uint256","name":"x","type":"uint256"}],"name":"set","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}])
+
+var I=C.at("0x5296c94ddd2b5f69f4733e8f37b5c0724fc58370")
+eth.defaultAccount=eth.accounts[0]
+I.set(1)
+}}
+
+
+7) Some geth commands directly by means of the JSON API (__only__ works with a dev instance, running on port 8545)
+
+curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"net_listening","params":[],"id":67}' --url 127.0.0.1:8545
+
+curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_accounts","params":[],"id":67}' --url 127.0.0.1:8545
+
+curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_newFilter","params":[{"fromBlock":"0x1","toBlock":"0x3395"}],"id":67}' --url 127.0.0.1:8545
+=> {"jsonrpc":"2.0","id":67,"result":"0x8d1dd6920e952b190caefddfb9731c88"}
+
+curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_uninstallFilter","params":["0x8d1dd6920e952b190caefddfb9731c88"],"id":67}' --url 127.0.0.1:8545
+=> {"jsonrpc":"2.0","id":67,"result":true}
+
+curl -H "Content-Type: application/json" -X POST --data '{"jsonrpc":"2.0","method":"eth_getFilterLogs","params":["0x8d1dd6920e952b190caefddfb9731c88"],"id":67}' --url 127.0.0.1:8545

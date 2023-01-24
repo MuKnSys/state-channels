@@ -11,5 +11,9 @@
           "clish.ss"     ;; TODO: for commands, have the launcher automatically generated
           "scm"))
 
+(if (equal? BACKEND "geth_dev")
+  (diff*! "eth"
+          "solc"))
+
 (if (equal? BACKEND "libp2p_mockup")
   (diff*! "libp2p.ss"))

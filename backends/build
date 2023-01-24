@@ -17,5 +17,9 @@
          "clish.ss"
          "scm"))
 
+(if (equal? BACKEND "geth_dev")
+  (build "eth"
+         "solc"))
+
 (if (equal? BACKEND "libp2p_mockup")
   (build "libp2p.ss"))
