@@ -135,14 +135,12 @@
     ADDR))
 
 ;; Machines
-(define _PHMACHINE_LADDR (ownip))           ;; Local IP address of the physical machine
-(define _PHMACHINE_GADDR                    ;; Global IP address of the physical machine ([PROXY*]LADDR)
-        _PHMACHINE_LADDR)                   ;; FIXME: depend de si on peut savoir qu'on est derriere un proxy ou non
-(define _VMACHINE_GADDR                     ;; Physical address of the machine: GADDR/SUBM ; (can also be 127.0.0.SUBM)
-        (let* ((ADDR (conf-get "MACHINE"))) ;; TODO: check that it's actually a correct IP (_PHMACHINE_GADDR or 127.0.0.XY)
-          (if (unspecified? ADDR)
-            (set! ADDR (addr-machine (gaddr-normalize _PHMACHINE_GADDR))))
-          ADDR))
+(define _PHMACHINE_LADDR (ownip))  ;; Local IP address of the physical machine
+(define _PHMACHINE_GADDR           ;; Global IP address of the physical machine ([PROXY*]LADDR)
+        _PHMACHINE_LADDR)          ;; FIXME: depend de si on peut savoir qu'on est derriere un proxy ou non
+(define _VMACHINE_GADDR            ;; Physical address of the machine: GADDR/SUBM ; (can also be 127.0.0.SUBM)
+        (conf-get "MACHINE"        ;; TODO: check that it's actually a correct IP (_PHMACHINE_GADDR or 127.0.0.XY)
+                  (addr-machine (gaddr-normalize _PHMACHINE_GADDR))))
 
 ;; Physical OS-allocated (possibly agglomerated) proc
 (define tprocph0 (type "procph0"

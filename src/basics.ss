@@ -12,7 +12,7 @@
 (import ./llruntime)
 
 ;; Error
-(define ERRORCATCH #f)
+(define ERRORCATCH #t)
 (define (error_ . MSG)
   (for-each (=> (X)
               (display X))
@@ -376,6 +376,13 @@
 
 (define (file-delete FNAME) ;; TODO: should also work under Gerbil ; verify that it is so
   (delete-file FNAME))
+
+;; Getenv2
+(define (getenv2 VAR . ALTV)
+  (define RES (getenv VAR))
+  (if (not (string? RES))
+    (set! RES (if (empty? ALTV) Void (car ALTV))))
+  RES)
 
 ;; Paths
 (define (path-abs? FPATH)

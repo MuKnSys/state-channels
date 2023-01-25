@@ -163,13 +163,8 @@
   (:= RES 'MAPPED (make-hashv-table))
   RES)
 
-(define _MACHINE (let* ;; TODO: should be (most of the time) the machine's _public_ IP
-                   ((ADDR (getenv "MACHINE")))
-                   (if (not (string? ADDR))
-                     (set! ADDR (conf-get "MACHINE")))
-                   (if (not (string? ADDR))
-                     (set! ADDR "127.0.0.1"))
-                   ADDR))
+(define _MACHINE (conf-get2 "MACHINE" "127.0.0.1"))
+               ;; TODO: should be (most of the time) the machine's _public_ IP
 (define (current-machine)
   _MACHINE)
 (if (net-log)

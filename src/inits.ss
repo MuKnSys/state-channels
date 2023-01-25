@@ -14,17 +14,54 @@
 ;; Inits
 (define tinits (type "inits" '(FNAME DATA)))
 
+(define (file-readini FNAME . TO)
+  (define RES (if (empty? TO) (rexpr Void '()) (car TO)))
+  (define (val V)
+    (define N (string-length V))
+    (cond
+      ((== V "")
+       Nil)
+      ((string-digits? V)
+       (string->number V))
+      ((and (> N 1) (== (string-ref V 0) #\")
+                    (== (string-ref V (- N 1)) #\"))
+       (substring V 1 (- N 1)))
+      (else
+       V)))
+  (define (parse S)
+    (set! S (filter (=> (X) (!= X "")) S))
+    (set! S (map string-trim S))
+    (set! S (map (=> (S2) (map string-trim (string-split S2 #\=))) S))
+    (for-each (=> (E)
+                (define VAR Void)
+                (define VAL Void)
+                (if (< (list-length E) 1)
+                  (error "file-readini"))
+                (set! VAR (car E))
+                (if (not (and (> (string-length VAR) 0) (== (string-ref VAR 0) #\;)))
+                (begin
+                  (if (!= (list-length E) 2)
+                    (error "file-readini(2)"))
+                  (set! VAL (cadr E))
+                  (set! VAL (string-trim (car (string-split VAL #\;))))
+                  (:= RES VAR (val VAL)))))
+              S))
+  (if (and (string? FNAME) (file-exists? FNAME))
+    (parse (file-read FNAME 1)))
+  RES)
+
 (define (inits . FNAME)
   (define RES Unspecified)
-  (set! FNAME (if (empty? FNAME)
+  (set! FNAME (if (or (empty? FNAME) (not (string? (car FNAME))))
                 Unspecified
                 (path-normalize (car FNAME))))
   (set! RES (rexpr tinits `(FNAME ,FNAME
                             DATA ,(rexpr Void '()))))
-  (if (and (string? FNAME) (file-exists? FNAME))
-  (let* ((VAL (file-read FNAME)))
-    (if (not (empty? VAL))
-      (set! RES (rexpr-link (car VAL))))))
+ ;(if (and (string? FNAME) (file-exists? FNAME))
+ ;(let* ((VAL (file-read FNAME)))
+ ;  (if (not (empty? VAL))
+ ;    (set! RES (rexpr-link (car VAL))))))
+  (:= RES 'DATA (file-readini FNAME (: RES 'DATA)))
   RES)
 
 (method! tinits 'get (=> (I NAME)
@@ -40,19 +77,32 @@
         (>> O 'Indent))))))
 
 ;; Conf
-(define _INITF Unspecified)
 (define _INITS Unspecified)
 (define (init-conf FNAME)
-  (set! _INITF (path-normalize FNAME))
-  (set! _INITS (inits _INITF)))
+  (set! _INITS (inits FNAME)))
 
-(define (conf-get VAR)
-  (^ 'get _INITS VAR))
+(define (merge-conf FNAME)
+  (define SRC Void)
+  (define DEST (: _INITS 'DATA))
+  (set! SRC (: (inits FNAME) 'DATA))
+  (for-each (=> (X)
+              (define VAR (car X))
+              (if (and (!= VAR ':TYPE) (!= VAR ':ID))
+                (:= DEST (unattr VAR) (cadr X))))
+            SRC))
+
+(define (conf-get VAR . ALTV)
+  (define RES (^ 'get _INITS VAR))
+  (if (unspecified? RES)
+    (set! RES (if (empty? ALTV) Void (car ALTV))))
+  RES)
+
+(define (conf-get2 VAR . ALTV)
+  (getenv2 VAR (apply conf-get `(,VAR . ,ALTV))))
 
 ;; BOOT.ini
-(define _BOOTF (let* ;; TODO: should be (most of the time) the machine's _public_ IP
-                 ((FNAME (getenv "SC_BOOT")))
-                 (if (not (string? FNAME))
-                   (set! FNAME (string+ SC_PATH "/BOOT.ini")))
-                 FNAME))
-(init-conf _BOOTF)
+(init-conf (string+ SC_PATH "/BOOT.ini"))
+(merge-conf (getenv "SC_BOOT"))
+
+;; Inits
+(set! ERRORCATCH (boolean (conf-get "ERROR_CATCH" ERRORCATCH)))
