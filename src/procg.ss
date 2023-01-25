@@ -27,6 +27,28 @@
 ;;   proc groups can receive and send messages, but they are virtual ; so, that requires consensus ;
 ;;   procs can belong to only one group (for state-channel-replicated procs, seems that it can't be otherwise) ;
 ;;
+;; NOTE: proc groups should become actual processes in the future ; the group is then the mapping of the group's
+;;       core in the local mem of one member. The group, since it is a process, can act as the master of the
+;;       interaction (e.g. in RSM) ; in case it is more trusted than the members, it's a win ; otherwise, we
+;;       can still use the turning master algorithm, and the members manage the turntaking in between themselves.
+;;       The group-as-process is still necessary to get initial information about the group. Finally, only empty
+;;       servlets can join a group ; they post a join to the current master, which makes it be multisigned, and
+;;       then downloads the current version of the shared state to the newly entering member.
+;;       
+;;       2 cases:
+;;       => cooperative mode: in that case, nothing prevents the group master to fulfill all the functions
+;;                            pertaining to a master, i.e., initial connection, join/leave, and turntaking
+;;                            management (aka. consensus) ;
+;;       => adversarial/byzantine mode: in that situation, the group's member can in fact fulfill all the
+;;                            functions, including join/leave ; the initial connection is somehow problematic,
+;;                            in case the group starts from one member, who happens to be rogue ; for this, its
+;;                            behaviour has to be constrained enough by the protocol to prevent useful exploitation
+;;                            of the initial connection mechanism ; probably starting from an initial snapshot of
+;;                            the group's master _and_ of the group's participant process provides a strong enough
+;;                            starting point for a design (this is also valid for a restart after migration) ; there
+;;                            are hybrid cases, e.g. the case of a contract in the chain driving a state channel is
+;;                            a case where the master is trusted, and where the participants are not ;
+;;
 (set! tprocg (type `("procg" ,tproc)  ;; Proc group
                    '(PARENT           ;; Parent process
                      PEER             ;; Peers

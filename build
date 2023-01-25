@@ -14,19 +14,24 @@ case $1 in
     chmod 755 backends/$SCM/scm
     chmod 755 backends/$SCM/clish.ss
     backends/build $SCM
-    gcc src/ownip.c bin/ownip
+    gcc src/ownip.c -o bin/ownip
     ;;
   eth_dev)
     chmod 755 backends/geth_dev/eth
     chmod 755 backends/geth_dev/solc
-   #backends/build geth_dev
+    backends/build geth_dev
     if [[ ! -e "chain" ]]; then
-      echo "Creating chain"
+      echo "Creating the chain"
+      cp -dpr ./backends/geth_dev/chain .
+      cd chain
+      geth --datadir "./data" init genesis.json
     else
       echo "chain already exists"
     fi
     if [[ ! -e "a.out" ]]; then
       echo "Creating a.out"
+      mkdir a.out
+      touch a.out/ALIASES
     else
       echo "a.out already exists"
     fi

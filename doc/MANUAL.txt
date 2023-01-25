@@ -15,28 +15,51 @@ proc, call,
 procl, procg, proceth,
 proch, procph,
 procph0
+accounts
+
+=> ce qu'il y a à dire sur chacune.
 
 API de base
 
-Les différentes opérations
+Les opérations principales => ce qu'il y a à dire sur chacune.
 
-accounts
+Exemples d'utilisation de ces classes et de leurs APIs:
+examples/mp1_1.ss
+src/apimon.ss
+
+Autres classes
 ini files, scheduler, etc.
 
 
-3) Scripting
+3) API des micropaiements
 
-apimon.ss
+Position des différents programmes (mp1.ss, mp2.sol/ss).
+
+
+4) Scripting
+
+src/apimon.ss
 
 commandes dans bin (esp., scm & cli, plus solc & eth)
 
-Résumé des différentes commandes principales
+Résumé des principales commandes
 
-Autres programmes qui utilisent l'API
+
+5) Conclusion
+
+Roadmap.
 
 
 Appendix A: basics, rexpr
 
+Principales classes, fonctions & méthodes
+
+
 Appendix B: communications layer
 
+Principales classes, fonctions & méthodes
+
+
 Appendix C: INI files
+
+Principales variables.

@@ -1,3 +1,18 @@
+Faire par topic:
+
+=> send d'un proc à l'autre
+=> communications ;
+
+=> RSM ;
+=> mappings (d'un contrat ; entre contrat et procs du state channel) ;
+=> withdraw ;
+=> panic ;
+=> blockchain ;
+
+Dire à chaque fois quel est le OUT qui correspond dans les tests, ainsi que
+le (ou les) programme(s).
+
+
 1) high-level layer
 
 guile --no-auto-compile --debug -l src/llruntime.ss examples/mp1_1.ss
