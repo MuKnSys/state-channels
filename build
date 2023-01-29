@@ -10,8 +10,9 @@ case $1 in
     else
       SCM=$1
     fi
-    gcc src/ownip.c -o bin/ownip
     chmod 755 bin/cli
+    mkdir sock
+    gcc src/ownip.c -o bin/ownip
     chmod 755 backends/build
     chmod 755 backends/$SCM/scm
     chmod 755 backends/$SCM/clish.ss
