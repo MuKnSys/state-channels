@@ -6,43 +6,396 @@
 
 1) Introduction
 
-Principes de base, comment tout ca fonctionne, qu'est-ce qu'il y a.
+Our state channels library enables writing dapps (i.e., programs made of several
+processes), containing state channels, the programs being all (except contracts,
+written, e.g. in Solidity), written in the Scheme programming language.
+
+What is a state channel ? In essence, a state channel is a process enabling
+the concurrent edition of a distributed object ; the object we are talking
+about here (before it being distributed) is a normal object, which otherwise,
+would remain private, and only reachable by the process which contains it in
+its local memory.
+
+Once it becomes distributed in between a number of processes, an object is
+first --replicated--, a copy of it exists in the local memory of each one
+of the participant processes. That makes its concurrent edition working in
+another way than if there would be no duplication, and than if the object
+were simply stored in the local memory of a server, accessed by remote
+clients.
+
+In this latter case, there would be an unique avatar of the object, stored in
+a server, and transactions at the level of this server, ensuring a coherent state
+of the concurrently edited object.
+
+Distribution entails that we need another kind of mechanism to ensure coherence:
+that is implemented by means of a so-called Replicated State Machine (RSM)
+protocol, which works by means of each process broadcasting the (state altering)
+method call it wants to perform to the other processes, and all these other
+processes having to reach a --consensus-- first to agree on the proposed
+method call.
+
+Once the consensus is reached, the method call is actually performed on each
+one of the local copies, and a list of all these state-altering, replicated
+method calls stored inside the local memory of each one of the participating
+processes (we call this list the --replay list-- of the (state-channel
+encapsulated) object ; the replay list has the important property that,
+from the object's initial state, it can be used to recreate all the
+object's intermediate states leading to its final state).
+
+So: a state channel is, in essence, a set of processes, bound by the RSM
+protocol, which forces their respective states to remain exact mirrors of
+one each other. It's a device to enable the concurrent edition of such a
+mirrored state. When such a state is a preexisting object of interest, the
+state channel indeed acts as a concurrent editor for this object.
+
+
+In our system, there is a number of important entities a dapp is made of,
+especially:
+
+=> proclets: the aforementioned state channel participating processes ;
+
+=> process groups: the processes that represent the state channels as such.
+   A state channel is a group, basically. As we said above, the members of
+   a state channel have their states maintained mirrored by means of an RSM
+   protocol, but there are many kinds of other possible process groups, which
+   fulfill other purposes (e.g. simply exist to broadcast a message to all
+   the group's members ; or act as a gateway/proxy ; or constrain the behaviour
+   of the group's members in some way ; etc. : the possibilities are infinite) ;
+
+=> proclets that are mappings of remote processes of some kind, and act
+   as handles to manipulate them (in our system, Ethereum contracts are
+   mapped as proclets in exactly that way, and additionally, play the
+   role of group masters, they control the interaction in a number of
+   respects) ;
+
+=> vhosts: the processes a dapp is made of, which are more complex than
+   proclets, because in practice, we don't want to be forced to mirror
+   the whole state of processes by means of a state channel, or either,
+   be able to do nothing. So the vhosts are processes which can have arbitrary
+   states, _and_, with respect to concurrent edition of some parts of their
+   state, can _also_ contain proclets bound to other (remote) proclets by an
+   RSM protocol ;
+
+=> physical hosts: the physical processes that contain the vhosts (e.g.,
+   UNIX processes, browser tabs, etc.). Those ones contain a set of
+   vhosts, which are persistent, can be snapshotted, and later revived
+   in another physical locations/hosts on the network (so, they can
+   be --migrated-- in between hosts, basically) ;
+
+=> accounts and messages: another important aspect of all that is that
+   in between processes, when processes' snapshots are taken, everything
+   is always encrypted. Accounts are the objects which enable this encryption
+   to take place, and define the --identity-- of the processes running in
+   the network (i.e., the processes are --impersonating-- the physical or
+   virtual person who owns the account).
+
+   Additionally, messages have a number of properties: they are (1) idempotent,
+   i.e., messages --also-- have a unique, persistent existence of the network,
+   and can occur only --once--. So when a processes receives the same message
+   several times, it's only taken into account the first time (the message's
+   sender process UID, plus a nonce provide a unique id for this message). In
+   case they are replicated/state altering, messages also have (2) a replay list
+   number, that is used to maintain the coherence of the replay list (to be sure
+   that it is complete, especially) ;
 
 
 2) Main classes
 
-proc, call,
-procl, procg, proceth,
-proch, procph,
-procph0
-accounts
+proc: the abstract class for all processes ;
+call: the class that defines the format of messages ;
 
-=> ce qu'il y a à dire sur chacune.
+procl: proclets ;
+procg: process groups ;
+proceth: Ethereum processes ;
 
-API de base
+proch: vhosts ;
 
-Les opérations principales => ce qu'il y a à dire sur chacune.
-
-Exemples d'utilisation de ces classes et de leurs APIs:
-examples/mp1_1.ss
-src/apimon.ss
-
-Autres classes
-ini files, scheduler, etc.
+procph: physical processes ;
+procph0: a more low-level class that is used to represent physical processes ;
 
 
-3) API des micropaiements
+Basic slots of processes (main attributes):
 
-Position des différents programmes (mp1.ss, mp2.sol/ss).
+=> UID: the process's global UID (i.e., its global, persistent network address,
+        its --name--, under which other processes can talk to it) ;
+
+=> USER: the public key of the (physical or virtual) person that the process is
+         impersonating ;
+
+=> STATE: the process's state (it can be: Idle, Active, Waiting) ;
+
+=> ROLE: processes have one core, and multiple mappings ; that's what we call
+         their role. So ROLE's value can be either Core, or Mapping ;
+
+=> IN: the process's incoming message queue ; all the incoming messages it has
+       already received (some of them have already been processed, some others
+       are yet to be processed ; there's a pointer in the queue which points to
+       the next messages to be processed) ;
+
+=> OUT: the process's outcoming message queue ; works the same as IN, except than
+        when a message is processed, rather than triggering a method call on PROC's
+        SELF, it just sends the message ; 
+
+=> RL: the process's replay list: it contains the messages of IN which are state
+       altering, and thus, are replicated by means of the RSM protocol ;
+
+=> SELF: the process's RSM-maintained mirrored state (only proclets/members of
+         a state channel work like this ; for other kinds of processes, the state
+         evolution is less constrained) ;
+
+
+Basic API of processes (main methods):
+
+=> (procXYZ [list of attributes & values]): constructor to create a process of
+   the kind "XYZ" ; e.g.: << (proceth 'USER "smith" 'UID "PR_ETH#1" ...) >> ;
+
+=> (proc::call PROC FUNC . PARM): calling the method FUNC with parameters PARM,
+   on PROC's SELF (SELF contains the object a process is publishing/concurrently
+   editing on the network ; SELF is PROC's state (only in case of proclets) ; this
+   way, PROC can indeed be seen as a kind of --actor--) ;
+
+=> (proc::sync PROC): when PROC is the handle of a --remote-- process, one cannot
+   manipulate it directly as when it is living in the local memory of a physical
+   host ; to say it otherwise, processes have one _Core_, and several _Mapping_s,
+   and when the core is remote, (sync) enables to update the state of the remote
+   core into the local memory (i.e., inside the Mapping) ; overall, this mechanism
+   resembles a lot to what pseudo-filesystems like /proc provide under UNIX ;
+
+=> (proc::send PROC FUNC . PARM): sending a message call related to the method
+   FUNC of PROC's SELF, with parameters PARM. It works whether PROC is remote
+   or not, and performs a (call) once it reaches the Core of the process PROC ;
+
+=> (proc::step PROC): triggering a step of PROC's execution ; such a step can
+   consist in processing the next message of PROC's incoming message queue, or,
+   in case PROC is blocked in some way, trying to restart it (this possibly includes
+   restarting PROC's currently pending unterminated code (i.e., a continuation),
+   although restarting Scheme code that escapes to be restarted later by means
+   of a continuation is not implemented, at the moment) ; the method (step) can
+   only be called on Core processes that are living in the local memory of the
+   current vhost, not on Mappings ;
+
+=> (proc::join/leave PROC GROUP): joining or leaving a group ; not implemented
+   at the moment, process groups are always static, in our current implementation ;
+
+
+Some application-level code leveraging these classes and their APIs can be found in:
+=> examples/mp1_1.ss ;
+=> src/apimon.ss ;
+
+
+3) Micropayments API
+
+=> the local micropayments class (i.e., the one that defines the distributed ledger
+   objects that live in the local memory of each one of the proclets a given state
+   channel for micropayments is made of) can be found in examples/mp1.ss ;
+
+=> the Solidity contract for micropayments can be found in examples/mp2.sol, and
+   a Scheme class implementing a simulation/mockup of it in examples/mp2.ss ;
+
+
+Summary of the micropayments API (to be used in the clients which do micropayments):
+
+=> (micropay PUBKEY1 PUBKEY2 ... PUBKEY(N)): constructor ; creates an instance
+   of the micropayment class (i.e., a contract) in the chain, for a state channel
+   involving N local state channel processes, impersonating the persons owning
+   Ethereum accounts having PUBKEY1, PUBKEY2, ... PUBKEY(N), as their public keys,
+   respectively ; this contract then has to be mapped in the local memory of each
+   one of the participant processes, and from it, a group whose master is the contract's
+   mapping has to be created ; this group then acts as the "local mapping" of the
+   state channel ;
+
+=> (start PROC): the proclet PROC starts the state channel it is member of ; when
+   the balance of a participating proclet is zero, it can perform no transfers ;
+
+=> (deposit PROC AMOUNT): the process PROC deposits AMOUNT Ethereum in the contract,
+   drawn from its corresponding Ethereum account ; the deposit is then mirrored in
+   the state channel (at some later moment, in an asynchronous fashion) ;
+
+=> (transfer PROC AMOUNT RCPT): the process PROC transfers AMOUNT Ethereum from
+   its local account in the micropayment's state channel ledger to the local
+   account of the process RCPT ;
+
+=> (withdraw PROC AMOUNT): the process PROC withdraws AMOUNT Ethereum from its
+   local account in the micropayment's state channel back to the contract (and
+   then, automatically, back to PROC's USER's Ethereum account) ;
+
+=> (panic PROC): the process PROC triggers the emergency closing of the state
+   channel ; it amounts to a (withdraw) of all the Ethereums of all the participants
+   stored in the micropayment state channel ; any participant can do that, at any
+   time (although the (panic) is usually triggered by the detection of an adversarial
+   situation) [yet to be implemented] ;
+
+=> (settlement PROC): the process PROC settles the interaction ; everybody gets
+   its money back, and the state channel is closed [yet to be implemented] ;
+
+==>
+The micropayments API is implemented in examples/mp1.ss (state channel side),
+and in examples/mp2.sol (contract side).
 
 
 4) Scripting
 
+The scripting commands are implemented in:
 src/apimon.ss
 
-commandes dans bin (esp., scm & cli, plus solc & eth)
 
-Résumé des principales commandes
+There is also a number of shell-based commands:
+
+=> bin/scm [PROG]: launches the Scheme interpreter, and runs the PROG Scheme
+                   program ;
+
+=> bin/cli <CLASS> [SCRIPT]: launches the CLI for scripting ; first loads
+                             the <CLASS> class (located in examples/CLASS.ss),
+                             and optionally, runs the SCRIPT script ;
+
+=> bin/solc <SOLPRG>: the Solidity compiler ; compiles the SOLPRG Solidity
+                      program to ~:SC/a.out ;
+
+=> bin/eth: a wrapper to some of the functionalities of the local dev chain,
+            providing:
+            => bin/eth start: start the chain ;
+            => bin/eth log: show the logs (by means of tail -f) ;
+            => bin/eth logs: show the (Solidity) logs emitted by a given Ethereum
+                                                                       [ contract ;
+
+Summary of the main scripting commands:
+
+a) Objects
+
+=> $VAR ! CLASS PARMS: create an object of the class CLASS, and link the environment
+   variable VAR to it ;
+
+=> dump: list all existing environment variables ;
+
+=> dump VAR: show a low-level (as an sexpr) representation of the value of VAR ;
+
+=> print VAR: pretty-prints the value of VAR ;
+
+
+b) Hosts
+
+=> proch USER UID: creates a vhost impersonating the user USER, having the uid UID ;
+
+=> chost: prints the current vhost's UID ;
+
+=> chost UID: the process having the uid UID becomes the current vhost ;
+
+
+c) Proclets
+
+=> proc USER UID [$VAR]: creates a core proclet having the uid UID, impersonating
+   the person owning the public key USER (USER can also be an alias, either of
+   the public key, or of the internal alias object representing the corresponding
+   Ethereum account), and optionally, sets the proclet's SELF to the value
+   of the environment variable VAR ;
+
+=> procm UID USER: creates a mapping for the (remote) proclet having the uid UID,
+   impersonating the user USER (in fact, that latter part should be automatic) ;
+
+
+d) Groups
+
+=> join UIDG UIDM UID1 UID2 ... UID(N): creates a process group (i.e., a state
+   channel), having the uid UIDG, the process having the uid UIDM as its master,
+   and the participant processes being the processes UID1, UID2, ... UID(N) ;
+
+=> sync UID: synchronizes the proclet UID (which must be member of a group having
+   a master) with the state of the group's master ; this is how we catch the
+   asynchronous results of method calls sent to a group's master (especially,
+   when it is a contract) : our processes never do blocking calls, everything
+   is asynchronous ;
+
+=> sync UID: when the proclet UID is not member of a group, and is a mapping,
+   synchronize its local representation with the state of its (remote) core ;
+
+
+e) Listing procs & their states
+
+=> netlist: list all locally visible processes (the vhosts, the core proclets,
+   the proclets' mappings that we currently see) in a fashion that resembles
+   what UNIX's << ls -l >> command does ;
+
+=> netlist UID: lists the incoming, the outcoming, and the replay list of the
+   process UID ;
+
+=> state UID: lists the process UID's state, just as << print >> would do if we
+   were directly printing its SELF ;
+
+=> statef UID: lists the state of the micropayments' proclet having the uid UID,
+   showing its balance in the state channel, along with the amount of withdrawn
+   Ethereum currently pending (i.e., the amount of Ethereum for which we are
+   currently awaiting a confirmation that it has been processed by the contract
+   in the blockhain ; "processed" meaning, here, that the money has been actually
+   recovered, i.e., it's finally back in the Ethereum account related to the
+   proclet having the uid UID) ;
+   
+
+f) Sending messages
+
+=> whoami: prints the current proclet's UID ;
+
+=> iam UID: the proclet having the uid UID becomes the current proclet ;
+
+=> UID ^ FUNC PARMS: the current proclet sends the message [FUNC PARMS] to the
+   (possibly remote) proclet having the uid UID ;
+
+
+f) Scheduling
+
+=> autorun 0|1: saturates the scheduler or not after a CLI command has been issued ;
+
+=> step UID: triggers the execution of the process UID one step further ;
+
+=> step* UID: steps the process UID until its STATE becomes Idle ;
+
+=> fetchin N: by means of performing N steps of the underlying physical process,
+   fetches all the available incoming inputs/messages, without performing any
+   step triggering further the execution of the subprocesses (i.e. the vhosts,
+   the proclets, etc.) ;
+
+=> run: repeatedly step the underlying physical process's scheduler, until all
+   its subprocesses become either Idle or Waiting ;
+
+
+g) Accounts
+
+=> netlist-acc 0|1: sets the visibility of Ethereum accounts in << netlist >> ;
+
+=> acc: lists the Ethereum accounts we are aware of ;
+
+=> acc I USER: associates the user's alias USER to the Ethereum account numbered
+   as "I" in our local list of Ethereum accounts ;
+
+
+h) Ethereum procs (i.e. contracts)
+
+=> proce USER UID CLASS: creates a contract, impersonating the person USER, having
+   the uid UID, from the Solidity class CLASS ; automatically creates an alias
+   for the newly created contract ;
+
+=> proce USER UID CONTRACT: maps the preexisting Ethereum contract having the
+   Ethereum ID CONTRACT (which can be given as an alias), and recreates it as
+   a proclet impersonating the person USER, having the uid UID ;
+
+=> proce! UID USER1 USER2 USER(N): initializes a << proce >> as created above,
+   having the uid UID, to, as a group, being a group impersonating N persons
+   owning the respective public keys USER1, USER2, ... USER(N) ;
+
+=> alias: lists all the aliases we are aware of ;
+
+=> ethblock: lists the current block number of the Ethereum chain we are
+   connected to ;
+
+=> ethprocs: lists the aliases (and for each, the corresponding Ethereum
+   contract's ID) of all the contracts previously created ;
+
+=> ethwait N: wait until N blocks of the Ethereum chain we are connected to
+   have been mined ;
+
+
+i) Miscellaneous commands
+
+=> q: quit ;
 
 
 5) Conclusion
@@ -52,14 +405,14 @@ Roadmap.
 
 Appendix A: basics, rexpr
 
-Principales classes, fonctions & méthodes
+Main classes, functions & methods
 
 
 Appendix B: communications layer
 
-Principales classes, fonctions & méthodes
+Main classes, functions & methods
 
 
 Appendix C: INI files
 
-Principales variables.
+Main variables.
