@@ -340,7 +340,7 @@ f) Sending messages
    (possibly remote) proclet having the uid UID ;
 
 
-f) Scheduling
+g) Scheduling
 
 => autorun 0|1: saturates the scheduler or not after a CLI command has been issued ;
 
@@ -357,7 +357,7 @@ f) Scheduling
    its subprocesses become either Idle or Waiting ;
 
 
-g) Accounts
+h) Accounts
 
 => netlist-acc 0|1: sets the visibility of Ethereum accounts in << netlist >> ;
 
@@ -367,7 +367,7 @@ g) Accounts
    as "I" in our local list of Ethereum accounts ;
 
 
-h) Ethereum procs (i.e. contracts)
+i) Ethereum procs (i.e. contracts)
 
 => proce USER UID CLASS: creates a contract, impersonating the person USER, having
    the uid UID, from the Solidity class CLASS ; automatically creates an alias
@@ -393,7 +393,7 @@ h) Ethereum procs (i.e. contracts)
    have been mined ;
 
 
-i) Miscellaneous commands
+j) Miscellaneous commands
 
 => q: quit ;
 
