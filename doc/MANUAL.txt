@@ -82,16 +82,16 @@ especially:
    in another physical locations/hosts on the network (so, they can
    be --migrated-- in between hosts, basically) ;
 
-=> accounts and messages: another important aspect of all that is that
-   in between processes, when processes' snapshots are taken, everything
-   is always encrypted. Accounts are the objects which enable this encryption
-   to take place, and define the --identity-- of the processes running in
-   the network (i.e., the processes are --impersonating-- the physical or
-   virtual person who owns the account).
+=> accounts and messages: another important aspect of all that is that in
+   between processes (when messages are sent ; when processes' snapshots
+   are taken), everything is always encrypted. Accounts are the objects
+   which enable this encryption to take place, and define the --identity--
+   of the processes running in the network (i.e., the processes are
+   --impersonating-- the physical or virtual person who owns the account).
 
    Additionally, messages have a number of properties: they are (1) idempotent,
    i.e., messages --also-- have a unique, persistent existence of the network,
-   and can occur only --once--. So when a processes receives the same message
+   and can occur only --once--. So when a process receives the same message
    several times, it's only taken into account the first time (the message's
    sender process UID, plus a nonce provide a unique id for this message). In
    case they are replicated/state altering, messages also have (2) a replay list
