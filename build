@@ -28,6 +28,7 @@ case $1 in
       cp -dpr ./backends/geth_dev/chain .
       cd chain
       geth --datadir "./data" init genesis.json
+      cd -
     else
       echo "chain already exists"
     fi

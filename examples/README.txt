@@ -134,11 +134,19 @@ This example is yet to be implemented.
 
 1.g) mp4 (Blockchain#1)
 
-Open a first console, go to "~:SC" (the directory which contains the downloaded
-state channels library's GIT repository), then do:
+First, the micropayments' contract must have been compiled. To this end, go
+to "~:SC" (the directory which contains the downloaded state channels library's
+GIT repository), then do:
+~:SC>bin/solc examples/mp2.sol
+
+You then need to start the chain. To this end, open a first console, go
+to "~:SC", then do:
 ~:SC>eth start
 
-Open another console, go to "~:SC", then do:
+To see the chain's logs, open another console, go to "~:SC", then do:
+~:SC>eth log
+
+Finally, to start the "mp4" example, open another console, go to "~:SC", then do:
 ~:SC>bin/cli mp1 mp4
 
 This example shows the creation of a "Micropay" contract (the corresponding Solidity
