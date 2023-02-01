@@ -14,6 +14,7 @@ case $1 in
     mkdir sock
     gcc src/ownip.c -o bin/ownip
     chmod 755 backends/build
+    chmod 755 backends/diff
     chmod 755 backends/$SCM/scm
     chmod 755 backends/$SCM/clish.ss
     backends/build $SCM

@@ -341,6 +341,12 @@
                 L)
       (reverse RES))))
 
+(define (list-groupa L)
+  (map (=> (A)
+         (set-car! A (attr (car A)))
+         A)
+       (list-group L)))
+
 ;; Hash tables
 (define (hash-for-each-in-order FUNC HT)
   (set! HT (sort (hash-map->list cons HT)

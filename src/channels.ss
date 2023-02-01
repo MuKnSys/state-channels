@@ -49,15 +49,26 @@
 
 ;; Addrs ; TODO: remove calls to those from the code, fuse them with those below, & throw them away 
 (define (addr-machine ADDR)
-  (car (string-split ADDR #\:)))
+  (define RES (car (string-split ADDR #\:)))
+  (if (!= RES "")
+    RES
+    Void))
 
 (define (addr-netm ADDR)
-  (car (string-split (addr-machine ADDR) #\/)))
+  (define ADDRM (addr-machine ADDR))
+  (if (string? ADDRM)
+    (car (string-split ADDRM #\/))
+    Void))
 
 (define (addr-subm ADDR)
-  (define L (string-split (addr-machine ADDR) #\/))
-  (if (> (list-length L) 1)
-    (cadr L)
+  (define ADDRM (addr-machine ADDR))
+  (define L Void)
+  (if (string? ADDRM)
+    (begin
+      (set! L (string-split ADDRM #\/))
+      (if (> (list-length L) 1)
+        (cadr L)
+        "0"))
     "0"))
 
 (define (addr-host ADDR) ;; Hosts == OS-allocated processes (i.e. procph0s)
@@ -85,10 +96,12 @@
 (define (gaddr-core ADDR)
   (define L Void)
   (set! ADDR (gaddr-netm ADDR))
-  (set! L (string-split ADDR #\*))
-  (if (> (list-length L) 1)
-    (cadr L)
-    ADDR))
+  (if (string? ADDR)
+    (begin
+      (set! L (string-split ADDR #\*))
+      (if (> (list-length L) 1)
+        (set! ADDR (cadr L)))))
+  ADDR)
 
 (define (gaddr-subm ADDR)
   (addr-subm ADDR))
@@ -104,19 +117,24 @@
   (set! SUBM (if (empty? SUBM) "" (car SUBM)))
   (if (unspecified? SUBM)
     (set! SUBM "0"))
-  (string+ GIP (if (== "" SUBM) "" (string+ "/" SUBM)) ":" PROCID))
+  (string+ GIP (if (string? SUBM) (string+ "/" SUBM) "")
+               (if (unspecified? PROCID) "" (string+ ":" PROCID))))
 
-(define (gaddr-npath ADDR) ;; GADDR/SUBM:PROCID => 127.0.0.SUBM:_PORT0 ou _PHMACHINE_LADDR:_PORT0 si 00
-                           ;;                   => PATH dans le filesystem sinon
+(define (gaddr-npath ADDR . FILLIN) ;; GADDR/SUBM:PROCID => 127.0.0.SUBM:_PORT0 ou _PHMACHINE_LADDR:_PORT0 si 00
+                                    ;;                   => PATH dans le filesystem sinon
   (define CORE (gaddr-core ADDR))
   (define SUBM (gaddr-subm ADDR))
   (define PROCID (gaddr-host ADDR))
-  (if (== CORE "")
-    (error "gaddr-npath::CORE"))
-  (if (== SUBM "")
-    (error "gaddr-npath::SUBM"))
+  (if (not (empty? FILLIN))
+    (set! FILLIN (car FILLIN)))
+  (if (unspecified? CORE)
+    (if FILLIN
+      (set! CORE (gaddr-core _VMACHINE_GADDR))
+      (error "gaddr-npath::CORE " ADDR)))
+  (if (unspecified? SUBM)
+    (error "gaddr-npath::SUBM " ADDR))
   (if (unspecified? PROCID)
-    (error "gaddr-npath::PROCID"))
+    (error "gaddr-npath::PROCID " ADDR))
   (if (== PROCID "00")
     (if (== SUBM "0")
       (string+ CORE ":" (string _PORT0))
@@ -127,12 +145,16 @@
   (define CORE (gaddr-core ADDR))
   (define SUBM (gaddr-subm ADDR))
   (define PROCID (gaddr-host ADDR))
-  (if (== (substring CORE 0 8) "127.0.0.")
-    (begin
-      (if (!= SUBM "")
-        (error "gaddr-normalize::SUBM[local]"))
-      (gaddr (gaddr-netm _PHMACHINE_GADDR) PROCID (substring CORE 8 (string-length CORE))))
-    ADDR))
+  (if (unspecified? CORE)
+    (set! CORE (gaddr-core _VMACHINE_GADDR)))
+  (set! ADDR
+        (if (== (substring CORE 0 8) "127.0.0.") ;; FIXME: refine this test
+          (begin
+            (if (specified? SUBM)
+              (error "gaddr-normalize::SUBM[local]"))
+            (gaddr (gaddr-netm _PHMACHINE_GADDR) PROCID (substring CORE 8 (string-length CORE))))
+          (gaddr CORE PROCID SUBM)))
+  ADDR)
 
 ;; Machines
 (define _PHMACHINE_LADDR (ownip))  ;; Local IP address of the physical machine
@@ -157,20 +179,19 @@
   (== (typeof PROC) tprocph0))
 
 (define (procph0 . PARM)
-  (define RES Void)
-  (define L (list-group PARM))
-  (define PROCID (<- L 'PROCID))
-  (set! RES (rexpr tprocph0 L))
+  (define RES (rexpr tprocph0 (list-group PARM)))
+  (define PROCID Void)
   (:? RES 'INCHAN (empty))
   (:? RES 'NONCE 0)
   (:? RES 'AWANSWS (empty))
+  (set! PROCID (<- RES 'PROCID))
   (if (specified? PROCID)
   (begin
-    (if (specified? (: PROC 'GADDR))
+    (if (specified? (: RES 'GADDR))
       (error "procph0::PROCID"))
-    (:= PROC 'GADDR (gaddr (gaddr-netm _VMACHINE_GADDR)
-                           PROCID
-                           (gaddr-subm _VMACHINE_GADDR)))))
+    (:= RES 'GADDR (gaddr (gaddr-netm _VMACHINE_GADDR)
+                          PROCID
+                          (gaddr-subm _VMACHINE_GADDR)))))
  ;(procph0-bind RES)
   RES)
 
@@ -198,11 +219,44 @@
 ;; Proxied channels
 (define _PROXIED (make-hashv-table)) ;; Physical (root) address => CliChans [outcoming kept sockets to (mainly proxied) procs]
 
+;; Chmsgs
+(define tchmsg (type "chmsg"
+                     '(MODE     ;; Async, Async*, Sync (Async & Async*: standard main loop ; Sync: accept() & handshaken)
+                       FROM     ;; Physical address of the socket's sending endpoint (i.e.: _proc_)
+                       TO       ;; Physical address of the socket's receiving endpoint (i.e.: _proc_)
+                       MSG      ;; The payload
+                      )))
+
+(define (chmsg? MSG)
+  (== (typeof MSG) tchmsg))
+
+(define (chmsg . PARM)
+  (define RES (rexpr tchmsg (list-group PARM)))
+  RES)
+
+(define (chmsg-oob FROM TO)
+  (define RES (string+ FROM ";" TO))
+  (string+ (string (string-length RES)) "#" RES))
+
+(define (rawmsg->chmsg STR)
+  (define L (string-split STR #\#))
+  (define LEN Void)
+  (define HEAD Void)
+  (define PAYLOAD Void)
+  (set! LEN (number (car L)))
+  (set! PAYLOAD (substring STR (+ (string-length (car L)) 1) (string-length STR)))
+  (set! HEAD (substring PAYLOAD 0 LEN))
+  (set! PAYLOAD (substring PAYLOAD LEN (string-length PAYLOAD)))
+  (set! L (string-split HEAD #\;))
+  (chmsg 'FROM (car L) 'TO (cadr L) 'MSG PAYLOAD))
+
 ;; Channels
 (define tchannel (type "channel"
                        '(CATEG    ;; Client (outcoming), Server, SrvCli (incoming socket)
-                         FROM     ;; Physical address of the socket's sending endpoint
-                         TO       ;; Physical address of the socket's receiving endpoint
+                         MODE     ;; Async, Async*, Sync (Async & Async*: standard main loop ; Sync: accept() & handshaken)
+                         _FROM    ;; Physical address of the socket's sending endpoint (IP)
+                         FROM     ;; Physical address of the socket's sending endpoint (proc)
+                         TO       ;; Physical address of the socket's receiving endpoint (proc)
                          SOCK     ;; Socket (server socket for Server channels, client socket for Client channels)
                          INSOCK   ;; Incoming (client) sockets
                          PROC     ;; Process (Server channels only)
@@ -212,12 +266,16 @@
   (== (typeof CH) tchannel))
 
 (define (channel . PARM)
-  (define RES Void)
-  (define L (list-group PARM))
-  (set! RES (rexpr tchannel L))
+  (define RES (rexpr tchannel (list-group PARM)))
   (:? RES 'INSOCK (empty))
   (:? RES 'PROC Nil)
   RES)
+
+(define (channel-from CHAN)
+  (: CHAN 'FROM))
+
+(define (channel-to CHAN)
+  (: CHAN 'TO))
 
 (define (channel-srv ADDR . PROC) ;; => Chan[GADDR:PORT PROXIED SRVSOCK INSOCKS]
                                   ;; if !(root?), opens a server socket at the appropriate place in the filesystem
@@ -229,43 +287,61 @@
                                   ;;                         => they stem from accepts: during the time they are used
                                   ;;                                                    to communicate and are not yet closed ;
   (define RES (channel 'CATEG 'Server
-                       'TO ADDR))
-  (:= RES 'SOCK (sock-srv (gaddr-npath ADDR)))
+                       'MODE 'Async*
+                       'TO (gaddr-normalize ADDR)))
+  (:= RES 'SOCK (sock-srv (gaddr-npath (: RES 'TO))))
   (if (not (empty? PROC))
     (:= RES 'PROC (car PROC)))
   RES)
 
-(define (channel-srvcli ADDR) ;; => SrvCliChan
-  Void)
+(define (channel-srvcli TO . MODE) ;; => SrvCliChan
+  (define RES (channel 'CATEG 'SrvCli
+                       'MODE 'Async*
+                       'TO TO))
+  (if (not (empty? MODE))
+    (:= RES 'MODE (car MODE)))
+  RES)
 
 (define (channel-subscribe ADDR) ;; => Void
   Void)
 
-(define (channel-cli ADDR) ;; => CliChan (either kept, or either on a !(proxied?), so volatile in the latter case
-                           ;;    A local IP address (i.e. 127.0.0.[1-254]) _cannot_ connect to a nonlocal IP address
-                           ;;                                                          [ other than _PHMACHINE_GADDR
+(define (channel-cli ADDR . MODE) ;; => CliChan (either kept, or either on a !(proxied?), so volatile in the latter case
+                                  ;;    A local IP address (i.e. 127.0.0.[1-254]) _cannot_ connect to a nonlocal IP address
+                                  ;;                                                          [ other than _PHMACHINE_GADDR
   (define RES (channel 'CATEG 'Client
-                       'TO ADDR))
+                       'MODE 'Async*
+                       'TO (gaddr-normalize ADDR)))
   (define FROM Void)
   (define PROC (current-procph0))
   (set! FROM (if (nil? PROC)
                 (string+ _VMACHINE_GADDR ":00")
-                (: (current-procph0) 'GADDR)))
+                (: PROC 'GADDR)))
   (:= RES 'FROM FROM)
   (:= RES 'SOCK (sock-cli (gaddr-npath ADDR)))
+  (if (not (empty? MODE))
+    (:= RES 'MODE (car MODE)))
   RES)
 
 (define (channel-accept CHAN) ;; => SrvCliChan (either kept, or either on a !(proxied?), so volatile in the latter case
-  (define RES (channel 'CATEG 'SrvCli
-                       'TO (: CHAN 'TO)))
-  (:= RES 'SOCK (sock-accept (: CHAN 'SOCK)))
-;; TODO: set RES.FROM
+  (define RES (channel-srvcli (: CHAN 'TO)))
+  (define SOCK (sock-accept (: CHAN 'SOCK)))
+  (:= RES '_FROM (ipaddr (sock-ip-address SOCK))) ;; NOTE: (sock-ip-address) is only for the 1st time ; TODO: check what
+  (:= RES 'SOCK SOCK)                             ;;       we can about it (e.g. error if local address of a remote machine)
   RES)
 
 (define (channel-write CHAN MSG . OPT) ;; => Void ; adds FROM, TO, NONCE, ASK, SYNC]
                                        ;;           if ISANSW, it must be the right FROM+TO, and an answer to an NONCE to
                                        ;;                      which there have been no answers yet
-  Void)
+  (define FROM (: CHAN 'FROM))
+  (define TO (: CHAN 'TO))
+  (if (not (list-in? (: CHAN 'CATEG) '(Client SrvCli)))
+    (error "channel-write::CATEG"))
+  (if (== (: CHAN 'CATEG) 'SrvCli)
+  (begin
+    (set! FROM TO)
+    (set! TO (: CHAN 'FROM))))
+  (sock-write (: CHAN 'SOCK) (chmsg-oob FROM TO) 0)
+  (sock-write (: CHAN 'SOCK) MSG))
 
 (define (channel-send ADDR MSG . OPT) ;; => Void
   Void)
@@ -283,13 +359,40 @@
                             ;;                                if (proxied?), does (read) on the first wet incoming kept socket
                             ;; if CliChan, one only reads on its socket
                             ;; decodes FROM+TO, NONCE, ASK&SYNC, and does what is appropriate
-  Void)
-
-(define (channel-eof! CHAN) ;; => Void
-  Void)
+  (define FROMNP (ipaddr (sock-ip-address (: CHAN 'SOCK))))
+  (define MSG (sock-read (: CHAN 'SOCK)))
+  (define RES Void)
+  (if (eof-object? MSG)
+    MSG
+    (begin
+      (set! MSG (rawmsg->chmsg MSG))
+      (if (and (== (: CHAN 'CATEG) 'SrvCli) (unspecified? (: CHAN 'FROM)))
+        (:= CHAN 'FROM (: MSG 'FROM))) ;; TODO: manage combining proxied addresses (by meand of FROMNP)
+                                       ;; TODO: raise an error if the announced address definitely cannot fit with FROMNP
+    ;; TODO: set CHAN.MODE the first time (if there is one)
+      MSG)))
 
 (define (channel-close CHAN) ;; => Void
-  Void)
+  (sock-close (: CHAN 'SOCK)))
+
+(define (channel-eof! CHAN) ;; => Void
+  (channel-close CHAN)) ;; FIXME: do that only if CHAN.KEEP ; otherwise, we have to sent an actual EOF object
+
+;; Chlog
+(define (chlog OBJ)
+  (cond ((channel? OBJ)
+         (outraw (: OBJ 'CATEG))
+         (outraw " ")
+         (outraw (: OBJ 'FROM))
+         (outraw " ")
+         (outraw (: OBJ 'TO)))
+        ((chmsg? OBJ)
+         (outraw (: OBJ 'MSG))
+         (outraw " [")
+         (outraw (: OBJ 'FROM))
+         (outraw "=>")
+         (outraw (: OBJ 'TO))
+         (outraw "]"))))
 
 ;; Procph0's main loop
 (define (_start)

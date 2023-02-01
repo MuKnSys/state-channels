@@ -190,15 +190,18 @@
   (define RES Unspecified)
   (set! K (attr K))
   (if (specified? A)
-  (begin
-    (set! RES (cadr (cadr A)))
-    (set-cdr! A (cddr A)))
-  (if (and (not (empty? O)) (== (caar O) K))
-  (begin
-    (set! RES (cadar O))
-    (set-car! (car O) (caadr O))
-    (set-car! (cdar O) (cadadr O))
-    (set-cdr! O (cddr O)))))
+    (begin
+      (set! RES (cadr (cadr A)))
+      (set-cdr! A (cddr A)))
+    (if (and (not (empty? O)) (== (caar O) K))
+      (begin
+        (set! RES (cadar O))
+        (if (empty? (cdr O))
+          (set-car! O Void)
+          (begin
+            (set-car! (car O) (caadr O))
+            (set-car! (cdar O) (cadadr O))
+            (set-cdr! O (cddr O)))))))
   RES)
 
 (define (rexpr-set! O K V . OPT) ;; default with (rcons), otherwise (cons)-ing a pair after the 1st
