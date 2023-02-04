@@ -164,6 +164,26 @@
         (conf-get "MACHINE"        ;; TODO: check that it's actually a correct IP (_PHMACHINE_GADDR or 127.0.0.XY)
                   (addr-machine (gaddr-normalize _PHMACHINE_GADDR))))
 
+;; Relays
+(define (relay-out SRC DEST) ;; SRC & DEST are gaddrs
+  (define CORES (gaddr-core SRC))
+  (define SUBMS (gaddr-subm SRC))
+  (define HOSTS (gaddr-host SRC))
+  (define CORED (gaddr-core DEST))
+  (define SUBMD (gaddr-subm DEST))
+  (define HOSTD (gaddr-host DEST))
+  (if (== CORES CORED)
+    (if (== SUBMS SUBMD)
+      (if (or (== HOSTS HOSTD) (== HOSTS "0"))
+        DEST
+        (gaddr CORED "0" SUBMD))
+      (if (!= HOSTS "00")
+        (gaddr CORES "00" SUBMS)
+        (gaddr CORES "00" SUBMD)))
+    (if (== HOSTS "00")
+      (gaddr CORED "00" "0")
+      (gaddr CORES "00" SUBMS))))
+
 ;; Physical OS-allocated (possibly agglomerated) proc
 (define tprocph0 (type "procph0"
                        '(GADDR    ;; Physical address of the current proc: VGADDR[:PROCNO]
@@ -181,6 +201,7 @@
 (define (procph0 . PARM)
   (define RES (rexpr tprocph0 (list-group PARM)))
   (define PROCID Void)
+  (define BIND Void)
   (:? RES 'INCHAN (empty))
   (:? RES 'NONCE 0)
   (:? RES 'AWANSWS (empty))
@@ -192,15 +213,21 @@
     (:= RES 'GADDR (gaddr (gaddr-netm _VMACHINE_GADDR)
                           PROCID
                           (gaddr-subm _VMACHINE_GADDR)))))
- ;(procph0-bind RES)
+  (set! BIND (<- RES 'BIND))
+  (if (specified? BIND)
+    (procph0-bind RES (if (symbol? BIND) BIND Void)))
   RES)
 
-(define (procph0-bind PROC)
-  (if (not (procph0 ? PROC))
+(define (procph0-bind PROC SOCKMODE)
+  (define CHAN Void)
+  (if (not (procph0? PROC))
     (error "procph0-bind" (typeof PROC)))
   (if (unspecified? (: PROC 'GADDR))
     (error "procph0-bind::no GADDR" (: PROC 'GADDR)))
-  (rcons (: PROC 'INCHAN) (channel-srv (: PROC 'GADDR) PROC))) ;; TODO: check that it doesn't already exists
+  (set! CHAN (channel-srv (: PROC 'GADDR) PROC)) ;; TODO: check that it doesn't already exists
+  (rcons (: PROC 'INCHAN) CHAN)
+  (if (specified? SOCKMODE)
+    (:= CHAN 'MODE SOCKMODE))) ;; TODO: check that SOCKMODE is actually a valid mode name
 
 ;; All procph0s
 (define _PORT0 10002)     ;; Port of proc 00
@@ -222,8 +249,10 @@
 ;; Chmsgs
 (define tchmsg (type "chmsg"
                      '(MODE     ;; Async, Async*, Sync (Async & Async*: standard main loop ; Sync: accept() & handshaken)
-                       FROM     ;; Physical address of the socket's sending endpoint (i.e.: _proc_)
-                       TO       ;; Physical address of the socket's receiving endpoint (i.e.: _proc_)
+                       FROM     ;; Physical address of the socket's sending endpoint (sender proc)
+                       TO       ;; Physical address of the socket's receiving endpoint (recipient proc)
+                       _FROM    ;; Physical address of the socket's sending endpoint (relay)
+                       _TO      ;; Physical address of the socket's receiving endpoint (relay)
                        MSG      ;; The payload
                       )))
 
@@ -234,8 +263,8 @@
   (define RES (rexpr tchmsg (list-group PARM)))
   RES)
 
-(define (chmsg-oob FROM TO)
-  (define RES (string+ FROM ";" TO))
+(define (chmsg-oob FROM TO _FROM _TO)
+  (define RES (string+ FROM ";" TO ";" _FROM ";" _TO))
   (string+ (string (string-length RES)) "#" RES))
 
 (define (rawmsg->chmsg STR)
@@ -248,7 +277,9 @@
   (set! HEAD (substring PAYLOAD 0 LEN))
   (set! PAYLOAD (substring PAYLOAD LEN (string-length PAYLOAD)))
   (set! L (string-split HEAD #\;))
-  (chmsg 'FROM (car L) 'TO (cadr L) 'MSG PAYLOAD))
+  (if (!= (list-length L) 4)
+    (error "rawmsg->chmsg"))
+  (chmsg 'FROM (car L) 'TO (cadr L) '_FROM (caddr L) '_TO (cadddr L) 'MSG PAYLOAD))
 
 ;; Channels
 (define tchannel (type "channel"
@@ -289,7 +320,17 @@
   (define RES (channel 'CATEG 'Server
                        'MODE 'Async*
                        'TO (gaddr-normalize ADDR)))
-  (:= RES 'SOCK (sock-srv (gaddr-npath (: RES 'TO))))
+  (define TO Void)
+  (set! TO (gaddr-npath (: RES 'TO)))
+  (catch ;; TODO: move that inside (sock-srv)
+    True (=> ()
+           (:= RES 'SOCK (sock-srv TO)))
+         (=> (E . OPT)
+           (if (_npath-path? TO)
+             (if (file-exists? (npath-path TO))
+             (begin
+               (file-delete (npath-path TO))
+               (:= RES 'SOCK (sock-srv TO)))))))
   (if (not (empty? PROC))
     (:= RES 'PROC (car PROC)))
   RES)
@@ -305,19 +346,24 @@
 (define (channel-subscribe ADDR) ;; => Void
   Void)
 
+(define (_chfrom)
+  (define PROC (current-procph0))
+  (if (nil? PROC)
+     (string+ _VMACHINE_GADDR ":00")
+     (: PROC 'GADDR)))
+
 (define (channel-cli ADDR . MODE) ;; => CliChan (either kept, or either on a !(proxied?), so volatile in the latter case
                                   ;;    A local IP address (i.e. 127.0.0.[1-254]) _cannot_ connect to a nonlocal IP address
                                   ;;                                                          [ other than _PHMACHINE_GADDR
   (define RES (channel 'CATEG 'Client
                        'MODE 'Async*
                        'TO (gaddr-normalize ADDR)))
-  (define FROM Void)
-  (define PROC (current-procph0))
-  (set! FROM (if (nil? PROC)
-                (string+ _VMACHINE_GADDR ":00")
-                (: PROC 'GADDR)))
+  (define FROM (_chfrom))
   (:= RES 'FROM FROM)
-  (:= RES 'SOCK (sock-cli (gaddr-npath ADDR)))
+  (catch True (=> ()
+                (:= RES 'SOCK (sock-cli (gaddr-npath ADDR))))
+              (=> (E . OPT)
+                (error "Can't connect to " ADDR "[" (gaddr-npath ADDR) "]")))
   (if (not (empty? MODE))
     (:= RES 'MODE (car MODE)))
   RES)
@@ -325,6 +371,7 @@
 (define (channel-accept CHAN) ;; => SrvCliChan (either kept, or either on a !(proxied?), so volatile in the latter case
   (define RES (channel-srvcli (: CHAN 'TO)))
   (define SOCK (sock-accept (: CHAN 'SOCK)))
+  (:= RES 'MODE (: CHAN 'MODE)) ;; TODO: when the mode is at the level of the server channel ; otherwise the client sets this
   (:= RES '_FROM (ipaddr (sock-ip-address SOCK))) ;; NOTE: (sock-ip-address) is only for the 1st time ; TODO: check what
   (:= RES 'SOCK SOCK)                             ;;       we can about it (e.g. error if local address of a remote machine)
   RES)
@@ -334,17 +381,41 @@
                                        ;;                      which there have been no answers yet
   (define FROM (: CHAN 'FROM))
   (define TO (: CHAN 'TO))
+  (define FROM_ Void)
+  (define TO_ Void)
   (if (not (list-in? (: CHAN 'CATEG) '(Client SrvCli)))
     (error "channel-write::CATEG"))
   (if (== (: CHAN 'CATEG) 'SrvCli)
   (begin
     (set! FROM TO)
     (set! TO (: CHAN 'FROM))))
-  (sock-write (: CHAN 'SOCK) (chmsg-oob FROM TO) 0)
+  (set! FROM_ FROM)
+  (set! TO_ TO)
+  (if (not (empty? OPT))
+  (begin
+    (set! FROM_ (car OPT))
+    (set! TO_ (cadr OPT))))
+  (sock-write (: CHAN 'SOCK) (chmsg-oob FROM_ TO_ FROM TO) 0)
   (sock-write (: CHAN 'SOCK) MSG))
 
 (define (channel-send ADDR MSG . OPT) ;; => Void
-  Void)
+  (define CLI Void)
+  (define FROM_ Void)
+  (define TO_ Void)
+  (if (chmsg? MSG)
+    (begin
+      (set! FROM_ (: MSG 'FROM))
+      (set! TO_ (: MSG 'TO))
+      (if (and (specified? ADDR) (!= TO_ ADDR))
+        (error "channel-send")
+        (set! ADDR TO_))
+      (set! MSG (: MSG 'MSG)))
+    (begin
+      (set! FROM_ (_chfrom))
+      (set! TO_ ADDR)))
+  (set! ADDR (relay-out (_chfrom) TO_))
+  (set! CLI (channel-cli ADDR))
+  (channel-write CLI MSG FROM_ (gaddr-normalize TO_)))
 
 (define (channel-wet? CHAN) ;; => Bool [channel has data]
   Void)
@@ -359,18 +430,27 @@
                             ;;                                if (proxied?), does (read) on the first wet incoming kept socket
                             ;; if CliChan, one only reads on its socket
                             ;; decodes FROM+TO, NONCE, ASK&SYNC, and does what is appropriate
-  (define FROMNP (ipaddr (sock-ip-address (: CHAN 'SOCK))))
-  (define MSG (sock-read (: CHAN 'SOCK)))
-  (define RES Void)
-  (if (eof-object? MSG)
-    MSG
-    (begin
-      (set! MSG (rawmsg->chmsg MSG))
-      (if (and (== (: CHAN 'CATEG) 'SrvCli) (unspecified? (: CHAN 'FROM)))
-        (:= CHAN 'FROM (: MSG 'FROM))) ;; TODO: manage combining proxied addresses (by meand of FROMNP)
-                                       ;; TODO: raise an error if the announced address definitely cannot fit with FROMNP
-    ;; TODO: set CHAN.MODE the first time (if there is one)
-      MSG)))
+  (define FROMNP Void)
+  (define MSG Void)
+  (define CATEG (: CHAN 'CATEG))
+  (cond ((== CATEG 'Server)
+         (set! CHAN (channel-accept CHAN))
+         (channel-read CHAN))
+        (else
+         (set! FROMNP (ipaddr (sock-ip-address (: CHAN 'SOCK))))
+         (set! MSG (sock-read (: CHAN 'SOCK)))
+         (if (and (not (eof-object? MSG))
+                  (!= MSG "Unspecified")) ;; FIXME: temporary fix ; remove this asap
+           (begin
+             (set! MSG (rawmsg->chmsg MSG))
+             (if (and (== (: CHAN 'CATEG) 'SrvCli) (unspecified? (: CHAN 'FROM)))
+               (:= CHAN 'FROM (: MSG '_FROM))) ;; TODO: manage combining proxied addresses (by meand of FROMNP)
+                                               ;; TODO: raise an error if the announced address definitely cannot fit with FROMNP
+          ;; TODO: set CHAN.MODE the first time (if there is one)
+             Void))
+         (if (== (: CHAN 'MODE) 'Async)
+           (channel-eof! CHAN))
+         MSG)))
 
 (define (channel-close CHAN) ;; => Void
   (sock-close (: CHAN 'SOCK)))
@@ -383,6 +463,8 @@
   (cond ((channel? OBJ)
          (outraw (: OBJ 'CATEG))
          (outraw " ")
+         (outraw (: OBJ 'MODE))
+         (outraw " ")
          (outraw (: OBJ 'FROM))
          (outraw " ")
          (outraw (: OBJ 'TO)))
@@ -392,10 +474,23 @@
          (outraw (: OBJ 'FROM))
          (outraw "=>")
          (outraw (: OBJ 'TO))
-         (outraw "]"))))
+         (outraw "]")
+         (outraw " {")
+         (outraw (: OBJ '_FROM))
+         (outraw "=>")
+         (outraw (: OBJ '_TO))
+         (outraw "}"))))
 
 ;; Procph0's main loop
-(define (_start)
+(define (procph0-reroute PROC MSG)
+  (define RES False)
+  (if (!= (: MSG 'TO) (: PROC 'GADDR))
+  (begin
+    (channel-send Void MSG)
+    (set! RES True)))
+  RES)
+
+(define (procph0-start PROC)
 ;; 2 incoming sockets:
 ;;   IN00:: _VMACHINE_GADDR:_PORT0 <= si SUBM==0, _PHMACHINE_LADDR:_PORT0, sinon 127.0.0.SUBM:_PORT0
 ;;                                 => UP:   faire les subscribe si IN00 est proxied (si SUBM==0 ; sinon on relaye vers IN00/0)
@@ -409,4 +504,23 @@
 ;; => IN01 && procno => allouer un procno
 ;;
 ;; 
-  Void)
+  (define SRV (car (: PROC 'INCHAN)))
+  (define RECVH Void)
+  (define EXTH Void)
+  (define IDLEH Void)
+  (define MSG Void)
+  (set! RECVH (: PROC 'RECVH))
+  (set! EXTH (: PROC 'EXTH))
+ ;(set! IDLEH (: PROC 'IDLEH)) ;; TODO: manage IDLEH by means of (select) & nonblocking socks
+  (while True
+    (set! MSG (channel-read SRV))
+    (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
+             (not (procph0-reroute PROC MSG)))
+      (begin
+        (if (specified? RECVH)
+          (RECVH MSG))
+        (if (specified? EXTH)
+          (RECVH MSG)))
+      (begin
+        (chlog MSG)
+        (cr)))))
