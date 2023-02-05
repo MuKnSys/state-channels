@@ -481,6 +481,19 @@
          (outraw (: OBJ '_TO))
          (outraw "}"))))
 
+;; Logs
+(define (com-log LEVEL) ;; TODO: move that below socks.ss, in such a way that it can be used there.
+  (define LOGS (conf-get "COM_LOG"))
+  (define RES Void)
+  (if (specified? LOGS)
+    (set! RES (: LOGS LEVEL)))
+  (set! RES (if (specified? RES)
+              (boolean RES)
+              False))
+  RES)
+
+(define CHAN_LOG (com-log "chan"))
+
 ;; Procph0's main loop
 (define (procph0-reroute PROC MSG)
   (define RES False)
@@ -514,13 +527,15 @@
  ;(set! IDLEH (: PROC 'IDLEH)) ;; TODO: manage IDLEH by means of (select) & nonblocking socks
   (while True
     (set! MSG (channel-read SRV))
+    (if CHAN_LOG
+      (begin
+        (outraw ">  ")
+        (chlog MSG)
+        (cr)))
     (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
              (not (procph0-reroute PROC MSG)))
       (begin
         (if (specified? RECVH)
           (RECVH MSG))
         (if (specified? EXTH)
-          (RECVH MSG)))
-      (begin
-        (chlog MSG)
-        (cr)))))
+          (RECVH MSG))))))
