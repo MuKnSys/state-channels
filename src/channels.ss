@@ -225,7 +225,7 @@
   (if (unspecified? (: PROC 'GADDR))
     (error "procph0-bind::no GADDR" (: PROC 'GADDR)))
   (set! CHAN (channel-srv (: PROC 'GADDR) PROC)) ;; TODO: check that it doesn't already exists
-  (rcons (: PROC 'INCHAN) CHAN)
+  (rcons (: PROC 'INCHAN) CHAN)                  ;; FIXME: previous line: don't bind only on PROC.GADDR
   (if (specified? SOCKMODE)
     (:= CHAN 'MODE SOCKMODE))) ;; TODO: check that SOCKMODE is actually a valid mode name
 
@@ -289,7 +289,7 @@
                          FROM     ;; Physical address of the socket's sending endpoint (proc)
                          TO       ;; Physical address of the socket's receiving endpoint (proc)
                          SOCK     ;; Socket (server socket for Server channels, client socket for Client channels)
-                         INSOCK   ;; Incoming (client) sockets
+                         INCHAN   ;; Incoming (client) channels (Server channels only)
                          PROC     ;; Process (Server channels only)
                         )))
 
@@ -298,15 +298,45 @@
 
 (define (channel . PARM)
   (define RES (rexpr tchannel (list-group PARM)))
-  (:? RES 'INSOCK (empty))
+  (:? RES 'INCHAN (empty))
   (:? RES 'PROC Nil)
   RES)
+
+(define (channel-categ CHAN)
+  (: CHAN 'CATEG))
+
+(define (channel-srv? CHAN)
+  (== (channel-categ CHAN) 'Server))
+
+(define (channel-cli? CHAN)
+  (== (channel-categ CHAN) 'Client))
+
+(define (channel-srvcli? CHAN)
+  (== (channel-categ CHAN) 'SrvCli))
+
+(define (channel-mode CHAN)
+  (: CHAN 'MODE))
+
+(define (channel-mode! CHAN MODE)
+  (:= CHAN 'MODE MODE))
+
+(define (channel-async? CHAN)
+  (== (channel-mode CHAN) 'Async))
+
+(define (channel-async*? CHAN)
+  (== (channel-mode CHAN) 'Async*))
+
+(define (channel-sync? CHAN)
+  (== (channel-mode CHAN) 'Sync))
 
 (define (channel-from CHAN)
   (: CHAN 'FROM))
 
 (define (channel-to CHAN)
   (: CHAN 'TO))
+
+(define (channel-busy? CHAN)
+  (not (boxed-empty? (: CHAN 'INCHAN))))
 
 (define (channel-srv ADDR . PROC) ;; => Chan[GADDR:PORT PROXIED SRVSOCK INSOCKS]
                                   ;; if !(root?), opens a server socket at the appropriate place in the filesystem
@@ -334,6 +364,12 @@
   (if (not (empty? PROC))
     (:= RES 'PROC (car PROC)))
   RES)
+
+(define (channel-connect SRV CLI) ;; [Not sure we implement this] : connects a Server channel to its (accept)ed incoming
+   ;Or: (channel-accept SRV CLI)  ;; connection CLI ; (channel-read) takes from this one only ; if we disconnect, then it
+                                  ;; takes from all, and accepts new connections from the serversocket ; there is a way to
+                                  ;; obtain the currently accepted socket (for resuming the conversation later).
+  Void)
 
 (define (channel-srvcli TO . MODE) ;; => SrvCliChan
   (define RES (channel 'CATEG 'SrvCli
@@ -363,7 +399,8 @@
   (catch True (=> ()
                 (:= RES 'SOCK (sock-cli (gaddr-npath ADDR))))
               (=> (E . OPT)
-                (error "Can't connect to " ADDR "[" (gaddr-npath ADDR) "]")))
+               ;(error "Can't connect to " ADDR "[" (gaddr-npath ADDR) "]") TODO: find a way to restore this when needed
+                Void))
   (if (not (empty? MODE))
     (:= RES 'MODE (car MODE)))
   RES)
@@ -383,20 +420,25 @@
   (define TO (: CHAN 'TO))
   (define FROM_ Void)
   (define TO_ Void)
-  (if (not (list-in? (: CHAN 'CATEG) '(Client SrvCli)))
-    (error "channel-write::CATEG"))
-  (if (== (: CHAN 'CATEG) 'SrvCli)
-  (begin
-    (set! FROM TO)
-    (set! TO (: CHAN 'FROM))))
-  (set! FROM_ FROM)
-  (set! TO_ TO)
-  (if (not (empty? OPT))
-  (begin
-    (set! FROM_ (car OPT))
-    (set! TO_ (cadr OPT))))
-  (sock-write (: CHAN 'SOCK) (chmsg-oob FROM_ TO_ FROM TO) 0)
-  (sock-write (: CHAN 'SOCK) MSG))
+  (cond ((channel-srv? CHAN)
+         (if (not (channel-busy? CHAN))
+           (error "channel-write::srv+!busy"))
+         (apply channel-write `(,(car (: CHAN 'INCHAN)) ,MSG . ,OPT)))
+        ((list-in? (: CHAN 'CATEG) '(Client SrvCli))
+         (if (== (: CHAN 'CATEG) 'SrvCli)
+         (begin
+           (set! FROM TO)
+           (set! TO (: CHAN 'FROM))))
+         (set! FROM_ FROM)
+         (set! TO_ TO)
+         (if (not (empty? OPT))
+         (begin
+           (set! FROM_ (car OPT))
+           (set! TO_ (cadr OPT))))
+         (sock-write (: CHAN 'SOCK) (chmsg-oob FROM_ TO_ FROM TO) 0)
+         (sock-write (: CHAN 'SOCK) MSG))
+        (else
+         (error "channel-write::CATEG"))))
 
 (define (channel-send ADDR MSG . OPT) ;; => Void
   (define CLI Void)
@@ -414,8 +456,9 @@
       (set! FROM_ (_chfrom))
       (set! TO_ ADDR)))
   (set! ADDR (relay-out (_chfrom) TO_))
-  (set! CLI (channel-cli ADDR))
-  (channel-write CLI MSG FROM_ (gaddr-normalize TO_)))
+  (set! CLI (channel-cli ADDR 'Async))
+  (channel-write CLI MSG FROM_ (gaddr-normalize TO_))
+  (channel-eof! CLI))
 
 (define (channel-wet? CHAN) ;; => Bool [channel has data]
   Void)
@@ -433,12 +476,24 @@
   (define FROMNP Void)
   (define MSG Void)
   (define CATEG (: CHAN 'CATEG))
+  (define CLI Void)
   (cond ((== CATEG 'Server)
-         (set! CHAN (channel-accept CHAN))
-         (channel-read CHAN))
+         (if (channel-sync? CHAN)
+           (if (channel-busy? CHAN)
+             (set! CLI (car (: CHAN 'INCHAN))) ;; FIXME: improve this: one active conversation at a time, plus a number of KEEPs
+             (begin
+               (set! CLI (channel-accept CHAN))
+               (runshift (: CHAN 'INCHAN) CLI)))
+           (set! CLI (channel-accept CHAN)))
+         (set! MSG (channel-read CLI))
+         (if (eof-object? MSG)
+           (channel-eof! CHAN))
+         MSG)
         (else
          (set! FROMNP (ipaddr (sock-ip-address (: CHAN 'SOCK))))
          (set! MSG (sock-read (: CHAN 'SOCK)))
+         (if (== MSG "Unspecified")
+           (sock-write (: CHAN 'SOCK) "1234")) ;; FIXME: temporary fix ; remove this asap
          (if (and (not (eof-object? MSG))
                   (!= MSG "Unspecified")) ;; FIXME: temporary fix ; remove this asap
            (begin
@@ -456,7 +511,32 @@
   (sock-close (: CHAN 'SOCK)))
 
 (define (channel-eof! CHAN) ;; => Void
-  (channel-close CHAN)) ;; FIXME: do that only if CHAN.KEEP ; otherwise, we have to sent an actual EOF object
+  (define CLI Void)
+  (cond ((channel-srv? CHAN)
+         (if (not (channel-busy? CHAN))
+           (error "channel-eof!::srv+!busy"))
+         (set! CLI (rshift (: CHAN 'INCHAN)))
+         (channel-eof! CLI))
+        (else
+         (channel-close CHAN)))) ;; FIXME: do that only if CHAN.KEEP ; otherwise, we have to sent an actual EOF object
+
+;; (channel-touch)
+(define (channel-touch ADDR . FETCH)
+  (define RES Void)
+  (set! FETCH (if (empty? FETCH)
+                Void
+                (car FETCH)))
+  (catch True (=> ()
+                (define SOCK (channel-cli ADDR))
+                (if (specified? FETCH)
+                  (begin
+                    (channel-write SOCK "Unspecified")
+                    (set! RES (channel-read SOCK)))
+                  (set! RES True))
+                (channel-close SOCK))
+              (=> (E . OPT)
+                Void))
+  RES)
 
 ;; Chlog
 (define (chlog OBJ)
@@ -479,7 +559,9 @@
          (outraw (: OBJ '_FROM))
          (outraw "=>")
          (outraw (: OBJ '_TO))
-         (outraw "}"))))
+         (outraw "}"))
+        (else
+         (outraw OBJ))))
 
 ;; Logs
 (define (com-log LEVEL) ;; TODO: move that below socks.ss, in such a way that it can be used there.

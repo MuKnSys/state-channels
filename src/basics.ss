@@ -157,7 +157,8 @@
       (number? O)
       (symbol? O)
       (char? O)
-      (string? O)))
+      (string? O)
+      (eof-object? O)))
 
 (define (strsy? O)
   (or (symbol? O)
@@ -244,10 +245,31 @@
     (set-cdr! (last-pair L) `(,VAL))))
 
 (define list-add append)
+
 (define (rcons L V)
   (if (boxed-empty? L) ;; FIXME?: (Relatively) shitty hack for empty lists
     (set-car! L V)
     (append! L `(,V))))
+(define rpush rcons) ;; TODO: rpop
+
+(define (rshift L)
+  (define RES (if (boxed-empty? L)
+                Unspecified
+                (car L)))
+  (if (not (boxed-empty? L))
+  (begin
+    (set-car! L Unspecified)
+    (if (not (empty? (cdr L)))
+    (begin
+      (set-car! L (cadr L))
+      (set-cdr! L (cddr L))))))
+  RES)
+    
+(define (runshift L V)
+  (define V0 (car L))
+  (if (not (boxed-empty? L))
+    (set-cdr! L (cons V0 (cdr L))))
+  (set-car! L V))
 
 (define (list-flatten L)
   (cond ((null? L) Nil)
