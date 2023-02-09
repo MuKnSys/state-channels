@@ -89,7 +89,7 @@
       (set! HOST (: HOST 'HOST))))
   HOST)
 
-(define (host-fsock HOSTID)
+(define (host-fsock HOSTID) ;; TODO: throw away (host-fsock) & (host-fsock2), or integrate them in channels.ss
   (path-normalize (string+ (host-phys-socks) "/" (addr-subm (current-machine)) "/" HOSTID)))
 
 (define (host-fsock2 ADDR) ;; TODO: to be reunited with the previous one

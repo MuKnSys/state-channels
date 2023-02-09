@@ -23,9 +23,10 @@
   (import: ./calls))
 
 ;; Physical host proc
-(set! tprocph (type `("procph" ,tproch) ;; Physical host process (_one_ per physical OS-level process) ; by means
-                    '(HOSTID            ;; of migrating host processes to various physical host processes, one can
-                     )))                ;; deploy a distributed app in various ways.
+(set! tprocph (type `("procph" ,tproch) ;; Physical host process (_one_ per physical OS-level process) ; by means of migrating
+                    '(HOSTID            ;;  [ host procs to various physical host procs, one can deploy a dapp in various ways.
+                      PROCPH0           ;; The low-level avatar of a procph (aka. procph0) [TODO: reunite later with procph].
+                     )))
 
 ;; Constructor
 (define (procph . PARM)
@@ -51,7 +52,6 @@
 ;; Current physical process
 (define _SOCK0A (host-fsock "0"))
 (define _HOSTID ((=> ()
-                  ;(define VAL (sock-touch _SOCK0A 1))
                    (define VAL (channel-touch ":0" 1))
                    (if (unspecified? VAL)
                      (if (file-exists? _SOCK0A)
@@ -68,14 +68,19 @@
   (write MSG)
   (outraw ">>")
   (cr))
+(define DHT_LOG (com-log "dht"))
 (define (_handler0 MSG)
   (cond ((== MSG Void)
         ;(_handler-log MSG)
+         (if DHT_LOG
+           (chlog2 MSG ">> "))
          (set! _HOSTIDNB (+ _HOSTIDNB 1))
          (string _HOSTIDNB))
         ((and (pair? MSG) (== (car MSG) 'enter))
          (if (net-log)
            (_handler-log MSG))
+         (if DHT_LOG
+           (chlog2 MSG ">> "))
          (let* ((UID (cadr MSG))
                 (ADDR (caddr MSG)))
           ;(outraw "nenter(0)=> ") ;; TODO: turn that to debug logs
@@ -86,7 +91,9 @@
            (netp2p-net-enter UID)
            Void))
         ((and (pair? MSG) (== (car MSG) 'leave))
-         (_handler-log MSG)
+        ;(_handler-log MSG)
+         (if DHT_LOG
+           (chlog2 MSG ">> "))
          Void)
         ((and (pair? MSG) (== (car MSG) 'dispatch))
          (set! MSG (cadr MSG))
@@ -112,11 +119,14 @@
 
 (define (_handler1 MSG)
  ;(outraw "[H1]")(_handler-log MSG)
+  (if DHT_LOG
+    (chlog2 MSG ">> "))
   (net-send MSG)
  ;(lstproc (net-resolve (: MSG 'TO)))
  ;(cr)
 )
 
+;; Init (host-proc) (1)
 (host-proc! (if (== _HOSTID "0")
               (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
                       'UID 'phys
@@ -127,94 +137,53 @@
                       'HOSTID _HOSTID
                       'HANDLER _handler1)))
 
-;; Start
-(define _START-SRV Void) ;; FIXME: doesn't work with multiple hosts
-(define _START-OFLAGS Void)
-(define _START-ISBLOCK True)
-(define _START-NEVERBLOCK False)
+;; Context
+(define (the-procph0)
+  (: (host-proc) 'PROCPH0))
+
+(define (the-srv-chan)
+  (car (: (the-procph0) 'INCHAN)))
+
 (define (the-srv-sock)
-  (: _START-SRV 'SOCK))
+  (: (the-srv-chan) 'SOCK))
+
 (define (the-srv)
-  (cadr (: _START-SRV 'SOCK)))
-(define (blockio)
- ;(outraw "Blocking !!!\n")
-  (if (not _START-NEVERBLOCK)
-  (begin
-    (set! _START-ISBLOCK True)
-    (fcntl (the-srv) F_SETFL _START-OFLAGS)))) ;; TODO: improve this, by means of really changing the bit on the current state
-(define (nonblockio)
- ;(outraw "Nonblocking !!!\n")
-  (set! _START-ISBLOCK False)
-  (fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
-(define (start . HOST)
-  (define SOCK Void)
-  (define PREVRES False)
-  (define RES True)
-  (define RES2 Void)
-  (define ONCE (list-in? 'Once HOST)) ;; FIXME: improve this (1)
-  (define ONCENB (if (> (list-length HOST) 1) (cadr HOST) 0)) ;; FIXME: doesn't work if there is a proc parm
-  (define FINI False)
-  (define SRVA Void)
-  (set! HOST (filter (=> (X) ;; FIXME: improve this (2)
-                       (proc? X))
-                     HOST))
-  (set! HOST (if (empty? HOST)
-               (host-proc)
-               (car HOST)))
-  (if (not (procph? HOST))
-    (error "start"))
-  (set! SRVA (host-fsock (: HOST 'HOSTID))) ;; FIXME: doesn't work for if we call (start) several times with different hosts
-  (if (unspecified? _START-SRV)
-    (begin
-      (if (file-exists? SRVA)
-        (file-delete SRVA))
-     ;(set! _START-SRV (sock-srv SRVA))
-      (set! _START-SRV (channel-srv (string+ ":" (: HOST 'HOSTID))))
-      (channel-mode! _START-SRV 'Sync)
-      (set! _START-OFLAGS (fcntl (the-srv) F_GETFL))))
-  (while (not FINI)
-  (begin
-    (set! RES (^ 'step (host-proc)))
-    (if (and RES PREVRES) 
-      (noop))
-    (if (and (not RES) (not PREVRES))
-      (noop))
-    (if (and RES (not PREVRES))
-      (nonblockio))
-    (if (and (not RES) PREVRES)
-      (blockio))
-    (set! PREVRES RES)
-    (if (and ONCE (<= ONCENB 0)) ; (not RES))
-      (begin
-        (set! SOCK False)
-        (set! FINI True))
-      (begin
-     ;(errlog _START-ISBLOCK)
-      (set! SOCK (channel-accept _START-SRV))))
-    (if (and ONCE (> ONCENB 0) (not SOCK))
-      (set! ONCENB (- ONCENB 1)))
-    (if (!= SOCK False)
-    (begin
-      (if (and ONCE (> ONCENB 0))
-        (set! ONCENB (- ONCENB 1)))
-     ;(outraw "New client: ")
-     ;(out (sock-details SOCK))
-     ;(cr)
-     ;(outraw "Address: ")
-     ;(out (sock-address SOCK))
-     ;(cr)
-      (set! RES2 (: (channel-read SOCK) 'MSG))
-     ;(outraw "Message0: ")
-     ;(out RES2)
-     ;(cr)
-      (set! RES2 (sexpr-parse RES2))
-     ;(outraw "Message: ")
-     ;(out RES2)
-     ;(cr)
-      (set! RES2 ((: (host-proc) 'HANDLER) RES2))
-      (if (specified? RES2)
-        (channel-write SOCK RES2))
-      (channel-eof! SOCK))))))
+  (cadr (the-srv-sock)))
+
+;; Init (host-proc) (2)
+(:= (host-proc)
+    'PROCPH0
+    (procph0 'PROCID (gaddr-host (string+ ":" (: (host-proc) 'HOSTID))) 'BIND 'Async))
+(:= (the-procph0)
+    'PROCPH
+    (host-proc))
+(:= (the-procph0)
+    'ACTIONH
+    ((=> ()
+       (define PREVRES False)
+       (=> (PROC)
+         (define RES (^ 'step (: PROC 'PROCPH)))
+         (if (and RES PREVRES) 
+           (noop))
+         (if (and (not RES) (not PREVRES))
+           (noop))
+         (if (and RES (not PREVRES))
+           (nonblockio))
+         (if (and (not RES) PREVRES)
+           (blockio))
+         (set! PREVRES RES)))))
+(:= (the-procph0)
+    'RECVH
+    (=> (PROC MSG)
+      (define RES (: MSG 'MSG))
+      (set! RES (sexpr-parse RES))
+      ((: (: PROC 'PROCPH) 'HANDLER) RES)))
+(current-procph0! (the-procph0))
+
+(channel-mode! (the-srv-chan) 'Sync)
+
+;; Blocking/nonblocking modes (init)
+(set! _START-OFLAGS (fcntl (the-srv) F_GETFL)) ;; FIXME: integrate this inside procph0
 
 ;(if (== _HOSTID "0")
 ;  (start))

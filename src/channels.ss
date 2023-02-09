@@ -190,9 +190,11 @@
                          INCHAN   ;; Server channels (incoming)
                          NONCE    ;; Next nonce
                          AWANSWS  ;; All nonces for which we await an (asynchronous) answer
+                         ACTIONH  ;; Action handler (in the loop)
                          RECVH    ;; Receiving handler (per message)
                          EXTH     ;; Extended handler (additional actions per message)
                          IDLEH    ;; Idle handler
+                         PROCPH   ;; The high-level avatar of a procph (aka. procph) [TODO: reunite later with procph0].
                         )))
 
 (define (procph0? PROC)
@@ -408,9 +410,12 @@
 (define (channel-accept CHAN) ;; => SrvCliChan (either kept, or either on a !(proxied?), so volatile in the latter case
   (define RES (channel-srvcli (: CHAN 'TO)))
   (define SOCK (sock-accept (: CHAN 'SOCK)))
-  (:= RES 'MODE (: CHAN 'MODE)) ;; TODO: when the mode is at the level of the server channel ; otherwise the client sets this
-  (:= RES '_FROM (ipaddr (sock-ip-address SOCK))) ;; NOTE: (sock-ip-address) is only for the 1st time ; TODO: check what
-  (:= RES 'SOCK SOCK)                             ;;       we can about it (e.g. error if local address of a remote machine)
+  (if SOCK
+    (begin
+      (:= RES 'MODE (: CHAN 'MODE)) ;; TODO: when the mode is at the level of the server channel ; otherwise the client sets this
+      (:= RES '_FROM (ipaddr (sock-ip-address SOCK))) ;; NOTE: (sock-ip-address) is only for the 1st time ; TODO: check what
+      (:= RES 'SOCK SOCK))                            ;;       we can about it (e.g. error if local address of a remote machine)
+    (set! RES False))
   RES)
 
 (define (channel-write CHAN MSG . OPT) ;; => Void ; adds FROM, TO, NONCE, ASK, SYNC]
@@ -539,7 +544,7 @@
   RES)
 
 ;; Chlog
-(define (chlog OBJ)
+(define (chlog OBJ) ;; FIXME: (outraw), (cr), etc., do not work well with redirects (1)
   (cond ((channel? OBJ)
          (outraw (: OBJ 'CATEG))
          (outraw " ")
@@ -561,7 +566,21 @@
          (outraw (: OBJ '_TO))
          (outraw "}"))
         (else
-         (outraw OBJ))))
+         (>> OBJ)))) ;; TODO: display regular calls in a more concise manner
+
+(define (chlog2 MSG . PREF)
+  (set! PREF (if (not (empty? PREF))
+               (car PREF) Void))
+  (rawouts 1)
+  (with-output-to-port
+    (current-error-port)
+    (=> ()
+      (if (specified? PREF)
+        (outraw PREF)) ;; FIXME: (outraw), (cr), etc., do not work well with redirects (2)
+      (chlog MSG)
+      (cr)
+      (force-output)))
+  (rawouts 0))
 
 ;; Logs
 (define (com-log LEVEL) ;; TODO: move that below socks.ss, in such a way that it can be used there.
@@ -620,4 +639,60 @@
         (if (specified? RECVH)
           (RECVH MSG))
         (if (specified? EXTH)
-          (RECVH MSG))))))
+          (EXTH MSG))))))
+
+;; Blocking/nonblocking modes
+(define _START-OFLAGS Void)
+(define _START-ISBLOCK True)
+(define _START-NEVERBLOCK False)
+
+(define (blockio)
+ ;(outraw "Blocking !!!\n")
+  (if (not _START-NEVERBLOCK)
+  (begin
+    (set! _START-ISBLOCK True)
+    (fcntl (the-srv) F_SETFL _START-OFLAGS)))) ;; TODO: improve this, by means of really changing the bit on the current state
+
+(define (nonblockio)
+ ;(outraw "Nonblocking !!!\n")
+  (set! _START-ISBLOCK False)
+  (fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
+
+;; Start
+(define (start . TIMES)
+  (define SOCK Void)
+  (define MSG Void)
+  (define RES Void)
+  (define ONCE (list-in? 'Once TIMES)) ;; FIXME: improve this (1)
+  (define ONCENB (if (> (list-length TIMES) 1) (cadr TIMES) 0))
+  (define FINI False)
+  (while (not FINI)
+  (begin
+    ((: (the-procph0) 'ACTIONH)
+     (the-procph0))
+    (if (and ONCE (<= ONCENB 0)) ; (not RES)) ;; RES from inside (the-procph0).ACTIONH ; in case we need it, return it
+      (begin
+        (set! SOCK False)
+        (set! FINI True))
+      (begin
+       ;(errlog _START-ISBLOCK)
+        (set! SOCK (channel-accept (the-srv-chan)))))
+    (if (and ONCE (> ONCENB 0) (not SOCK))
+      (set! ONCENB (- ONCENB 1)))
+    (if (!= SOCK False)
+    (begin
+      (set! MSG (channel-read SOCK))
+      (if CHAN_LOG
+        (chlog2 MSG ">  "))
+      (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
+               (not (procph0-reroute (the-procph0) MSG)))
+        (begin
+          (set! RES
+                ((: (the-procph0) 'RECVH)
+                 (the-procph0)
+                 MSG))
+          (if (specified? RES)
+            (channel-write SOCK RES))
+          (if (and ONCE (> ONCENB 0))
+            (set! ONCENB (- ONCENB 1)))))
+      (channel-eof! SOCK))))))

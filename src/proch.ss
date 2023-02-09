@@ -54,8 +54,8 @@
   (define RES False)
   (logit PROC)
   (hash-for-each (=> (UID PR) ;; TODO: replace that by hash-for-each-in-order
-    (logit PR)
-    (if (^ 'step PR)
-      (set! RES True)))
-    (allprocsh PROC))
+                   (logit PR)
+                   (if (^ 'step PR)
+                     (set! RES True)))
+                 (allprocsh PROC))
   RES))

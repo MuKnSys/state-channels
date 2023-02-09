@@ -138,7 +138,7 @@
 
 (method! tproc 'out-step (=> (PROC)
   (ifTrue (and (not (^ 'out-idle? PROC))
-               (== (: PROC 'STATE) 'Active))
+               True) ;(== (: PROC 'STATE) 'Active))
           (=> ()
             (define MSG (^ 'out++ PROC))
             (sign MSG (: PROC 'USER) 'SIGN_E) ;; TODO: verify that it's necessary
@@ -179,21 +179,23 @@
   (error "tproc::core-call-RSM : abstract")))
 
 (method! tproc 'in-step (=> (PROC)
-  (ifTrue (not (^ 'in-idle? PROC))
-          (=> ()
-            (define MSG Void)
-            (cond ((== (: PROC 'STATE) 'Active)
-                   (set! MSG (^ 'in++ PROC))
-                   (if (: MSG 'ACK)
-                     (noop)
-                     (^ 'core-call-RSM PROC MSG)))
-                  ((== (: PROC 'STATE) 'Waiting)
-                   (if ((: PROC 'COND) PROC 1)
-                   (begin
-                     (:= PROC 'COND Nil)
-                     (:= PROC 'STATE 'Active))))
-                  (else
-                   (error "in-step")))))))
+  (define RES (not (^ 'in-idle? PROC)))
+  (define MSG Void)
+  (if RES
+    (cond ((== (: PROC 'STATE) 'Active)
+           (set! MSG (^ 'in++ PROC))
+           (if (: MSG 'ACK)
+             (noop)
+             (^ 'core-call-RSM PROC MSG)))
+          ((== (: PROC 'STATE) 'Waiting)
+           (if ((: PROC 'COND) PROC 1)
+             (begin
+               (:= PROC 'COND Nil)
+               (:= PROC 'STATE 'Active))
+             (set! RES False)))
+          (else
+           (error "in-step"))))
+  RES))
     
 (method! tproc 'update-state (=> (PROC)
   (cond ((== (: PROC 'STATE) 'Active)

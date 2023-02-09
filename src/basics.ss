@@ -667,6 +667,30 @@
 (define (clreol)
   (outraw (string+ (string #\esc) "[0K")))
 
+(define _OOUT Void)
+(define _OOUTRAW Void)
+(define _OCR Void)
+(define (rawouts B)
+  (if (boolean B)
+    (begin
+      (if (specified? _OOUT)
+        (error "rawouts"))
+      (set! _OOUT out)
+      (set! _OOUTRAW outraw)
+      (set! _OCR cr)
+      (set! out write)
+      (set! outraw display)
+      (set! cr (=> () (display "\n"))))
+    (begin
+      (if (unspecified? _OOUT)
+        (error "rawouts"))
+      (set! out _OOUT)
+      (set! outraw _OOUTRAW)
+      (set! cr _OCR)
+      (set! _OOUT Void)
+      (set! _OOUTRAW  Void)
+      (set! _OCR Void))))
+
 ;; Shell
 (define (sh-cmd-log B)
   (set! _SH_CMD_LOG B)) ;; FIXME: _SH_CMD_LOG has to be defined inside llruntime
