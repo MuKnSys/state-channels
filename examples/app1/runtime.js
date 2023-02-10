@@ -24,6 +24,7 @@ global.type=function (O) {
 function _proto(X) {
   return X.constructor.prototype;
 }
+global.isUndefined=function (O) { return O===undefined; }
 global.isNull=function (X) { return X==null; }
 global.isBoolean=function (X) { return _proto(X)==_proto(true); }
 global.toBoolean=function (X) { return Boolean(X); }
@@ -32,6 +33,19 @@ global.toNumber=function (X) { return Number(X); }
 global.isString=function (X) { return _proto(X)==_proto("A"); }
 global.toString=function (X) { return String(X); }
 global.isArray=function (X) { return _proto(X)==_proto([]); } // TODO: boxed atoms, objects & functions
+
+global.setprop=function (O,NAME,GET,SET,E,C) {
+  if (!isString(NAME)) error("setprop");
+  if (isUndefined(E)) E=false;
+  if (isUndefined(C)) C=false;
+  var PARMS={
+    "enumerable": E,
+    "configurable": C
+  };
+  if (GET) PARMS["get"]=GET;
+  if (SET) PARMS["set"]=SET;
+  Object.defineProperty(O,NAME,PARMS);
+}
 
 if (inServer()) {
   global.util=require('util');

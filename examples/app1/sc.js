@@ -2,7 +2,7 @@
 
 // Accounts
 var _ACCOUNT={};
-global.account=function (NAME,PASS,BALANCE,PRIVKEY) {
+global.Account=function (NAME,PASS,BALANCE,PRIVKEY) {
   if (new.target) {
     this.NAME=NAME;
     this.PASS=PASS;
@@ -10,41 +10,64 @@ global.account=function (NAME,PASS,BALANCE,PRIVKEY) {
     this.PRIVKEY=PRIVKEY;
     _ACCOUNT[NAME]=this;
   }
-  else return new account(NAME,PASS,BALANCE,PRIVKEY);
+  else return new Account(NAME,PASS,BALANCE,PRIVKEY);
 }
 global.isAccount=function (ACC) {
-  return type(ACC)==account;
+  return type(ACC)==Account;
 }
 global.toAccount=function (ACC) {
   if (isString(ACC)) ACC=_ACCOUNT[ACC];
   if (!isAccount(ACC)) ACC=undefined;
   return ACC;
 }
+var _LOGIN_CREDENTIALS=[];
 global.login=function (NAME,PASS) {
   var ACC=_ACCOUNT[NAME];
-  if (ACC!==undefined && _OUTFOCUS!=null) { // TODO: check pass
-    _OUTFOCUS.USER=ACC;
+  if (ACC!==undefined && _OUTFOCUS!=null) {
+    if (ACC.PASS==PASS) {
+      if (!_LOGIN_CREDENTIALS.includes(ACC)) _LOGIN_CREDENTIALS.push(ACC);
+      iam(ACC);
+    }
   }
+}
+global.iam=function (ACC) {
+  if (isString(ACC)) ACC=_ACCOUNT[ACC];
+  if (!isAccount(ACC)) return;
+  if (_OUTFOCUS!=null && _LOGIN_CREDENTIALS.includes(ACC)) _OUTFOCUS.USER=ACC;
 }
 global.whoami=function () {
   if (_OUTFOCUS!=null) return _OUTFOCUS.USER;
 }
 
 // State channels
-global.schannel=function (PARM) {
+global.StateChannel=function (PARM) {
   var BALANCE={};
   if (new.target) {
     this.BALANCE={};
     for (var NAME in PARM) this.BALANCE[NAME]=0;
     this.STATE="Started";
     for (var NAME in PARM) {
-      login(NAME); // FIXME: improve this
+      iam(NAME);
       this.deposit(PARM[NAME]);
     }
+    setprop(this,"state",function() {
+      return this.STATE;
+    },null);
+    setprop(this,"balance",function() {
+      var ME=whoami();
+      if (ME!=null) return this.BALANCE[ME.NAME];
+               else return null;
+    },null);
   }
-  else return new schannel(PARM);
+  else return new StateChannel(PARM);
 }
-schannel.prototype.deposit=function(AMOUNT) {
+StateChannel.create=function (PARM) {
+  return StateChannel(PARM);
+}
+StateChannel.prototype.detailedStatus=function() {
+  return { state:this.state, balance:this.balance };
+}
+StateChannel.prototype.deposit=function(AMOUNT) {
   if (this.STATE!="Started") return;
   var ME=whoami();
   if (!isNumber(AMOUNT)) error("sc.deposit : AMOUNT should be a number");
@@ -53,17 +76,17 @@ schannel.prototype.deposit=function(AMOUNT) {
     this.BALANCE[ME.NAME]+=AMOUNT;
   }
 }
-schannel.prototype.transfer=function(AMOUNT,ACC) {
+StateChannel.prototype.send=function(AMOUNT,ACC) {
   if (this.STATE!="Started") return;
   var SRC=whoami();
-  if (!isAccount(ACC)) error("sc.transfer : ACC should be an account");
-  if (!isNumber(AMOUNT)) error("sc.transfer : AMOUNT should be a number");
-  if (ACC!=null && SRC!=null && the_sc().BALANCE[SRC.NAME]>=AMOUNT) {
+  if (!isAccount(ACC)) error("sc.send : ACC should be an account");
+  if (!isNumber(AMOUNT)) error("sc.send : AMOUNT should be a number");
+  if (ACC!=null && SRC!=null && this.BALANCE[SRC.NAME]>=AMOUNT) {
     this.BALANCE[SRC.NAME]-=AMOUNT;
     this.BALANCE[ACC.NAME]+=AMOUNT;
   }
 }
-schannel.prototype.withdraw=function(AMOUNT) {
+StateChannel.prototype.withdraw=function(AMOUNT) {
   if (this.STATE!="Started") return;
   var ME=whoami();
   if (!isNumber(AMOUNT)) error("sc.withdraw : AMOUNT should be a number");
@@ -72,25 +95,29 @@ schannel.prototype.withdraw=function(AMOUNT) {
     ME.BALANCE+=AMOUNT;
   }
 }
-schannel.prototype.close=function() {
+StateChannel.prototype.withdrawAndOrClose=function(AMOUNT) {
+  if (isUndefined(AMOUNT)) this.close;
+                      else this.withdraw(AMOUNT);
+}
+StateChannel.prototype.close=function() {
   if (this.STATE!="Started") return;
   for (var NAME in this.BALANCE) {
-    login(NAME); // FIXME: improve this
+    iam(NAME);
     this.withdraw(this.BALANCE[NAME]);
   }
   this.STATE="Closed";
 }
-schannel.prototype.abort=function() { // close() & abort() are the same here ; in a real state channel, close() is multisig
+StateChannel.prototype.abort=function() { // close() & abort() are the same here ; in a real state channel, close() is multisig
   this.close();
 }
 
 // Init
-account("bob","1234",1000);
-account("carol","5678",1000);
+Account("bob","1234",1000);
+Account("carol","5678",1000);
 
 out.focus({}); // NOTE: to enable login() ; TODO: improve this.
 var _THE_SC;
-global.the_sc=function () {
+global.the_sc=function (SC) {
+  if (SC) _THE_SC=SC;
   return _THE_SC;
 }
-_THE_SC=schannel({"bob":10,"carol":10});

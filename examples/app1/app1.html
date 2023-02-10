@@ -9,6 +9,7 @@
       out.focus("col2");
       login("carol","5678");
       welcome();
+      the_sc(StateChannel.create({"bob":10,"carol":10}));
       dom.fetch("in1").addEventListener("keydown",(EVT) => {
         if (EVT.keyCode==13) trig("1");
       });
@@ -29,12 +30,18 @@
         RES+="&gt;&nbsp;Loc: "+the_sc().BALANCE[ME.NAME];
         return RES;
       }
+      function balance() {
+        return "&gt;&nbsp;"+the_sc().balance;
+      }
+      function status() {
+        return "&gt;&nbsp;"+JSON.stringify(the_sc().detailedStatus());
+      }
       function deposit(AMOUNT) {
         the_sc().deposit(toNumber(AMOUNT));
         return bal();
       }
-      function transfer(AMOUNT,WHO) {
-        the_sc().transfer(toNumber(AMOUNT),toAccount(WHO));
+      function send(AMOUNT,WHO) {
+        the_sc().send(toNumber(AMOUNT),toAccount(WHO));
         return bal();
       }
       function withdraw(AMOUNT) {
@@ -46,22 +53,30 @@
         return bal();
       }
       function help() {
-        var RES="&gt;&nbsp;balances: see my balances<br>";
-        RES+="&gt;&nbsp;deposit AMOUNT: move AMOUNT eth => my local account in the state channel<br>";
-        RES+="&gt;&nbsp;transfer AMOUNT USER: inside the state channel, move AMOUNT eth to USER<br>";
+        var RES="&gt;&nbsp;balance: see my balance<br>";
+        RES+="&gt;&nbsp;status: see the detailed status of the state channel<br>";
+        RES+="&gt;&nbsp;balances: see my balances<br>";
+        RES+="&gt;&nbsp;deposit AMOUNT: move AMOUNT eth =&gt; my local account in the state channel<br>";
         RES+="&gt;&nbsp;withdraw AMOUNT: move back AMOUNT eth from the state channel to my account<br>";
+        RES+="&gt;&nbsp;send AMOUNT USER: inside the state channel, move AMOUNT eth to USER<br>";
         RES+="&gt;&nbsp;close: close the state channel ; everybody recovers his money";
         return RES;
       }
       function exec(CMD) {
         var RES;
+        if (CMD[0]=="state") RES=state();
+        else
+        if (CMD[0]=="balance") RES=balance();
+        else
+        if (CMD[0]=="status") RES=status();
+        else
         if (CMD[0]=="balances") RES=bal();
         else
         if (CMD[0]=="deposit") RES=deposit(CMD[1]);
         else
-        if (CMD[0]=="transfer") RES=transfer(CMD[1],CMD[2]);
-        else
         if (CMD[0]=="withdraw") RES=withdraw(CMD[1]);
+        else
+        if (CMD[0]=="send") RES=send(CMD[1],CMD[2]);
         else
         if (CMD[0]=="close") RES=close();
         else
