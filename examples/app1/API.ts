@@ -21,7 +21,7 @@ function whoami(): Account|null;
 
 // State channels
 interface LedgerElementDescrList {
-  [index: string]: number;
+  [index: string]: number; // index is the user alias ; number is the balance for this user.
 }
 
 interface StateChannel {
