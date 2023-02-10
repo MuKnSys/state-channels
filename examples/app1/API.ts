@@ -4,16 +4,16 @@
 
 // Accounts
 interface Account {
-  name: string;
-  pass: string | undefined;
-  balance: number;
-  public_key: string;
+  readonly name: string;
+  readonly pass: string | undefined;
+  readonly balance: number;
+  readonly public_key: string;
 
   constructor(NAME: string, PASS: string|undefined, BALANCE:number, PUBKEY: string);
   isAccount(): boolean;
 }
 
-function login(NAME: string, PASS: string): boolean;
+async function login(NAME: string, PASS: string): boolean;
 
 function iam(ACC: Account): boolean;
 function whoami(): Account|null;
@@ -28,15 +28,15 @@ interface StateChannel {
   readonly state: string;
   readonly balance: number;
 
-  constructor(PARM: LedgerElementDescrList);
+  async constructor(PARM: LedgerElementDescrList);
   isStateChannel(): boolean;
 
   status(): { state: string, balance: number };
 
-  send(AMOUNT: number, ACC: Account): boolean;
-  deposit(AMOUNT: number): boolean;
-  withdraw(AMOUNT: number): boolean;
+  async send(AMOUNT: number, ACC: Account): boolean;
+  async deposit(AMOUNT: number): boolean;
+  async withdraw(AMOUNT: number): boolean;
 
-  withdrawAndOrClose(AMOUNT: number): boolean;
-  close(): boolean;
+  async withdrawAndOrClose(AMOUNT: number): boolean;
+  async close(): boolean;
 }
