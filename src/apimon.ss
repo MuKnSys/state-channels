@@ -739,4 +739,6 @@
 
 ;; Start
 (if (not (defined? '__STANDALONE__)) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
-  (start 'Once))
+(begin
+  (init0)
+  (start 'Once)))

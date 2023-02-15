@@ -126,17 +126,6 @@
  ;(cr)
 )
 
-;; Init (host-proc) (1)
-(host-proc! (if (== _HOSTID "0")
-              (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
-                      'UID 'phys
-                      'HOSTID "0"
-                      'HANDLER _handler0)
-              (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
-                      'UID 'phys
-                      'HOSTID _HOSTID
-                      'HANDLER _handler1)))
-
 ;; Context
 (define (the-procph0)
   (: (host-proc) 'PROCPH0))
@@ -150,40 +139,50 @@
 (define (the-srv)
   (cadr (the-srv-sock)))
 
-;; Init (host-proc) (2)
-(:= (host-proc)
-    'PROCPH0
-    (procph0 'PROCID (gaddr-host (string+ ":" (: (host-proc) 'HOSTID))) 'BIND 'Async))
-(:= (the-procph0)
-    'PROCPH
-    (host-proc))
-(:= (the-procph0)
-    'ACTIONH
-    ((=> ()
-       (define PREVRES False)
-       (=> (PROC)
-         (define RES (^ 'step (: PROC 'PROCPH)))
-         (if (and RES PREVRES) 
-           (noop))
-         (if (and (not RES) (not PREVRES))
-           (noop))
-         (if (and RES (not PREVRES))
-           (nonblockio))
-         (if (and (not RES) PREVRES)
-           (blockio))
-         (set! PREVRES RES)))))
-(:= (the-procph0)
-    'RECVH
-    (=> (PROC MSG)
-      (define RES (: MSG 'MSG))
-      (set! RES (sexpr-parse RES))
-      ((: (: PROC 'PROCPH) 'HANDLER) RES)))
-(current-procph0! (the-procph0))
+;; Init (host-proc)
+(define (init0)
+  (host-proc! (if (== _HOSTID "0")
+                (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
+                        'UID 'phys
+                        'HOSTID "0"
+                        'HANDLER _handler0)
+                (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
+                        'UID 'phys
+                        'HOSTID _HOSTID
+                        'HANDLER _handler1)))
+  (:= (host-proc)
+      'PROCPH0
+      (procph0 'PROCID (gaddr-host (string+ ":" (: (host-proc) 'HOSTID))) 'BIND 'Async))
+  (:= (the-procph0)
+      'PROCPH
+      (host-proc))
+  (:= (the-procph0)
+      'ACTIONH
+      ((=> ()
+         (define PREVRES False)
+         (=> (PROC)
+           (define RES (^ 'step (: PROC 'PROCPH)))
+           (if (and RES PREVRES) 
+             (noop))
+           (if (and (not RES) (not PREVRES))
+             (noop))
+           (if (and RES (not PREVRES))
+             (nonblockio))
+           (if (and (not RES) PREVRES)
+             (blockio))
+           (set! PREVRES RES)))))
+  (:= (the-procph0)
+      'RECVH
+      (=> (PROC MSG)
+        (define RES (: MSG 'MSG))
+        (set! RES (sexpr-parse RES))
+        ((: (: PROC 'PROCPH) 'HANDLER) RES)))
+  (current-procph0! (the-procph0))
 
-(channel-mode! (the-srv-chan) 'Sync)
+  (channel-mode! (the-srv-chan) 'Sync)
 
-;; Blocking/nonblocking modes (init)
-(set! _START-OFLAGS (fcntl (the-srv) F_GETFL)) ;; FIXME: integrate this inside procph0
+  ;; Blocking/nonblocking modes (init)
+  (set! _START-OFLAGS (fcntl (the-srv) F_GETFL))) ;; FIXME: integrate this inside procph0
 
 ;(if (== _HOSTID "0")
 ;  (start))

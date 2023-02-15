@@ -36,7 +36,9 @@
       (if (not (file-exists? (dirname PORT)))
        ;(error "sock-srv: directory " (dirname PORT) " not found"))
         (mkdir (path-normalize (dirname PORT))))
-      (bind SOCK AF_UNIX PORT)))
+      (bind SOCK AF_UNIX PORT))) ;; TODO: detect interferences ; if the file exists, try to connect to it:
+                                 ;; => if it doesn't work, delete the file socket, create a new one & use it ;
+                                 ;; => if it works, it means that the filesocket is active, raise err["sock already in use"] ;
   (listen SOCK 5)
   (if (== FAM PF_INET)
     `(socksrvi ,SOCK False False)
@@ -49,8 +51,8 @@
    `(,TAG ,(car SOCK) ,(if (== TAG 'socksrvclii) (cdr SOCK) (caddr SRV)) False)
     False))
 
-(define (sock-cli ADDR . PORT)
-  (define ADDR0 ADDR)
+(define (sock-cli ADDR . PORT) ;; TODO: implement _nonblocking_ (sock-cli), with async writes (which bufferize the msgs &
+  (define ADDR0 ADDR)          ;;       act as async (send)s once it's connected) ; (read) is then nonblocking as a default
   (define FAM Void)
   (define SOCK Void)
   (define FPATH Void)
@@ -75,21 +77,46 @@
        ;(error "sock-cli: directory " (dirname FPATH) " not found"))
         (mkdir (path-normalize (dirname FPATH))))
       (connect SOCK AF_UNIX FPATH)))
- `(sock ,SOCK False ,ADDR0))
+ `(sock ,SOCK False ,ADDR0)) ;; FIXME: there should be no "False" in (sock ...)
 
 (define (sock-read SOCK)
   (read-line (cadr SOCK)))
 
-(define (sock-write SOCK MSG)
+(define (sock-read-n SOCK N)
+  (get-string-n (cadr SOCK) N))
+
+(define (sock-write SOCK MSG . NL)
  ;(outraw MSG)
  ;(outraw " [=>")
  ;(outraw (cadddr SOCK))
  ;(outraw "]")
  ;(cr)
-  (display (string-append MSG "\n") (cadr SOCK)))
+  (set! NL (if (empty? NL)
+             True
+             (boolean (car NL))))
+  (if NL
+    (set! MSG (string+ MSG "\n")))
+  (display MSG (cadr SOCK))) ;; FIXME: (display) has to become (write), here ;; ah no wouldn't work, we need the newline
 
 (define (sock-close SOCK)
   (close (cadr SOCK)))
+
+(define (sock-touch ADDR . FETCH)
+  (define RES Void)
+  (set! FETCH (if (empty? FETCH)
+                Void
+                (car FETCH)))
+  (catch True (=> ()
+                (define SOCK (sock-cli ADDR))
+                (if (specified? FETCH)
+                  (begin
+                    (sock-write SOCK "Unspecified")
+                    (set! RES (sock-read SOCK)))
+                  (set! RES True))
+                (sock-close SOCK))
+              (=> (E . OPT)
+                Void))
+  RES)
 
 (define (sock-details SOCK)
   (caddr SOCK))
@@ -99,6 +126,6 @@
 
 (define (sock-ip-address SOCK)
   (define A (sock-address SOCK))
-  (if (string? A)
+  (if (not (vector? A))
     Void
     (vector-ref A 1)))

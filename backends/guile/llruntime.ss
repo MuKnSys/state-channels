@@ -9,7 +9,8 @@
 ;
 
 (use-modules (ice-9 popen)
-             (ice-9 rdelim))
+             (ice-9 rdelim)
+             (ice-9 textual-ports))
 
 ;; Lang
 (define-macro (=> LST . CODE)

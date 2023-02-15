@@ -287,6 +287,7 @@
 (define tchannel (type "channel"
                        '(CATEG    ;; Client (outcoming), Server, SrvCli (incoming socket)
                          MODE     ;; Async, Async*, Sync (Async & Async*: standard main loop ; Sync: accept() & handshaken)
+                         PROTO    ;; Protocol: Binary, Text (newline-separated text), HTTP
                          _FROM    ;; Physical address of the socket's sending endpoint (IP)
                          FROM     ;; Physical address of the socket's sending endpoint (proc)
                          TO       ;; Physical address of the socket's receiving endpoint (proc)
