@@ -257,12 +257,20 @@
   (set! RES (hash-ref (net-procs) NAME))
   (if (not RES)
     (set! RES (net-resolve-group NAME)))
+  (if (not RES)
+    (set! RES (account-byUID NAME)))
   (if (or (proceth? PROC)
           (account? PROC)) ;; TODO: improve this
     (set! RES PROC)
     (if (and (not RES) (not ISCORE) (empty? OPT)) ;; TODO: populate & test OPT
       (set! RES (net-map NAME))))
   RES)
+
+(define (net-resolve? NAME)
+  (define PROC (net-resolve NAME 1))
+  (if (or (unspecified? PROC) (not PROC))
+    (set! PROC (hash-ref (net-mapped) NAME)))
+  PROC)
 
 (define (net-send MSG . PROC) ;; NOTE: PROC is here to be able to send an MSG to a proc which is not MSG.TO
   (if (empty? PROC)

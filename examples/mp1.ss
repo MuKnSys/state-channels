@@ -18,6 +18,17 @@
        (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT))
        (:= ACCOUNT GIVER (- (: ACCOUNT GIVER) AMOUNT))))
 
+    deposit ;; NOTE: it's a fake
+    (tmicropay num
+    ,(=> (MP AMOUNT)
+       (define ACCOUNT (: MP 'ACCOUNT))
+       (define PR (sender-proc))
+       (define USER Void)
+       (if (nil? PR)
+         (error "micropay.deposit : no sender"))
+       (set! USER (sy (: PR 'USER)))
+       (:= ACCOUNT USER (+ (: ACCOUNT USER) AMOUNT))))
+
     deposit/return ;; Return from a (blockchain) deposit
     (tmicropay lst
     ,(=> (MP CALL)

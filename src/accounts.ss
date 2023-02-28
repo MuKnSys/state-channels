@@ -39,6 +39,16 @@
 (define (accounts-length)
   (hash-count (const True) (allaccounts 2)))
 
+(define (accounts-list)
+  (define I 0)
+  (define N (accounts-length))
+  (define L '())
+  (while (< I N)
+    (set! L (cons (account-byNo I) L))
+    (set! I (+ I 1)))
+  (reverse L))
+
+(define _ACCOUNTNO 0)
 (define (account . PARM)
   (define RES (apply proc `(,taccount . ,PARM)))
   (define PUBKEY Void)
@@ -50,8 +60,9 @@
   (set! NAME (: RES 'NAME))
   (if (specified? NAME)
     (hash-set! (allaccounts 1) (sy NAME) RES))
-  (if (specified? (: RES 'ACCNO))
-    (hash-set! (allaccounts 2) (: RES 'ACCNO) RES))
+  (:= RES 'ACCNO _ACCOUNTNO)
+  (set! _ACCOUNTNO (+ _ACCOUNTNO 1))
+  (hash-set! (allaccounts 2) (: RES 'ACCNO) RES)
   RES)
 
 (define (account-name! ACC NAME)

@@ -326,13 +326,17 @@
       (map rexpr-unlink O)))
   O)
 
+(define (rexpr-link-type O)
+  (if (atom? O)
+    (let* ((TYVAL (type-by-name O)))
+      (if (specified? TYVAL)
+        TYVAL O))
+    O))
+
 (define (rexpr-link O)
   (if (pair? O)
     (if (== (car O) ':TYPE)
-      (if (atom? (cadr O))
-        (let* ((TYVAL (type-by-name (cadr O))))
-          (if (specified? TYVAL)
-            (set-car! (cdr O) TYVAL))))
+      (set-car! (cdr O) (rexpr-link-type (cadr O)))
       (map rexpr-link O)))
   O)
 
@@ -343,6 +347,7 @@
 
 ;; Pretty-printing
 ;; TODO: add loop protection
+(define _PRETTY_DOIT Void) ;; TODO: implement genuine pretty-printing patterns
 (define _PRETTY_OMIT '()) ;; TODO: implement genuine pretty-printing patterns
 (define (rexpr-pretty O)
   (if (list? O)
@@ -363,6 +368,7 @@
                                  (strsy? (car ELT)))
                           (if (and (!= (car ELT) ':TYPE)
                                    (!= (car ELT) ':ID)
+                                   (or (unspecified? _PRETTY_DOIT) (list-in? (unattr (car ELT)) _PRETTY_DOIT))
                                    (not (list-in? (unattr (car ELT)) _PRETTY_OMIT)))
                             (begin
                               (cr)
@@ -398,7 +404,7 @@
 (define (method TYPE F)
   (define M Void)
   (if (not (type? TYPE))
-    (error "method"))
+    (error "method " TYPE " " F))
   (while (and (not (nil? TYPE)) (unspecified? M))
     (set! M (: (: TYPE 'METHOD) F))
     (set! TYPE (: TYPE 'INHERITS)))
@@ -448,6 +454,73 @@
 
 (define ^ mcall) ;; TODO: improve this ugly thing
 (define ^? mcallv)
+
+;; CSV-like files
+(define (csv-read FNAME TY SLOT)
+  (define (val X)
+    (cond ((== X "_")
+           Void)
+          ((string-digits? X)
+           (number X))
+          (else
+           X)))
+  (define L (map (=> (L) 
+                   (map val (filter (=> (S)
+                                      (> (string-length S) 0))
+                                    (map string-trim
+                                         (string-split L #\space)))))
+                 (file-read FNAME 1)))
+  (define CONS Void)
+  (set! TY (rexpr-link-type TY))
+  (cond ((type? TY)
+         (set! CONS (=> (PARM)
+                      (rexpr TY PARM))))
+        ((procedure? TY)
+         (set! CONS (=> (PARM)
+                      (apply TY PARM))))
+        (else
+         (error "csv-read(1)")))
+  (map (=> (E)
+         (define (var X)
+           (if (pair? X) (cadr X) X))
+         (define (ty X)
+           (if (pair? X) (car X) 'any))
+         (define (cvt VAL TY)
+           (cond ((== TY 'num)
+                  (number VAL))
+                 ((== TY 'str)
+                  (string VAL))
+                 (else
+                  VAL)))
+         (define VARS (map (=> (X) (var X)) SLOT))
+         (define TYS (map (=> (X) (ty X)) SLOT))
+         (CONS (list-splice VARS (map (=> (VAL)
+                                        (define TY (car TYS))
+                                        (set! TYS (cdr TYS))
+                                        (cvt VAL TY))
+                                      E))))
+       L))
+
+(define (csv-write FNAME L SLOT) ;; FIXME: use SLOT to generate the appropriate escapings
+  (define (val X)
+    (cond ((unspecified? X)
+           "_")
+          ((number? X)
+           (string X))
+          ((string? X)
+           X)
+          (else
+           X)))
+  (file-write
+    FNAME
+    (string-join (map (=> (E)
+                        (string-join (map (=> (VAR)
+                                            (val (: E VAR)))
+                                          SLOT)
+                                     " "))
+                      L)
+                 "\n")
+    display))
 
 ;; Init
 (heap-set! _TYPES '@type '@type) ;; Bootstrap ; TODO: add type "type"

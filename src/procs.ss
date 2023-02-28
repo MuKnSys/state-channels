@@ -105,6 +105,13 @@
     (set! PROCH (car PROC)))
   (: (: PROCH 'SCHED) 'ALLPROCS))
 
+;; Petname
+(define (proc-petname PR)
+  (define NAME Void)
+  (if (proc? PR)
+    (set! NAME (: PR (if (account? PR) 'NAME 'USER))))
+  NAME)
+
 ;; Map
 (method! tproc 'prog! (=> (PROC O) ;; Set the proc's servlet
   (:= PROC 'SELF O)))
@@ -239,11 +246,13 @@
 
 (define (current-proc! PROC)
   (if (not (or (nil? PROC)
+               (account? PROC) ;; TODO: hsss ... check this (how exactly accounts can become the current proc)
                (and (== (typeof PROC) tprocl)
                     (== (: PROC 'ROLE) 'Core))))
     (error "current-proc! : not a proc" (typeof PROC)))
   (set! _CURPROC PROC)
-  (if (not (nil? PROC))
+  (if (and (not (nil? PROC))
+           (not (account? PROC))) ;; TODO: hsss ... keep the current proch in case of accounts is a trick
     (current-proch! (: PROC 'HOST))))
 
 ;; Global context (sender proc)

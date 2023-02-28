@@ -29,7 +29,7 @@
 (net-enter PR1)
 (net-enter PR2)
 (net-enter PR3)
-(define GR1 (proc-group Void PR1 PR2 PR3))
+(define GR1 (proc-group+attach Void PR1 PR2 PR3))
 (:= GR1 'UID "GR1")
 (:= GR1 'USER "nobody")
 (outraw "---\n")

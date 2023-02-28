@@ -1,4 +1,4 @@
-require("./runtime.js");
+require("../app2/runtime.js");
 require("./sc.js");
 
 var SC=the_sc();

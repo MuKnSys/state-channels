@@ -148,10 +148,11 @@
   (if (unspecified? CORE)
     (set! CORE (gaddr-core _VMACHINE_GADDR)))
   (set! ADDR
-        (if (== (substring CORE 0 8) "127.0.0.") ;; FIXME: refine this test
+        (if (and (== (substring CORE 0 8) "127.0.0.")
+                 (!= CORE "127.0.0.255")) ;; FIXME: refine this test
           (begin
             (if (specified? SUBM)
-              (error "gaddr-normalize::SUBM[local]"))
+              (error "gaddr-normalize::SUBM[local] " ADDR))
             (gaddr (gaddr-netm _PHMACHINE_GADDR) PROCID (substring CORE 8 (string-length CORE))))
           (gaddr CORE PROCID SUBM)))
   ADDR)

@@ -108,7 +108,7 @@
     (set! O (map json-serialize O))
     (string+ "[" (string-join O ",") "]"))
   (cond ((unspecified? O)
-         "undefined")
+         "null") ;; NOTE: should be "undefined" here, but for talking to JS, we need "null" ...
         ((boolean? O)
 	 (if O "true" "false"))
         ((number? O)

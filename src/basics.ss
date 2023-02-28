@@ -105,7 +105,7 @@
     O)))))
 
 (define (string-digits? S) ;; TODO: do more functions like this, e.g. that recognize the format of floating numbers
-  (define RES (string? S))
+  (define RES (and (string? S) (> (string-length S) 0)))
   (define I 0)
   (while (and RES (< I (string-length S)))
     (set! RES (and RES (char-digit? (string-ref S I))))
@@ -226,6 +226,16 @@
   (if (eq? L PTR)
     PREV
     Unspecified))
+
+(define (list-pos L VAL)
+  (define I 0)
+  (define RES Void)
+  (for-each (=> (ELT)
+              (if (and (unspecified? RES) (equal? ELT VAL))
+                (set! RES I))
+              (set! I (+ I 1)))
+            L)
+  RES)
 
 (define (list-length L)
   (if (boxed-empty? L)
@@ -368,6 +378,17 @@
          (set-car! A (attr (car A)))
          A)
        (list-group L)))
+
+(define (list-splice L1 L2)
+  (define L '())
+  (if (!= (list-length L1) (list-length L2))
+    (error "list-splice"))
+  (for-each (=> (E1)
+              (define E2 (car L2))
+              (set! L2 (cdr L2))
+              (set! L (cons E2 (cons E1 L))))
+            L1)
+  (reverse L))
 
 ;; Hash tables
 (define (hash-for-each-in-order FUNC HT)
@@ -640,7 +661,8 @@
     (atcol0 0))
   (while (> N 0)
     (_display " ")
-    (set! N (- N 1))))
+    (set! N (- N 1)))
+  Void)
 
 (define (cr)
   (outraw "\n")

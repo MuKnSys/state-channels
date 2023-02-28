@@ -1,0 +1,20 @@
+<html><head>
+  <script language="javascript" src="runtime.js"></script>
+  <script language="javascript">
+    var HRES=[];
+    function msg(O) {
+      httpSend("POST","http://localhost:1234","A=1&B=2",O,function (X) {
+        HRES.push(X);
+      //alert (X);
+      });
+    }
+    function start() {
+      out("Coucou"),cr();
+      msg([{ _:"npr", PARM:["0h"]},
+           { _:"netlist", PARM:["HOST1"]}]);
+      msg({ _:"call", PARM:[{ A:1234, B:5678 }, 12, 34]});
+    }
+  </script>
+</head>
+<body onLoad="start()">
+</body></html>

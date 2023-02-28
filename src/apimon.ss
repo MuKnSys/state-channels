@@ -142,9 +142,12 @@
   (cond ((procg? GR)
          (>> (: GR 'PEER))
          (if (specified? (: GR 'PARENT))
-         (begin
-           (outraw "@")
-           (outraw (: (: GR 'PARENT) 'UID)))))
+           (begin
+             (outraw "@")
+             (outraw (: (: GR 'PARENT) 'UID))))
+        ;(outraw "<:")
+        ;(outraw (: GR 'UID))
+         Void)
         ((nil? GR)
          (outraw "(_)"))
         (else
@@ -154,6 +157,13 @@
   (define NAME (: PR (if (account? PR) 'NAME 'USER)))
   (outraw (if (specified? NAME) NAME "_")))
 
+(define (lstprstate PR)
+  (outraw (if (and (not (procph? PR)) (net-resolve PR))
+            (if (procg? PR)
+              (if (procg-ready? PR) "^" "_")
+              "^")
+            "_")))
+
 (define (lstproc PR . SHORT)
   (define UID (: PR 'UID))
   (define SELF (: PR 'SELF))
@@ -162,7 +172,7 @@
   (if (not SHORT)
   (begin
     (outraw (strpid PR))
-    (outraw (if (net-resolve PR) "^" "_"))
+    (lstprstate PR)
     (outraw " ")))
   (outraw (if (specified? UID) (pralias UID) "_"))
   (outraw " ")
@@ -198,7 +208,7 @@
   (define UID (: PR 'UID))
   (define SELF (: PR 'SELF))
   (outraw (strpid PR))
-  (outraw (if (and (not (procph? PR)) (net-resolve PR)) "^" "_"))
+  (lstprstate PR)
   (tab)
   (outraw (if (specified? UID) (pralias UID) "_"))
   (tab)
@@ -436,6 +446,8 @@
               (car UID)))
   (if (specified? UID)
     (let* ((PR (netrsv UID)))
+      (if (not PR)
+        (set! PR (account-byName (sy UID))))
       (if PR
         (current-proc! PR)
         (outraw (string+ "Proc " UID " is not on the net"))))
@@ -470,10 +482,35 @@
                               P
                               (outraw (string+ "Proc " NAME " is not on the net")))))))
                    UID))
-         (RES (apply proc-group LP)))
+         (RES (apply proc-group+attach LP)))
     (:= RES 'UID NAME)
     (:= RES 'USER "nobody")
     RES))
+
+(define (_gr UID CMASTER CPEER . PETNAMES)
+  (define RES Void)
+  (define MSELF (apply CMASTER PETNAMES))
+  (define MASTER Void)
+  (set! MASTER (procl 'USER "blockchain"))
+  (^ 'prog! MASTER MSELF)
+  (set! RES (proc-group (procg 'UID UID)
+                        MASTER (list-length PETNAMES)))
+  (:= RES 'CPEER CPEER)
+  (_npr MASTER)
+  RES)
+
+(define (_gre UID)
+  (define PR (netrsv UID))
+  (define EP Void)
+  (if PR
+    (if (procg? PR)
+      (begin
+       ;(outraw (string+ "Creating endpoint for group " (: PR 'UID)))
+        (set! EP (^ 'endpoint PR))
+        (if (specified? EP)
+          (_npr EP)))
+      (outraw (string+ "Proc " UID " is not a group")))
+    (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_prstop UID)
   (define PR (netrsv UID))
@@ -589,7 +626,7 @@
             L))
 
 (define (_state . L)
-  (set! _PRETTY_OMIT '(WITHDRAW))
+  (set! _PRETTY_OMIT '(WITHDRAW _ACCOUNT))
   (apply _statef L)
   (set! _PRETTY_OMIT '()))
 
@@ -654,6 +691,7 @@
   (define I 0)
   (define N (accounts-length))
   (define ACC Void)
+  (define LO (list-length OPT))
   (if (empty? OPT)
     (begin
       (tabsep " ")
@@ -662,15 +700,21 @@
         (set! ACC (account-byNo I))
         (outraw (: ACC 'ACCNO))
         (tab)
+        (outraw (if (unspecified? (: ACC 'ACCNO_LOCETH)) "_" (: ACC 'ACCNO_LOCETH)))
+        (tab)
         (outraw (if (unspecified? (: ACC 'NAME)) "_" (: ACC 'NAME)))
         (tab)
         (outraw (: ACC 'UID))
         (if (< (+ I 1) N) (cr))
         (set! I (+ I 1)))
       (outraw (tabs 'End)))
-    (begin
-      (set! ACC (account-byNo (car OPT)))
-      (account-name! ACC (cadr OPT)))))
+    (cond ((== LO 1)
+           (set! _PRETTY_DOIT '(UID CATEG NAME PASSWORD))
+           (rexpr-pretty (account-byNo (car OPT)))
+           (set! _PRETTY_DOIT Void))
+          ((== LO 2)
+           (set! ACC (account-byNo (car OPT)))
+           (account-name! ACC (cadr OPT))))))
 
 ;; Aliases
 (define (_alias)
@@ -702,6 +746,8 @@
 (apimon "procm" _procm '(str str))
 
 (apimon '("_sc!" "join") _sc '(str str str str str) 'VARGS True)
+(apimon "procg" _gr '(str var var str str str str str) 'VARGS True)
+(apimon "procge" _gre '(str))
 (apimon "stop" _prstop '(str))
 (apimon "unstop" _prunstop '(str))
 (apimon '("prs" "step") _prs '(str))
@@ -723,6 +769,13 @@
 (apimon "sync" _sync '(str))
 
 ;; Init
+(csv-read (string+ SC_PATH "/a.out/PASSWD") account '(NAME (str PASSWORD) UID))
+(let* ((N (accounts-length))
+       (I 0))
+  (while (< I N)
+    (pralias! (: (account-byNo I) 'UID) "ACC")
+    (set! I (+ I 1))))
+
 (define _APIMONEthAccounts Void)
 (catch True (=> ()
               (set! _APIMONEthAccounts (eth-accounts))) ;; Accounts
@@ -731,9 +784,16 @@
 (if (pair? _APIMONEthAccounts)
   (let* ((I 0))
     (for-each (=> (ACC)
-                (pralias! ACC "ACC")
-                (account 'ACCNO I
-                         'UID ACC)
+                (define PROC (account-byUID ACC))
+                (if (not PROC)
+                  (begin
+                    (pralias! ACC "ACC")
+                    (account 'ACCNO_LOCETH I
+                             'UID ACC))
+                  (begin
+                    (if (specified? (: PROC 'ACCNO_LOCETH))
+                      (error "APIMONEthAccounts"))
+                    (:= PROC 'ACCNO_LOCETH I)))
                 (set! I (+ I 1)))
               _APIMONEthAccounts)))
 
