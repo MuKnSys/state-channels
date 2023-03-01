@@ -58,26 +58,16 @@
 ;;
 
 ;; Addresses
-(define (network-addr IP HOST . UID)
+(define (network-addr IP HOST . UID) ;; TODO: clean this
   (define RES (string+ IP ":" HOST))
   (if (not (empty? UID))
     (string+ RES ":" UID)
     RES))
 
-(define (addr-proc ADDR)
-  (define L (string-split ADDR #\:))
-  (if (> (list-length L) 2)
-    (caddr L)
-    Void))
+;; Hosts (physical hosts) ;; TODO: clean this
+(define (host-fsock HOSTID) ;; TODO: throw away (host-fsock) & (host-fsock2), or integrate them in channels.ss
+  (path-normalize (string+ (host-phys-socks) "/" (addr-subm (current-machine)) "/" HOSTID)))
 
-;; Net logs
-(define _NET_LOG False)
-(define (net-log . B) ;; FIXME: clean & organize the net logging system, with levels
-  (if (empty? B)
-    _NET_LOG
-    (set! _NET_LOG (list-in? (car B) '(#t 1 "1")))))
-
-;; Hosts (physical hosts)
 (define (proc-hostph PROC)
   (define HOST PROC)
   (define FINI False)
@@ -89,66 +79,19 @@
       (set! HOST (: HOST 'HOST))))
   HOST)
 
-(define (host-fsock HOSTID) ;; TODO: throw away (host-fsock) & (host-fsock2), or integrate them in channels.ss
-  (path-normalize (string+ (host-phys-socks) "/" (addr-subm (current-machine)) "/" HOSTID)))
-
-(define (host-fsock2 ADDR) ;; TODO: to be reunited with the previous one
-  (define SUBM (addr-subm ADDR))
-  (define HOST (addr-host ADDR))
-  (if (unspecified? HOST)
-    (error "host-fsock2::no host"))
-  (if (!= (addr-netm ADDR) (addr-netm (current-machine)))
-    (error "host-fsock2 " ADDR " " (current-machine)))
-  (path-normalize (string+ (host-phys-socks) "/" SUBM "/" HOST)))
-
-(define (host-phys-send HOSTA MSG) ;; TODO: also be able to send to hosts on another machine (local at the moment)
-  (define SOCKA Void)
-  (define SOCK Void)
-  (if (not (string? HOSTA))
-    (error "host-phys-send"))
-  (set! SOCKA (host-fsock2 HOSTA))
- ;(>> MSG)
- ;(outraw " [> ")
- ;(outraw HOSTA)
- ;(outraw "=>")
- ;(outraw SOCKA)
- ;(outraw "]")
- ;(cr)
-  (catch True (=> ()
-               ;(set! SOCK (sock-cli SOCKA))
-                (set! SOCK (channel-cli (string+ ":" (addr-host HOSTA)))))
-              (=> (E . OPT)
-                (error "host-phys-send(2) " SOCKA)))
-  (channel-write SOCK (sexpr-serialize MSG))
-  (channel-close SOCK))
-
 (define (host-send PROC MSG)
-  (define SENT False)
-  (if (proc? PROC)
-    (let* ((ADDR (hash-ref (net-phys) (: PROC 'UID))))
-      (if (and ADDR (!= (addr-host ADDR) (: (host-proc) 'HOSTID)))
-      (begin
-        (host-phys-send ADDR MSG)
-        (set! SENT True)))))
-  (if (not SENT) ;; FIXME: messy code
-  (begin
-    (if (and (proc? PROC) (not (procph? PROC)))
-      (set! PROC (proc-hostph PROC)))
-    (if (and (string? PROC) (== PROC (: (host-proc) 'HOSTID)))
-      (set! PROC (host-proc)))
-    (if (proc? PROC)
-    (begin
-      (if (not (procph? PROC))
-        (error "host-send"))
-      (if (== (: PROC 'ROLE) 'Core)
-        ((: PROC 'HANDLER) MSG)
-        (host-phys-send (network-addr (current-machine) (: PROC 'HOSTID)) MSG)))
-    (begin
-      (if (nil? PROC)
-        (set! PROC "0"))
-      (if (not (string? PROC))
-        (error "host-send(2)"))
-      (host-phys-send (network-addr (current-machine) PROC) MSG))))))
+  (define HOSTA (: (the-procph0) 'GADDR))
+  (define ADDR Void)
+  (set! ADDR (if (string? PROC)
+               (gaddr (gaddr-core HOSTA) PROC (gaddr-subm HOSTA))
+               (hash-ref (net-phys) (: PROC 'UID))))
+ ;(set! ADDR (if (and ADDR (gaddr-root? HOSTA) (gaddr-parent? HOSTA ADDR)) ;; TODO: not having direct point-2-point connections (?)
+ ;             ADDR
+ ;             (relay-up HOSTA)))
+  (set! ADDR (if (or (not ADDR) (== ADDR HOSTA))
+               (relay-up HOSTA)
+               ADDR))
+  (channel-send ADDR (sexpr-serialize MSG)))
 
 ;; Networks
 (define tnetwork (type "network"
@@ -164,15 +107,8 @@
   (:= RES 'MAPPED (make-hashv-table))
   RES)
 
-(define _MACHINE (conf-get2 "MACHINE" "127.0.0.1"))
-               ;; TODO: should be (most of the time) the machine's _public_ IP
 (define (current-machine)
-  _MACHINE)
-(if (net-log)
-(begin
-  (outraw "MACHINE=")
-  (outraw (current-machine))
-  (cr)))
+  _VMACHINE_GADDR)
 
 (define _NET (network))
 (define (current-network)
@@ -196,15 +132,8 @@
   (if (not (^ 'core? PROC))
     (error "net-enter(2)")
   (if (string? UID)
-    (let* ((ADDR (network-addr (current-machine)
-                               (: (host-proc) 'HOSTID))))
-      (if (net-log)
-      (begin
-        (outraw "nenter=> ") ;; TODO: turn that to (clean) debug logs
-        (out (: PROC 'ID))
-        (outraw " as ")
-        (outraw UID)
-        (cr)))
+    (let* ((ADDR (gaddr (current-machine)
+                        (: (host-proc) 'HOSTID))))
       (hash-set! (net-phys) UID ADDR)
       (hash-set! (net-procs) UID PROC)
       (host-send "0" `(enter ,UID ,ADDR))))))))
@@ -278,13 +207,6 @@
     (set! PROC (car PROC)))
   (if (not (proc? PROC))
     (error "net-send " PROC))
-  (if (net-log)
-  (begin
-    (outraw "net-send=> ")
-    (>> MSG)
-    (outraw " ")
-    (outraw (: PROC 'UID))
-    (cr)))
   (if (== (: PROC 'ROLE) 'Core)
     (^ 'post-to PROC MSG)
     (begin

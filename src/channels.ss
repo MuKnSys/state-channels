@@ -113,11 +113,13 @@
   (define PROXIED (and (specified? PROXY) (!= PROXY IP)))
   (string+ (if PROXIED (string+ PROXY "*") "") IP))
 
-(define (gaddr GIP PROCID . SUBM)
+(define (gaddr GIP PROCID . SUBM) ;; FIXME: works with GIP addr of a vmachine ; but SUBM can be set
   (set! SUBM (if (empty? SUBM) "" (car SUBM)))
   (if (unspecified? SUBM)
     (set! SUBM "0"))
-  (string+ GIP (if (string? SUBM) (string+ "/" SUBM) "")
+  (if (number? SUBM)
+    (set! SUBM (string SUBM)))
+  (string+ GIP (if (!= SUBM "") (string+ "/" SUBM) "")
                (if (unspecified? PROCID) "" (string+ ":" PROCID))))
 
 (define (gaddr-npath ADDR . FILLIN) ;; GADDR/SUBM:PROCID => 127.0.0.SUBM:_PORT0 ou _PHMACHINE_LADDR:_PORT0 si 00
@@ -143,10 +145,12 @@
 
 (define (gaddr-normalize ADDR) ;; 127.0.0.SUBM:PROCID => GADDR/SUBM:PROCID
   (define CORE (gaddr-core ADDR))
-  (define SUBM (gaddr-subm ADDR))
+  (define SUBM (gaddr-subm ADDR)) ;; TODO: have a (gaddr-subm) which returns Void when there is no submachine (incomplete ADDR)
   (define PROCID (gaddr-host ADDR))
   (if (unspecified? CORE)
-    (set! CORE (gaddr-core _VMACHINE_GADDR)))
+    (begin
+      (set! CORE (gaddr-core _VMACHINE_GADDR))
+      (set! SUBM (gaddr-subm _VMACHINE_GADDR))))
   (set! ADDR
         (if (and (== (substring CORE 0 8) "127.0.0.")
                  (!= CORE "127.0.0.255")) ;; FIXME: refine this test
@@ -162,8 +166,8 @@
 (define _PHMACHINE_GADDR           ;; Global IP address of the physical machine ([PROXY*]LADDR)
         _PHMACHINE_LADDR)          ;; FIXME: depend de si on peut savoir qu'on est derriere un proxy ou non
 (define _VMACHINE_GADDR            ;; Physical address of the machine: GADDR/SUBM ; (can also be 127.0.0.SUBM)
-        (conf-get "MACHINE"        ;; TODO: check that it's actually a correct IP (_PHMACHINE_GADDR or 127.0.0.XY)
-                  (addr-machine (gaddr-normalize _PHMACHINE_GADDR))))
+        (conf-get2 "MACHINE"       ;; TODO: check that it's actually a correct IP (_PHMACHINE_GADDR or 127.0.0.XY)
+                   (addr-machine (gaddr-normalize _PHMACHINE_GADDR))))
 
 ;; Relays
 (define (relay-out SRC DEST) ;; SRC & DEST are gaddrs
@@ -185,6 +189,22 @@
       (gaddr CORED "00" "0")
       (gaddr CORES "00" SUBMS))))
 
+(define _MASTER_GADDR (gaddr _PHMACHINE_GADDR "00" 0))
+(define (relay-up ADDR)
+  (define CORE (gaddr-core ADDR))
+  (define SUBM (gaddr-subm ADDR))
+  (define PROCID (gaddr-host ADDR))
+  (cond ((== ADDR _MASTER_GADDR)
+         Void)
+        ((== PROCID "00")
+         (if (!= SUBM "0")
+           (error "relay-up(1)"))
+         _MASTER_GADDR)
+        ((== PROCID "0")
+         (gaddr CORE "00" "0"))
+        (else
+         (gaddr CORE "0" SUBM))))
+
 ;; Physical OS-allocated (possibly agglomerated) proc
 (define tprocph0 (type "procph0"
                        '(GADDR    ;; Physical address of the current proc: VGADDR[:PROCNO]
@@ -195,7 +215,7 @@
                          RECVH    ;; Receiving handler (per message)
                          EXTH     ;; Extended handler (additional actions per message)
                          IDLEH    ;; Idle handler
-                         PROCPH   ;; The high-level avatar of a procph (aka. procph) [TODO: reunite later with procph0].
+                         PROCPH   ;; The high-level avatar of a procph0 (aka. procph) [TODO: reunite later with procph0].
                         )))
 
 (define (procph0? PROC)
@@ -400,10 +420,12 @@
                        'TO (gaddr-normalize ADDR)))
   (define FROM (_chfrom))
   (:= RES 'FROM FROM)
+  (set! ADDR (: RES 'TO))
   (catch True (=> ()
                 (:= RES 'SOCK (sock-cli (gaddr-npath ADDR))))
               (=> (E . OPT)
-               ;(error "Can't connect to " ADDR "[" (gaddr-npath ADDR) "]") TODO: find a way to restore this when needed
+                (if (== CHAN_LOG 2)
+                  (chlog2 (string+ ADDR " [" (gaddr-npath ADDR) "]") "< " "!"))
                 Void))
   (if (not (empty? MODE))
     (:= RES 'MODE (car MODE)))
@@ -464,8 +486,14 @@
       (set! TO_ ADDR)))
   (set! ADDR (relay-out (_chfrom) TO_))
   (set! CLI (channel-cli ADDR 'Async))
-  (channel-write CLI MSG FROM_ (gaddr-normalize TO_))
-  (channel-eof! CLI))
+  (if (unspecified? (: CLI 'SOCK))
+    (begin
+      (if (== CHAN_LOG 2)
+        (chlog2 (string+ MSG " [" FROM_ "=>" (gaddr-normalize TO_) "] via " ADDR) "< " "!"))
+      Void)
+    (begin
+      (channel-write CLI MSG FROM_ (gaddr-normalize TO_))
+      (channel-eof! CLI))))
 
 (define (channel-wet? CHAN) ;; => Bool [channel has data]
   Void)
@@ -530,19 +558,18 @@
 ;; (channel-touch)
 (define (channel-touch ADDR . FETCH)
   (define RES Void)
+  (define SOCK (channel-cli ADDR))
   (set! FETCH (if (empty? FETCH)
                 Void
                 (car FETCH)))
-  (catch True (=> ()
-                (define SOCK (channel-cli ADDR))
-                (if (specified? FETCH)
-                  (begin
-                    (channel-write SOCK "Unspecified")
-                    (set! RES (channel-read SOCK)))
-                  (set! RES True))
-                (channel-close SOCK))
-              (=> (E . OPT)
-                Void))
+  (if (specified? (: SOCK 'SOCK))
+    (begin
+      (if (specified? FETCH)
+        (begin
+          (channel-write SOCK "Unspecified")
+          (set! RES (channel-read SOCK)))
+        (set! RES True))
+      (channel-close SOCK)))
   RES)
 
 ;; Chlog
@@ -567,10 +594,14 @@
          (outraw "=>")
          (outraw (: OBJ '_TO))
          (outraw "}"))
+        ((string? OBJ)
+         (outraw OBJ)) ;; FIXME: not nice
         (else
          (>> OBJ)))) ;; TODO: display regular calls in a more concise manner
 
 (define (chlog2 MSG . PREF)
+  (define ERR (if (and (not (empty? PREF)) (> (list-length PREF) 1))
+                (cadr PREF) Void))
   (set! PREF (if (not (empty? PREF))
                (car PREF) Void))
   (rawouts 1)
@@ -579,6 +610,11 @@
     (=> ()
       (if (specified? PREF)
         (outraw PREF)) ;; FIXME: (outraw), (cr), etc., do not work well with redirects (2)
+      (if (specified? ERR)
+        (begin
+          (color-red)
+          (outraw ERR)
+          (color-white)))
       (chlog MSG)
       (cr)
       (force-output)))
@@ -591,7 +627,7 @@
   (if (specified? LOGS)
     (set! RES (: LOGS LEVEL)))
   (set! RES (if (specified? RES)
-              (boolean RES)
+              (number RES)
               False))
   RES)
 
@@ -631,10 +667,7 @@
   (while True
     (set! MSG (channel-read SRV))
     (if CHAN_LOG
-      (begin
-        (outraw ">  ")
-        (chlog MSG)
-        (cr)))
+      (chlog2 MSG ">  "))
     (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
              (not (procph0-reroute PROC MSG)))
       (begin

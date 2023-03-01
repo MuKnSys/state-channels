@@ -56,75 +56,50 @@
                    (if (unspecified? VAL)
                      (if (file-exists? _SOCK0A)
                        (file-delete _SOCK0A))
-                     (: VAL 'MSG)))))
+                     (if (atom? VAL)
+                       VAL (: VAL 'MSG))))))
 ;(outraw _HOSTID)
 ;(cr)
 (if (unspecified? _HOSTID)
   (set! _HOSTID "0"))
 
 (define _HOSTIDNB 0)
-(define (_handler-log MSG)
-  (outraw "<<")
-  (write MSG)
-  (outraw ">>")
-  (cr))
 (define DHT_LOG (com-log "dht"))
 (define (_handler0 MSG)
   (cond ((== MSG Void)
-        ;(_handler-log MSG)
          (if DHT_LOG
            (chlog2 MSG ">> "))
          (set! _HOSTIDNB (+ _HOSTIDNB 1))
          (string _HOSTIDNB))
         ((and (pair? MSG) (== (car MSG) 'enter))
-         (if (net-log)
-           (_handler-log MSG))
          (if DHT_LOG
            (chlog2 MSG ">> "))
          (let* ((UID (cadr MSG))
                 (ADDR (caddr MSG)))
-          ;(outraw "nenter(0)=> ") ;; TODO: turn that to debug logs
-          ;(outraw UID)
-          ;(cr)
            (hash-set! (net-phys) UID ADDR)
           ;(hash-set! (net-procs) UID PROC) ; TODO: create a mapping (?)
-           (netp2p-net-enter UID)
            Void))
         ((and (pair? MSG) (== (car MSG) 'leave))
-        ;(_handler-log MSG)
          (if DHT_LOG
            (chlog2 MSG ">> "))
          Void)
         ((and (pair? MSG) (== (car MSG) 'dispatch))
-         (set! MSG (cadr MSG))
-         (let* ((ADDR (hash-ref (net-phys) (: MSG (if (: MSG 'ACK) 'FROM 'TO)))))
-           (if (not ADDR)
-             (begin
-               (outraw "Proc ")
-               (outraw (: MSG 'TO))
-               (outraw " is unknown [can't redispatch]")
-               (cr))
-             (_handler1 MSG))))
+         (error "_handler0::dispatch"))
         (else
-         (let* ((ADDR (hash-ref (net-phys) (: MSG (if (: MSG 'ACK) 'FROM 'TO)))))
+         (let* ((ADDR (hash-ref (net-phys) (: MSG (if (specified? (: MSG '_TO)) '_TO ;; TODO: clean this wart
+                                                                                (if (: MSG 'ACK) 'FROM 'TO))))))
            (if (not ADDR)
              (begin
-               (outraw "Proc ")
-               (outraw (: MSG 'TO))
-               (outraw " is being resent")
+               (outraw* "Proc " (: MSG 'TO) " is not here")
                (cr)
-               (netp2p-net-send MSG))
+               Void)
              (_handler1 MSG))
            Void))))
 
 (define (_handler1 MSG)
- ;(outraw "[H1]")(_handler-log MSG)
   (if DHT_LOG
     (chlog2 MSG ">> "))
-  (net-send MSG)
- ;(lstproc (net-resolve (: MSG 'TO)))
- ;(cr)
-)
+  (net-send MSG))
 
 ;; Context
 (define (the-procph0)
@@ -140,11 +115,13 @@
   (cadr (the-srv-sock)))
 
 ;; Init (host-proc)
+(if DHT_LOG
+  (chlog2 (gaddr (current-machine) _HOSTID) "<< "))
 (define (init0)
-  (host-proc! (if (== _HOSTID "0")
+  (host-proc! (if (or (== _HOSTID "00") (== _HOSTID "0"))
                 (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
                         'UID 'phys
-                        'HOSTID "0"
+                        'HOSTID _HOSTID
                         'HANDLER _handler0)
                 (procph 'USER 'system ;; TODO: see if "system" is ok, as an identity
                         'UID 'phys

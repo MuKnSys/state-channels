@@ -28,14 +28,6 @@
   (:? RES 'SCHED (sched))
   (if (nil? (: RES 'HOST))
     (:= RES 'HOST (host-proc)))
-  (if (net-log)
-  (begin
-    (outraw "Proch[")
-    (outraw (: RES 'UID))
-    (outraw "] created on Procph[")
-    (outraw (: (: RES 'HOST) 'HOSTID))
-    (outraw "]")
-    (cr)))
   (^ 'host-init RES)
   RES)
 

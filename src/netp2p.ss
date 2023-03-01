@@ -52,14 +52,14 @@
 (define (netp2pd-global?)
   (== _NETP2P-PEERID _NETP2PD-GLOBAL))
 
-(if (net-log)
-(begin
-  (outraw "NETP2PD_ROOT=")
-  (outraw _NETP2PD-GLOBAL)
-  (cr)
-  (outraw "NETP2PD=")
-  (outraw _NETP2PD-ADDR)
-  (cr)))
+;(if (net-log)
+;(begin
+;  (outraw "NETP2PD_ROOT=")
+;  (outraw _NETP2PD-GLOBAL)
+;  (cr)
+;  (outraw "NETP2PD=")
+;  (outraw _NETP2PD-ADDR)
+;  (cr)))
 
 (define (netp2pd MSG . SOCKA0)
   (define RES '())
@@ -76,11 +76,11 @@
             (catch True (=> ()
                           (set! SOCK (sock-cli SOCKA)))
                         (=> (E . OPT)
-                          (if (net-log)
-                          (begin
-                            (outraw "Can't connect to ")
-                            (outraw (netp2pd-addr))
-                            (cr)))
+                         ;(if (net-log)
+                         ;(begin
+                         ;  (outraw "Can't connect to ")
+                         ;  (outraw (netp2pd-addr))
+                         ;  (cr)))
                           (noop)))
             (if (unspecified? SOCK)
               (empty)
@@ -113,11 +113,11 @@
 
 ;; API (used by root & local servers)
 (define (_netp2p-net-enter UID ADDR)
-  (if (net-log)
-  (begin
-    (outraw "enter ")(outraw UID)
-    (outraw "=>")(outraw ADDR)
-    (cr)))
+ ;(if (net-log)
+ ;(begin
+ ;  (outraw "enter ")(outraw UID)
+ ;  (outraw "=>")(outraw ADDR)
+ ;  (cr)))
   (if (netp2pd?)
     (hash-set! (net-phys) UID ADDR))
   (car (netp2pd `(net-enter ,UID ,ADDR))))
@@ -148,7 +148,7 @@
         (outraw "/")
         (outraw (addr-subm ADDR))
         (cr)
-        (host-phys-send (network-addr ADDR "0") MSG))
+        (host-phys-send (network-addr ADDR "0") MSG)) ;; FIXME: (host-phys-send) doesn't exists anymore
       (netp2pd `(net-dispatch ,MSG ,ADDR) (string+ (addr-netm ADDR) ":" (string _NETP2PD-PORT)))) ;; TODO: test this one
     (error "_netp2p-net-dispatch")))
 

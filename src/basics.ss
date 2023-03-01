@@ -94,15 +94,20 @@
 
 ;; Strings
 (define (string O)
-  (if (boolean? O)
-    (if O "#t" "#f")
-  (if (number? O)
-    (number->string O)
-  (if (char? O)
-    (_string O)
-  (if (symbol? O)
-    (symbol->string O)
-    O)))))
+  (cond ((unspecified? O)
+         "#u")
+        ((null? O)
+         "#n")
+        ((boolean? O)
+         (if O "#t" "#f"))
+        ((number? O)
+         (number->string O))
+        ((char? O)
+         (_string O))
+        ((symbol? O)
+         (symbol->string O))
+        (else
+         O)))
 
 (define (string-digits? S) ;; TODO: do more functions like this, e.g. that recognize the format of floating numbers
   (define RES (and (string? S) (> (string-length S) 0)))
@@ -646,6 +651,12 @@
     (spc (indent)))
   (atcol0 0)
   (_display X))
+
+(define (out* . L)
+  (for-each out L))
+
+(define (outraw* . L)
+  (for-each outraw L))
 
 (define _INDENT 0)
 (define (indent . N)

@@ -1,0 +1,37 @@
+
+# Initializing everything
+proch system HOST1
+chost HOST1
+#netlist-acc 1
+
+# We start with 3 procs/ledgers, each containing $10, joined
+#                                       [ in a state channel
+procg GR1 cmicropay micropay bob carol dave
+
+iam bob
+procge GR1
+iam carol
+procge GR1
+iam dave
+procge GR1
+
+netlist
+
+iam GR1#1
+GR1 ^ deposit 10
+iam GR1#2
+GR1 ^ deposit 10
+iam GR1#3
+GR1 ^ deposit 10
+run
+
+state GR1#0
+
+state GR1#1
+
+state GR1#2
+
+state GR1#3
+
+# Quitting
+#q
