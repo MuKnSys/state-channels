@@ -12,171 +12,230 @@
 (import ./socks)
 (import ./rexpr)
 
-;; Addresses
-(define (ipaddr->vector IP)
-  (define RES (make-vector 4))
-  (define L (string-split IP #\.))
-  (vector-set! RES 0 (number (car L)))
-  (vector-set! RES 1 (number (cadr L)))
-  (vector-set! RES 2 (number (caddr L)))
-  (vector-set! RES 3 (number (cadddr L)))
-  RES)
-
-(define (ipaddr-private? IP)
-  (define V (ipaddr->vector IP))
-  (or (== (vector-ref V 0) 10)       ;; Class A
-      (and (== (vector-ref V 0) 172) ;; Class B
-           (>= (vector-ref V 1) 16)
-           (<= (vector-ref V 1) 31))
-      (and (== (vector-ref V 0) 192) ;; Class C
-           (== (vector-ref V 1) 168))))
-
-(define (ipaddr IP)
-  (cond ((number? IP)
-         (set! IP (number->string IP 16))
-         (string+
-           (number->string (string->number (substring IP 0 2) 16))
-           "."
-           (number->string (string->number (substring IP 2 4) 16))
-           "."
-           (number->string (string->number (substring IP 4 6) 16))
-           "."
-           (number->string (string->number (substring IP 6 8) 16))))
-        ((string? IP) ;; TODO: check that it is actually an IP
-         IP)
-        (else
-         Void)))
-
-;; Addrs ; TODO: remove calls to those from the code, fuse them with those below, & throw them away 
-(define (addr-machine ADDR)
+;; GAddrs
+;; NPATH:HOST ;; NPATH == [NETM(i)/]*NETM(n)
+;;
+(define (gaddr-npath ADDR)
   (define RES (car (string-split ADDR #\:)))
   (if (!= RES "")
     RES
     Void))
 
-(define (addr-netm ADDR)
-  (define ADDRM (addr-machine ADDR))
-  (if (string? ADDRM)
-    (car (string-split ADDRM #\/))
-    Void))
-
-(define (addr-subm ADDR)
-  (define ADDRM (addr-machine ADDR))
-  (define L Void)
-  (if (string? ADDRM)
-    (begin
-      (set! L (string-split ADDRM #\/))
-      (if (> (list-length L) 1)
-        (cadr L)
-        "0"))
-    "0"))
-
-(define (addr-host ADDR) ;; Hosts == OS-allocated processes (i.e. procph0s)
+(define (gaddr-host ADDR) ;; Hosts == OS-allocated processes (i.e. procph0s)
   (define L (string-split ADDR #\:))
   (if (> (list-length L) 1)
     (cadr L)
     Void))
 
-;; GAddrs
-;; [PROXY*]CORE/SUBM:HOST
-;;
-(define (gaddr-proxied? ADDR)
-  (define L (string-split (gaddr-netm ADDR) #\*))
-  (> (list-length L) 1))
+(define (gaddr-phys? ADDR) ;; Physical machines (=> IP representing them)
+  ADDR)
 
-(define (gaddr-netm ADDR)
-  (addr-netm ADDR))
+(define (gaddr-phys ADDR) ;; NPath to the last physical machine
+  (npath-phys (gaddr-npath ADDR)))
 
-(define (gaddr-proxy ADDR)
-  (define L (string-split (gaddr-netm ADDR) #\*))
-  (if (> (list-length L) 1)
-    (car L)
-    Void))
+(define (gaddr-local ADDR) ;; Path inside the last physical machine's filesystem
+  (npath-local (gaddr-npath ADDR)))
 
-(define (gaddr-core ADDR)
+(define (gaddr-ip ADDR) ;; Last IP of the path
+  (npath-ip (gaddr-npath ADDR)))
+
+(define (gaddr NPATH PROCID)
+  (if (number? PROCID)
+    (set! PROCID (string PROCID)))
+  (if (or (specified? (gaddr-host NPATH)) (not (string? PROCID)))
+    (error "gaddr"))
+  (string+ NPATH ":" PROCID))
+
+(define (gaddr-normalize ADDR) ;; 127.0.0.SUBM:PROCID => NPATH/SUBM:PROCID or NPATH:00 if SUBM==255
+  (define NPATH (gaddr-npath ADDR))
+  (define PROCID (gaddr-host ADDR))
   (define L Void)
-  (set! ADDR (gaddr-netm ADDR))
-  (if (string? ADDR)
-    (begin
-      (set! L (string-split ADDR #\*))
-      (if (> (list-length L) 1)
-        (set! ADDR (cadr L)))))
-  ADDR)
+  (define RELPATH Void)
+  (define (to-subm ADDR)
+    (if (and (ipaddr? ADDR) (ipaddr-loopback? ADDR))
+      (let* ((SUBM (substring ADDR 8 (string-length ADDR))))
+        (cond ((== SUBM "254")
+               "0")
+              ((== SUBM "255")
+               "127.0.0.255")
+              (else
+               SUBM)))
+      (if (== ADDR "255")
+        "127.0.0.255"
+        ADDR)))
+  (set! L (map to-subm (string-split NPATH #\/)))
+  (set! NPATH (car L))
+  (set! RELPATH (or (== NPATH ".")
+                    (not (ipaddr? NPATH))
+                    (== NPATH "127.0.0.255")))
+  (set! L (filter (=> (E)
+                    (and (!= E ".")
+                         (!= E "127.0.0.255"))) ;; TODO: process ".."s
+                  L))
+  (set! NPATH (string-join L "/"))
+  (if RELPATH
+    (set! NPATH (string+ _PHMACHINE_GADDR (if (!= NPATH "") (string+ "/" NPATH) ""))))
+  (gaddr NPATH (if (unspecified? PROCID)
+                 "00" PROCID)))
 
-(define (gaddr-subm ADDR)
-  (addr-subm ADDR))
-
-(define (gaddr-host ADDR) ;; Hosts == OS-allocated processes (i.e. procph0s)
-  (addr-host ADDR))
-
-(define (gipaddr PROXY IP)
-  (define PROXIED (and (specified? PROXY) (!= PROXY IP)))
-  (string+ (if PROXIED (string+ PROXY "*") "") IP))
-
-(define (gaddr GIP PROCID . SUBM) ;; FIXME: works with GIP addr of a vmachine ; but SUBM can be set
-  (set! SUBM (if (empty? SUBM) "" (car SUBM)))
-  (if (unspecified? SUBM)
-    (set! SUBM "0"))
-  (if (number? SUBM)
-    (set! SUBM (string SUBM)))
-  (string+ GIP (if (!= SUBM "") (string+ "/" SUBM) "")
-               (if (unspecified? PROCID) "" (string+ ":" PROCID))))
-
-(define (gaddr-npath ADDR . FILLIN) ;; GADDR/SUBM:PROCID => 127.0.0.SUBM:_PORT0 ou _PHMACHINE_LADDR:_PORT0 si 00
-                                    ;;                   => PATH dans le filesystem sinon
-  (define CORE (gaddr-core ADDR))
-  (define SUBM (gaddr-subm ADDR))
-  (define PROCID (gaddr-host ADDR))
-  (if (not (empty? FILLIN))
-    (set! FILLIN (car FILLIN)))
-  (if (unspecified? CORE)
-    (if FILLIN
-      (set! CORE (gaddr-core _VMACHINE_GADDR))
-      (error "gaddr-npath::CORE " ADDR)))
-  (if (unspecified? SUBM)
-    (error "gaddr-npath::SUBM " ADDR))
-  (if (unspecified? PROCID)
-    (error "gaddr-npath::PROCID " ADDR))
-  (if (== PROCID "00")
-    (if (== SUBM "0")
-      (string+ CORE ":" (string _PORT0))
-      (string+ "127.0.0." SUBM ":" (string _PORT0)))
-    (string+ "./" (gaddr-subm ADDR) "/" PROCID)))
-
-(define (gaddr-normalize ADDR) ;; 127.0.0.SUBM:PROCID => GADDR/SUBM:PROCID
-  (define CORE (gaddr-core ADDR))
-  (define SUBM (gaddr-subm ADDR)) ;; TODO: have a (gaddr-subm) which returns Void when there is no submachine (incomplete ADDR)
-  (define PROCID (gaddr-host ADDR))
-  (if (unspecified? CORE)
-    (begin
-      (set! CORE (gaddr-core _VMACHINE_GADDR))
-      (set! SUBM (gaddr-subm _VMACHINE_GADDR))))
-  (set! ADDR
-        (if (and (== (substring CORE 0 8) "127.0.0.")
-                 (!= CORE "127.0.0.255")) ;; FIXME: refine this test
-          (begin
-            (if (specified? SUBM)
-              (error "gaddr-normalize::SUBM[local] " ADDR))
-            (gaddr (gaddr-netm _PHMACHINE_GADDR) PROCID (substring CORE 8 (string-length CORE))))
-          (gaddr CORE PROCID SUBM)))
-  ADDR)
+(define (gaddr-naddr ADDR) ;; NPATH:PROCID => 127.0.0.SUBM:_PORT0 ou _PHMACHINE_GADDR:_PORT0 si 00
+                           ;;              => PATH dans le filesystem sinon
+  (define NPATH Void)
+  (define HOST Void)
+  (define PHYS Void)
+  (define IP Void)
+  (define LOCAL Void)
+  (define PATH Void)
+  (define (hostpath0)
+    (if (== HOST "00")
+      (string _PORT0)
+      (string+ "./" HOST)))
+  (define (hostpath1 L)
+    (set! L (list->npath (map (=> (S)
+                                (string+ "_" S)) L)))
+    (string+ "./" L "/" HOST))
+  (set! ADDR (gaddr-normalize ADDR))
+  (set! NPATH (gaddr-npath ADDR))
+  (set! HOST (gaddr-host ADDR))
+  (set! PHYS (gaddr-phys NPATH))
+  (set! IP (npath-last PHYS))
+  (set! LOCAL (gaddr-local NPATH))
+  (set! PATH
+        (if (nil? LOCAL)
+          (hostpath0)
+          (let* ((L (npath->list LOCAL)))
+            (if (and (== (list-length L) 1) (== HOST "00"))
+              (let* ((SUBM (car L)))
+                (set! IP (string+ "127.0.0." (cond ((== SUBM "0") "254")
+                                                   ((== SUBM "254") (error "gaddr-naddr::254"))
+                                                   ((== SUBM "255") (error "gaddr-naddr::255"))
+                                                   (else SUBM))))
+                (hostpath0))
+              (hostpath1 L)))))
+  (naddr IP PATH))
 
 ;; Machines
-(define _PHMACHINE_LADDR (ownip))  ;; Local IP address of the physical machine
-(define _PHMACHINE_GADDR           ;; Global IP address of the physical machine ([PROXY*]LADDR)
-        _PHMACHINE_LADDR)          ;; FIXME: depend de si on peut savoir qu'on est derriere un proxy ou non
-(define _VMACHINE_GADDR            ;; Physical address of the machine: GADDR/SUBM ; (can also be 127.0.0.SUBM)
-        (conf-get2 "MACHINE"       ;; TODO: check that it's actually a correct IP (_PHMACHINE_GADDR or 127.0.0.XY)
-                   (addr-machine (gaddr-normalize _PHMACHINE_GADDR))))
+(define _PHMACHINE_LADDR (ownip))      ;; Local IP address of the physical machine
+(define _PHMACHINE_GADDR (ownnpath))   ;; NPATH of the physical machine
+(define _VMACHINE_GADDR                ;; NPATH of the current machine (can also be 127.0.0.SUBM)
+        (gaddr-npath (gaddr-normalize  ;; TODO: check that it's actually located inside PHMACHINE
+          (conf-get2 "MACHINE" _PHMACHINE_GADDR))))
 
 ;; Relays
+(define _PROXIED (make-hashv-table))
+(define (gaddr-proxied? ADDR) ;; Either physical machines with private IPs, or .ini file says so
+  (define NPATH (gaddr-npath ADDR))
+  (define HOST (gaddr-host ADDR))
+  (define PHYS Void)
+  (define IP Void)
+  (set! PHYS (npath-phys NPATH))
+  (set! IP (npath-ip PHYS))
+  (and (== HOST "00")
+    (or (and (== NPATH PHYS)
+             (or (ipaddr-private? IP)
+                 (hash-ref _PROXIED PHYS)))
+        (hash-ref _PROXIED NPATH))))
+
+(define (gaddr-proxied! ADDR)
+  (define NPATH (gaddr-npath ADDR))
+  (hash-set! _PROXIED NPATH True))
+
+(define _KEEP (make-hashv-table))
+(define (gaddr-keep? ADDR) ;; .ini file says so : proxied machines that ask for a keep (default: they don't)
+  (define NPATH (gaddr-npath ADDR))
+  (hash-ref _KEEP (npath-phys ADDR)))
+
+(define (gaddr-keep! ADDR)
+  (define NPATH (gaddr-npath ADDR))
+  (hash-set! _KEEP NPATH True))
+
+(define _MASTER_GADDR (gaddr _PHMACHINE_LADDR "00")) ;; TODO: enable configuring it
+(define (gaddr-next A1 A2 . OPT)
+  (define PREF Void)
+  (define NPATHM (gaddr-npath _MASTER_GADDR))
+  (define NPATH1 Void)
+  (define HOST1 Void)
+  (define NPATH2 Void)
+  (define HOST2 Void)
+  (define NPATH "_")
+  (define HOST "_")
+ ;(define ALL? (list-in? 'AllHops OPT))
+ ;(define UP? (list-in? 'Up OPT))
+ ;(define DOWN? (list-in? 'Down OPT))
+  (define (post)
+    (if (!= NPATH1 NPATH2)
+      (error "gaddr-next::post"))
+    (set! NPATH NPATH2)
+    (set! HOST (cond ((or (== HOST1 "0")
+                          (== HOST1 "00")) HOST2)
+                      (else
+                       "0"))))
+  (define (up)
+    (if (nil? (npath-minus NPATH1 PREF))
+      (error "gaddr-next::up"))
+    (cond ((or (== HOST1 "0")
+               (== HOST1 "00"))
+           (set! NPATH (npath-up NPATH1))
+           (if (empty? NPATH)
+             (set! NPATH (if (== NPATH1 NPATHM)
+                           (npath-first NPATH2)
+                           NPATHM)))
+           (set! HOST "00"))
+          (else
+           (set! NPATH NPATH1)
+           (set! HOST "0"))))
+  (define (down)
+    (if (nil? (npath-minus NPATH2 PREF))
+      (error "gaddr-next::down"))
+    (if (== NPATH1 PREF)
+      (cond ((== HOST1 "00")
+             (if (== (npath-up NPATH2) PREF)
+               (begin
+                 (set! NPATH NPATH2)
+                 (set! HOST (if (== HOST1 "00") "0" HOST2)))
+               (let* ((LOC (npath->list (npath-minus NPATH2 PREF))))
+                 (set! NPATH (string+ PREF "/" (car LOC)))
+                 (set! HOST (if (> (list-length LOC) 1)
+                                "00"
+                                "0")))))
+            (else
+             (error "gaddr-next::down::HOST1")))
+      Void))
+  (set! A1 (gaddr-normalize A1))
+  (set! A2 (gaddr-normalize A2))
+  (set! NPATH1 (gaddr-npath A1))
+  (set! HOST1 (gaddr-host A1))
+  (set! NPATH2 (gaddr-npath A2))
+  (set! HOST2 (gaddr-host A2))
+  (set! PREF (npath-prefix NPATH1 NPATH2))
+ ;(outraw* "  A1=" A1 "; A2=" A2 "\n")
+ ;(outraw* "  P1=" NPATH1 "; H1=" HOST1 "\n")
+ ;(outraw* "  P2=" NPATH2 "; H2=" HOST2 "\n")
+ ;(outraw* "  PREF=" PREF "\n")
+  (if (== NPATH1 NPATH2)
+    (post)
+    (if (or (nil? PREF)
+            (not (nil? (npath-minus NPATH1 PREF))))
+      (up)
+      (down)))
+  (gaddr NPATH HOST))
+
+(define (gaddr-up FROM TO . OPT)
+  Void)
+
+(define (relay-up ADDR)
+  (cond ((== ADDR _MASTER_GADDR)
+         Void)
+        ((== PROCID "00")
+         (if (!= SUBM "0")
+           (error "relay-up(1)"))
+         _MASTER_GADDR)
+        ((== PROCID "0")
+         (gaddr CORE "00" "0"))
+        (else
+         (gaddr CORE "0" SUBM))))
+
 (define (relay-out SRC DEST) ;; SRC & DEST are gaddrs
-  (define CORES (gaddr-core SRC))
-  (define SUBMS (gaddr-subm SRC))
-  (define HOSTS (gaddr-host SRC))
-  (define CORED (gaddr-core DEST))
-  (define SUBMD (gaddr-subm DEST))
-  (define HOSTD (gaddr-host DEST))
   (if (== CORES CORED)
     (if (== SUBMS SUBMD)
       (if (or (== HOSTS HOSTD) (== HOSTS "0"))
@@ -188,22 +247,6 @@
     (if (== HOSTS "00")
       (gaddr CORED "00" "0")
       (gaddr CORES "00" SUBMS))))
-
-(define _MASTER_GADDR (gaddr _PHMACHINE_GADDR "00" 0))
-(define (relay-up ADDR)
-  (define CORE (gaddr-core ADDR))
-  (define SUBM (gaddr-subm ADDR))
-  (define PROCID (gaddr-host ADDR))
-  (cond ((== ADDR _MASTER_GADDR)
-         Void)
-        ((== PROCID "00")
-         (if (!= SUBM "0")
-           (error "relay-up(1)"))
-         _MASTER_GADDR)
-        ((== PROCID "0")
-         (gaddr CORE "00" "0"))
-        (else
-         (gaddr CORE "0" SUBM))))
 
 ;; Physical OS-allocated (possibly agglomerated) proc
 (define tprocph0 (type "procph0"
@@ -233,9 +276,7 @@
   (begin
     (if (specified? (: RES 'GADDR))
       (error "procph0::PROCID"))
-    (:= RES 'GADDR (gaddr (gaddr-netm _VMACHINE_GADDR)
-                          PROCID
-                          (gaddr-subm _VMACHINE_GADDR)))))
+    (:= RES 'GADDR (gaddr _VMACHINE_GADDR))))
   (set! BIND (<- RES 'BIND))
   (if (specified? BIND)
     (procph0-bind RES (if (symbol? BIND) BIND Void)))
@@ -375,15 +416,15 @@
                        'MODE 'Async*
                        'TO (gaddr-normalize ADDR)))
   (define TO Void)
-  (set! TO (gaddr-npath (: RES 'TO)))
+  (set! TO (gaddr-naddr (: RES 'TO)))
   (catch ;; TODO: move that inside (sock-srv)
     True (=> ()
            (:= RES 'SOCK (sock-srv TO)))
          (=> (E . OPT)
-           (if (_npath-path? TO)
-             (if (file-exists? (npath-path TO))
+           (if (_naddr-path? TO)
+             (if (file-exists? (naddr-path TO))
              (begin
-               (file-delete (npath-path TO))
+               (file-delete (naddr-path TO))
                (:= RES 'SOCK (sock-srv TO)))))))
   (if (not (empty? PROC))
     (:= RES 'PROC (car PROC)))
@@ -422,10 +463,10 @@
   (:= RES 'FROM FROM)
   (set! ADDR (: RES 'TO))
   (catch True (=> ()
-                (:= RES 'SOCK (sock-cli (gaddr-npath ADDR))))
+                (:= RES 'SOCK (sock-cli (gaddr-naddr ADDR))))
               (=> (E . OPT)
                 (if (== CHAN_LOG 2)
-                  (chlog2 (string+ ADDR " [" (gaddr-npath ADDR) "]") "< " "!"))
+                  (chlog2 (string+ ADDR " [" (gaddr-naddr ADDR) "]") "< " "!"))
                 Void))
   (if (not (empty? MODE))
     (:= RES 'MODE (car MODE)))

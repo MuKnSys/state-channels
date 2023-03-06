@@ -492,16 +492,76 @@
 ;; Self path
 (define SC_PATH (dirname (dirname (path-normalize (_getcf)))))
 
-;; Network paths
+;; IP addresses
+(define (ipaddr? IP)
+  (define L (string-split IP #\.))
+  (and (== (list-length L) 4)
+       (string-digits? (list-get L 0))
+       (string-digits? (list-get L 1))
+       (string-digits? (list-get L 2))
+       (string-digits? (list-get L 3))))
+
+(define (ipaddr->vector IP)
+  (define RES (make-vector 4))
+  (define L (string-split IP #\.))
+  (if (not (ipaddr? IP))
+    (error "ipaddr->vector"))
+  (vector-set! RES 0 (number (car L)))
+  (vector-set! RES 1 (number (cadr L)))
+  (vector-set! RES 2 (number (caddr L)))
+  (vector-set! RES 3 (number (cadddr L)))
+  RES)
+
+(define (ipaddr-loopback? IP)
+  (if (not (ipaddr? IP))
+    (error "ipaddr-loopback"))
+  (== (substring IP 0 8) "127.0.0."))
+
+(define (ipaddr-phys? IP)
+  (if (not (ipaddr? IP))
+    (error "ipaddr-phys?"))
+  (not (ipaddr-loopback? IP)))
+
+(define (ipaddr-private? IP)
+  (define V (ipaddr->vector IP))
+  (if (not (ipaddr? IP))
+    (error "ipaddr-private?"))
+  (or (ipaddr-loopback? IP)
+      (or (== (vector-ref V 0) 10)       ;; Class A
+          (and (== (vector-ref V 0) 172) ;; Class B
+               (>= (vector-ref V 1) 16)
+               (<= (vector-ref V 1) 31))
+          (and (== (vector-ref V 0) 192) ;; Class C
+               (== (vector-ref V 1) 168)))))
+
+(define (ipaddr IP)
+  (cond ((number? IP)
+         (set! IP (number->string IP 16))
+         (string+
+           (number->string (string->number (substring IP 0 2) 16))
+           "."
+           (number->string (string->number (substring IP 2 4) 16))
+           "."
+           (number->string (string->number (substring IP 4 6) 16))
+           "."
+           (number->string (string->number (substring IP 6 8) 16))))
+        ((string? IP)
+         (if (ipaddr? IP)
+           IP
+           Void))
+        (else
+         Void)))
+
+;; Network addrs
 (define _HOST-SOCKS
         (string+ SC_PATH "/sock"))
 (define (host-phys-socks)
   _HOST-SOCKS)
 
-(define (_npath-port? ADDRE)
+(define (_naddr-port? ADDRE)
   (string-digits? ADDRE))
 
-(define (_npath-path? ADDRE)
+(define (_naddr-path? ADDRE)
   (define A0 (if (and (string? ADDRE) (> (string-length ADDRE) 0))
                  (string-get ADDRE 0)
                  Void))
@@ -509,46 +569,170 @@
     (or (eq? A0 #\.) (eq? A0 #\/))
     False))
 
-(define (_npath-machine? ADDRE)
-  (and (not (_npath-port? ADDRE))
-       (not (_npath-path? ADDRE))))
+(define (_naddr-machine? ADDRE)
+  (and (not (_naddr-port? ADDRE))
+       (not (_naddr-path? ADDRE))))
 
-(define (npath-machine ADDR)
+(define (naddr MACH PATH) ;; NOTE: PATH can also be a port ; otherwise, it has to either start with "." or "/"
+  (if (and (not (_naddr-path? PATH))
+           (not (_naddr-port? PATH)))
+    (error "naddr"))
+  (string+ MACH ":" (string PATH)))
+
+(define (naddr-machine ADDR)
   (if (string? ADDR)
     (let* ((L (string-split ADDR #\:)))
-      (if (_npath-machine? (car L))
+      (if (_naddr-machine? (car L))
         (car L)
         Void))
     Void))
 
-(define (npath-port ADDR)
+(define (naddr-port ADDR)
   (if (number? ADDR)
     (string ADDR)
   (if (string? ADDR)
     (let* ((L (string-split ADDR #\:))
            (S (if (<= (list-length L) 1)
                 (car L) (cadr L))))
-      (if (_npath-port? S)
+      (if (_naddr-port? S)
         S
         Void))
     Void)))
 
-(define (npath-path ADDR)
+(define (naddr-path ADDR)
   (if (string? ADDR)
     (let* ((L (string-split ADDR #\:))
            (S (if (<= (list-length L) 1)
                 (car L) (cadr L))))
-      (if (_npath-path? S)
+      (if (_naddr-path? S)
         (if (eq? (string-get S 0) #\.)
-          (string+ (host-phys-socks) "/" S)
+          (path-normalize (string+ (host-phys-socks) "/" S))
           S)
         Void))
     Void))
 
-;; Own IP
+;; Network paths
+(define (npath . L)
+  (string-join L "/"))
+
+(define (npath->list NP)
+  (if (or (nil? NP) (== NP ""))
+    Nil
+    (string-split NP #\/)))
+
+(define (list->npath L)
+  (if (pair? L)
+    (string-join L "/")
+    Nil))
+
+(define (npath-up NP)
+  (define L (reverse (npath->list NP)))
+  (define RES Void)
+  (list->npath (reverse (cdr L))))
+
+(define (npath-first NP)
+  (define L (npath->list NP))
+  (if (empty? L)
+    Void
+    (car L)))
+
+(define (npath-last NP)
+  (define L (npath->list NP))
+  (if (empty? L)
+    Void
+    (car (reverse L))))
+
+(define (npath-cons IP NP)
+  (define L (npath->list NP))
+  (define FIRST (npath-first NP))
+  (if (!= IP FIRST)
+    (set! L (cons IP L)))
+  (list->npath L))
+
+(define (npath-prefix NP1 NP2) ;; Common prefix
+  (define L1 (npath->list NP1))
+  (define L2 (npath->list NP2))
+  (define RES '())
+  (define B True)
+  (while (and B (and (pair? L1) (pair? L2)))
+    (if (== (car L1) (car L2))
+      (begin
+        (set! RES (cons (car L1) RES))
+        (set! L1 (cdr L1))
+        (set! L2 (cdr L2)))
+      (set! B False)))
+  (list->npath (reverse RES)))
+
+(define (npath-minus NP1 NP2) ;; Substract 2 paths => (cdr* NP1 (length common(NP1, NP2)))
+  (define PREF (npath-prefix NP1 NP2))
+  (define L1 Void)
+  (define L2 Void)
+  (define N)
+  (if (nil? PREF)
+    NP1
+    (begin
+      (set! L1 (npath->list NP1))
+      (set! L2 (npath->list NP2))
+      (set! N (list-length (npath->list PREF)))
+      (while (> N 0)
+        (set! L1 (cdr L1))
+        (set! N (- N 1)))
+      (list->npath L1))))
+
+(define (npath-phys NP)
+  (define L (npath->list NP))
+  (define RES Void)
+  (set! RES
+    (if (or (empty? L) (not (ipaddr? (car L))))
+      Nil
+      (let* ((B True)
+             (PTR (cdr L)))
+        (set! RES '())
+        (while (and B (not (empty? PTR)))
+          (if (ipaddr? (car PTR))
+            (begin
+              (set! RES (cons (car PTR) RES))
+              (set! PTR (cdr PTR)))
+            (set! B False)))
+        (cons (car L) (reverse RES)))))
+  (list->npath RES))
+
+(define (npath-local NP)
+  (npath-minus NP (npath-phys NP)))
+
+(define (npath-ip NP)
+  (npath-last (npath-phys NP)))
+
+;; Own IP ;; TODO: cache values
+(define (ownipmac)
+  (define IPMAC (sh-cmd (string+ SC_PATH "/bin/ownip")))
+  (string-split 
+    (string-replace
+      (if (pair? IPMAC) (car IPMAC) "127.0.0.255 A:B:C:D:E:F")
+      ":" ".")
+    #\space))
+
 (define (ownip)
-  (define IP (sh-cmd (string+ SC_PATH "/bin/ownip")))
-  (if (pair? IP) (car IP) "127.0.0.255"))
+  (car (ownipmac)))
+
+(define (ownmac)
+  (cadr (ownipmac)))
+
+(define _OWNPROXY Void)
+(define (ownproxy)
+  (define IP Void)
+  (if (unspecified? _OWNPROXY)
+    (begin
+      (set! IP (sh-cmd (string+ SC_PATH "/bin/extip")))
+      (set! _OWNPROXY (if (pair? IP) (car IP) Void))))
+  _OWNPROXY)
+
+(define (ownnpath)
+  (define PROXY (ownproxy))
+  (define ADDR (ownip))
+  (if (== PROXY ADDR)
+     ADDR
+     (npath PROXY ADDR)))
 
 ;; Basic I/O
 (define _OUTP False)

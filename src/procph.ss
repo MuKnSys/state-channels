@@ -14,7 +14,6 @@
 (import ./procs)
 (import ./ipc)
 (import ./calls)
-(import ./netp2p)
 
 (export
   (import: ./scheds)
@@ -50,14 +49,14 @@
   RES))
 
 ;; Current physical process
-(define _SOCK0A (host-fsock "0"))
-(define _HOSTID ((=> ()
+(define _SOCK0A '(host-fsock "0"))
+(define _HOSTID "0") '((=> ()
                    (define VAL (channel-touch ":0" 1))
                    (if (unspecified? VAL)
                      (if (file-exists? _SOCK0A)
                        (file-delete _SOCK0A))
                      (if (atom? VAL)
-                       VAL (: VAL 'MSG))))))
+                       VAL (: VAL 'MSG)))))
 ;(outraw _HOSTID)
 ;(cr)
 (if (unspecified? _HOSTID)
@@ -115,7 +114,7 @@
   (cadr (the-srv-sock)))
 
 ;; Init (host-proc)
-(if DHT_LOG
+(if (and DHT_LOG (not (defined? '__STANDALONE__))) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
   (chlog2 (gaddr (current-machine) _HOSTID) "<< "))
 (define (init0)
   (host-proc! (if (or (== _HOSTID "00") (== _HOSTID "0"))

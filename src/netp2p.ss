@@ -25,9 +25,9 @@
   (set! ADDR (getenv (if (== WHERE 'Local) "NETP2PD_LOCAL"
                                            "NETP2PD_GLOBAL")))
   (if (and (not (string? ADDR)) (== WHERE 'Local))
-    (set! ADDR (addr-netm (current-machine))))
+    (set! ADDR (gaddr-ip (current-machine))))
   (if (and (not (string? ADDR)) (== WHERE 'Global))
-    (set! ADDR (npath-machine _NETP2PD-ADDR)))
+    (set! ADDR (naddr-machine _NETP2PD-ADDR)))
   (if (not (string? ADDR))
    ;(set! ADDR "./NETP2PD") TODO: should be (current-machine) on a default port
     (error "netp2pd-addr"))
@@ -139,17 +139,15 @@
 
 (define (_netp2p-net-dispatch MSG ADDR)
   (if (netp2pd?)
-    (if (== (addr-netm ADDR) (addr-netm _NETP2PD-ADDR)) ;; Local machine
+    (if (== (gaddr-ip ADDR) (gaddr-ip _NETP2PD-ADDR)) ;; Local machine
       (begin
         (outraw "Proc ")
         (outraw (: MSG 'TO))
         (outraw " is being redispatched to ")
-        (outraw (addr-netm ADDR))
-        (outraw "/")
-        (outraw (addr-subm ADDR))
+        (outraw ADDR)
         (cr)
-        (host-phys-send (network-addr ADDR "0") MSG)) ;; FIXME: (host-phys-send) doesn't exists anymore
-      (netp2pd `(net-dispatch ,MSG ,ADDR) (string+ (addr-netm ADDR) ":" (string _NETP2PD-PORT)))) ;; TODO: test this one
+        (host-send (gaddr ADDR "0") MSG)) ;; FIXME: (host-send) only takes a proc UID as its 1st parm
+      (netp2pd `(net-dispatch ,MSG ,ADDR) (string+ (gaddr-ip ADDR) ":" (string _NETP2PD-PORT)))) ;; TODO: test this one
     (error "_netp2p-net-dispatch")))
 
 (define (_netp2p-net-send MSG)

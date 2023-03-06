@@ -57,16 +57,9 @@
 ;;    local processes are finally saturated, and the physical method calls finally performed ;
 ;;
 
-;; Addresses
-(define (network-addr IP HOST . UID) ;; TODO: clean this
-  (define RES (string+ IP ":" HOST))
-  (if (not (empty? UID))
-    (string+ RES ":" UID)
-    RES))
-
-;; Hosts (physical hosts) ;; TODO: clean this
-(define (host-fsock HOSTID) ;; TODO: throw away (host-fsock) & (host-fsock2), or integrate them in channels.ss
-  (path-normalize (string+ (host-phys-socks) "/" (addr-subm (current-machine)) "/" HOSTID)))
+;; Hosts (physical hosts)
+(define (host-fsock HOSTID) ;; TODO: integrate this in channels.ss (?)
+  (path-normalize (naddr-path (gaddr-naddr (gaddr (current-machine) HOSTID)))))
 
 (define (proc-hostph PROC)
   (define HOST PROC)
@@ -83,7 +76,7 @@
   (define HOSTA (: (the-procph0) 'GADDR))
   (define ADDR Void)
   (set! ADDR (if (string? PROC)
-               (gaddr (gaddr-core HOSTA) PROC (gaddr-subm HOSTA))
+               (gaddr HOSTA PROC)
                (hash-ref (net-phys) (: PROC 'UID))))
  ;(set! ADDR (if (and ADDR (gaddr-root? HOSTA) (gaddr-parent? HOSTA ADDR)) ;; TODO: not having direct point-2-point connections (?)
  ;             ADDR

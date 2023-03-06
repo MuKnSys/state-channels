@@ -85,10 +85,10 @@
 (define (sock-read-n SOCK N)
   (get-string-n (cadr SOCK) N))
 
-(define (sock-write SOCK MSG . NL)
+(define (sock-write SOCK MSG . NL) ;; TODO: encapsulate (cadr SOCK), or (caddr SOCK) everywhere
  ;(outraw MSG)
  ;(outraw " [=>")
- ;(outraw (cadddr SOCK))
+ ;(outraw (cadddr SOCK)) ;; FIXME: (cadddr SOCK) is likely wrong
  ;(outraw "]")
  ;(cr)
   (set! NL (if (empty? NL)
