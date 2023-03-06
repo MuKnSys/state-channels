@@ -43,7 +43,7 @@
   (if (number? PROCID)
     (set! PROCID (string PROCID)))
   (if (or (specified? (gaddr-host NPATH)) (not (string? PROCID)))
-    (error "gaddr"))
+    (error "gaddr " NPATH " " PROCID))
   (string+ NPATH ":" PROCID))
 
 (define (gaddr-normalize ADDR) ;; 127.0.0.SUBM:PROCID => NPATH/SUBM:PROCID or NPATH:00 if SUBM==255
@@ -63,6 +63,8 @@
       (if (== ADDR "255")
         "127.0.0.255"
         ADDR)))
+  (if (unspecified? NPATH)
+    (set! NPATH _VMACHINE_GADDR))
   (set! L (map to-subm (string-split NPATH #\/)))
   (set! NPATH (car L))
   (set! RELPATH (or (== NPATH ".")
@@ -119,7 +121,7 @@
 (define _PHMACHINE_GADDR (ownnpath))   ;; NPATH of the physical machine
 (define _VMACHINE_GADDR                ;; NPATH of the current machine (can also be 127.0.0.SUBM)
         (gaddr-npath (gaddr-normalize  ;; TODO: check that it's actually located inside PHMACHINE
-          (conf-get2 "MACHINE" _PHMACHINE_GADDR))))
+          (conf-get2 "MACHINE" (npath _PHMACHINE_GADDR "0")))))
 
 ;; Relays
 (define _PROXIED (make-hashv-table))
@@ -220,33 +222,11 @@
       (down)))
   (gaddr NPATH HOST))
 
-(define (gaddr-up FROM TO . OPT)
-  Void)
+(define (gaddr-up ADDR)
+  (gaddr-next ADDR (npath-first (gaddr-npath ADDR))))
 
 (define (relay-up ADDR)
-  (cond ((== ADDR _MASTER_GADDR)
-         Void)
-        ((== PROCID "00")
-         (if (!= SUBM "0")
-           (error "relay-up(1)"))
-         _MASTER_GADDR)
-        ((== PROCID "0")
-         (gaddr CORE "00" "0"))
-        (else
-         (gaddr CORE "0" SUBM))))
-
-(define (relay-out SRC DEST) ;; SRC & DEST are gaddrs
-  (if (== CORES CORED)
-    (if (== SUBMS SUBMD)
-      (if (or (== HOSTS HOSTD) (== HOSTS "0"))
-        DEST
-        (gaddr CORED "0" SUBMD))
-      (if (!= HOSTS "00")
-        (gaddr CORES "00" SUBMS)
-        (gaddr CORES "00" SUBMD)))
-    (if (== HOSTS "00")
-      (gaddr CORED "00" "0")
-      (gaddr CORES "00" SUBMS))))
+  (gaddr-up ADDR))
 
 ;; Physical OS-allocated (possibly agglomerated) proc
 (define tprocph0 (type "procph0"
@@ -276,7 +256,7 @@
   (begin
     (if (specified? (: RES 'GADDR))
       (error "procph0::PROCID"))
-    (:= RES 'GADDR (gaddr _VMACHINE_GADDR))))
+    (:= RES 'GADDR (gaddr _VMACHINE_GADDR PROCID))))
   (set! BIND (<- RES 'BIND))
   (if (specified? BIND)
     (procph0-bind RES (if (symbol? BIND) BIND Void)))
@@ -450,16 +430,18 @@
 (define (_chfrom)
   (define PROC (current-procph0))
   (if (nil? PROC)
-     (string+ _VMACHINE_GADDR ":00")
+     (string+ (gaddr (npath-up _VMACHINE_GADDR) ":00"))
      (: PROC 'GADDR)))
 
 (define (channel-cli ADDR . MODE) ;; => CliChan (either kept, or either on a !(proxied?), so volatile in the latter case
                                   ;;    A local IP address (i.e. 127.0.0.[1-254]) _cannot_ connect to a nonlocal IP address
                                   ;;                                                          [ other than _PHMACHINE_GADDR
-  (define RES (channel 'CATEG 'Client
-                       'MODE 'Async*
-                       'TO (gaddr-normalize ADDR)))
-  (define FROM (_chfrom))
+  (define RES Void)
+  (define FROM Void)
+  (set! RES (channel 'CATEG 'Client
+                     'MODE 'Async*
+                     'TO (gaddr-normalize ADDR)))
+  (set! FROM (_chfrom))
   (:= RES 'FROM FROM)
   (set! ADDR (: RES 'TO))
   (catch True (=> ()
@@ -525,7 +507,7 @@
     (begin
       (set! FROM_ (_chfrom))
       (set! TO_ ADDR)))
-  (set! ADDR (relay-out (_chfrom) TO_))
+  (set! ADDR (gaddr-next (_chfrom) TO_))
   (set! CLI (channel-cli ADDR 'Async))
   (if (unspecified? (: CLI 'SOCK))
     (begin

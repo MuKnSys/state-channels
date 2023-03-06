@@ -59,7 +59,7 @@
 
 ;; Hosts (physical hosts)
 (define (host-fsock HOSTID) ;; TODO: integrate this in channels.ss (?)
-  (path-normalize (naddr-path (gaddr-naddr (gaddr (current-machine) HOSTID)))))
+  (naddr-path (gaddr-naddr (gaddr (current-machine) HOSTID))))
 
 (define (proc-hostph PROC)
   (define HOST PROC)
@@ -76,7 +76,7 @@
   (define HOSTA (: (the-procph0) 'GADDR))
   (define ADDR Void)
   (set! ADDR (if (string? PROC)
-               (gaddr HOSTA PROC)
+               (gaddr (gaddr-npath HOSTA) PROC)
                (hash-ref (net-phys) (: PROC 'UID))))
  ;(set! ADDR (if (and ADDR (gaddr-root? HOSTA) (gaddr-parent? HOSTA ADDR)) ;; TODO: not having direct point-2-point connections (?)
  ;             ADDR

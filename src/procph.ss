@@ -49,14 +49,14 @@
   RES))
 
 ;; Current physical process
-(define _SOCK0A '(host-fsock "0"))
-(define _HOSTID "0") '((=> ()
+(define _SOCK0A (host-fsock "0"))
+(define _HOSTID ((=> ()
                    (define VAL (channel-touch ":0" 1))
                    (if (unspecified? VAL)
                      (if (file-exists? _SOCK0A)
                        (file-delete _SOCK0A))
                      (if (atom? VAL)
-                       VAL (: VAL 'MSG)))))
+                       VAL (: VAL 'MSG))))))
 ;(outraw _HOSTID)
 ;(cr)
 (if (unspecified? _HOSTID)
