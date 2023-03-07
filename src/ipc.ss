@@ -80,9 +80,9 @@
                (hash-ref (net-phys) (: PROC 'UID))))
  ;(set! ADDR (if (and ADDR (gaddr-root? HOSTA) (gaddr-parent? HOSTA ADDR)) ;; TODO: not having direct point-2-point connections (?)
  ;             ADDR
- ;             (relay-up HOSTA)))
+ ;             (gaddr-up HOSTA)))
   (set! ADDR (if (or (not ADDR) (== ADDR HOSTA))
-               (relay-up HOSTA)
+               (gaddr-up HOSTA)
                ADDR))
   (channel-send ADDR (sexpr-serialize MSG)))
 

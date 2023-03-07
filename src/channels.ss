@@ -23,7 +23,7 @@
 
 (define (gaddr-host ADDR) ;; Hosts == OS-allocated processes (i.e. procph0s)
   (define L (string-split ADDR #\:))
-  (if (> (list-length L) 1)
+  (if (and (> (list-length L) 1) (!= (cadr L) ""))
     (cadr L)
     Void))
 
@@ -45,6 +45,28 @@
   (if (or (specified? (gaddr-host NPATH)) (not (string? PROCID)))
     (error "gaddr " NPATH " " PROCID))
   (string+ NPATH ":" PROCID))
+
+(define (gaddr-expand . ADDR)
+  (define NPATH Void)
+  (define HOST Void)
+  (define L Void)
+  (set! ADDR (if (or (empty? ADDR)
+                     (unspecified? (car ADDR))) ":" (car ADDR)))
+  (set! NPATH (gaddr-npath ADDR))
+  (set! HOST (gaddr-host ADDR))
+  (if (unspecified? NPATH)
+    (set! NPATH "."))
+  (if (unspecified? HOST)
+    (set! HOST "0")) ;; TODO: when HOST is not given, try to have it allocated (?)
+  (set! L (filter (=> (X) (!= X "")) (npath->list NPATH)))
+  (if (== (string-ref NPATH 0) #\/)
+    (set! L (cons _PHMACHINE_GADDR L)))
+  (set! L (map (=> (X)
+                 (if (== X ".")
+                   _VMACHINE_GADDR
+                   X))
+                L))
+  (gaddr (list->npath L) HOST))
 
 (define (gaddr-normalize ADDR) ;; 127.0.0.SUBM:PROCID => NPATH/SUBM:PROCID or NPATH:00 if SUBM==255
   (define NPATH (gaddr-npath ADDR))
@@ -68,7 +90,7 @@
   (set! L (map to-subm (string-split NPATH #\/)))
   (set! NPATH (car L))
   (set! RELPATH (or (== NPATH ".")
-                    (not (ipaddr? NPATH))
+                    (not (ipaddr? NPATH)) ;; FIXME: if _all_ elements of NPATH are (ipaddr?)s
                     (== NPATH "127.0.0.255")))
   (set! L (filter (=> (E)
                     (and (!= E ".")
@@ -225,9 +247,6 @@
 (define (gaddr-up ADDR)
   (gaddr-next ADDR (npath-first (gaddr-npath ADDR))))
 
-(define (relay-up ADDR)
-  (gaddr-up ADDR))
-
 ;; Physical OS-allocated (possibly agglomerated) proc
 (define tprocph0 (type "procph0"
                        '(GADDR    ;; Physical address of the current proc: VGADDR[:PROCNO]
@@ -327,15 +346,19 @@
 
 ;; Channels
 (define tchannel (type "channel"
-                       '(CATEG    ;; Client (outcoming), Server, SrvCli (incoming socket)
-                         MODE     ;; Async, Async*, Sync (Async & Async*: standard main loop ; Sync: accept() & handshaken)
-                         PROTO    ;; Protocol: Binary, Text (newline-separated text), HTTP
-                         _FROM    ;; Physical address of the socket's sending endpoint (IP)
-                         FROM     ;; Physical address of the socket's sending endpoint (proc)
-                         TO       ;; Physical address of the socket's receiving endpoint (proc)
-                         SOCK     ;; Socket (server socket for Server channels, client socket for Client channels)
-                         INCHAN   ;; Incoming (client) channels (Server channels only)
-                         PROC     ;; Process (Server channels only)
+                       '(CATEG     ;; Client (outcoming), Server, SrvCli (incoming socket)
+                         MODE      ;; Async, Async*, Sync (Async & Async*: standard main loop ; Sync: accept() & handshaken)
+                         PROTO     ;; Protocol: Binary, Text (newline-separated text), HTTP
+                         _FROM     ;; Physical address of the socket's sending endpoint (IP)
+                         FROM      ;; Physical address of the socket's sending endpoint (proc)
+                         TO        ;; Physical address of the socket's receiving endpoint (proc)
+                         KEEP      ;; Kept channel (long polling)
+                         BLOCKING  ;; Blocking channel (long polling)
+                         SOCK      ;; Socket (server socket for Server channels, client socket for Client channels)
+                         INCHAN    ;; Incoming (client) channels (Server channels only)
+                         PARENT    ;; Parent (the Server it belongs to, i.e., it appears in its parent's INCHAN)
+                         CURCHAN   ;; Current channel (Server channels only)
+                         PROC      ;; Process (Server channels only)
                         )))
 
 (define (channel? CH)
@@ -343,7 +366,11 @@
 
 (define (channel . PARM)
   (define RES (rexpr tchannel (list-group PARM)))
+  (:? RES 'KEEP False)
+  (:? RES 'BLOCKING True)
   (:? RES 'INCHAN (empty))
+  (:? RES 'PARENT Nil)
+  (:? RES 'CURCHAN Nil)
   (:? RES 'PROC Nil)
   RES)
 
@@ -380,8 +407,26 @@
 (define (channel-to CHAN)
   (: CHAN 'TO))
 
+(define (channel-keep? CHAN)
+  (: CHAN 'KEEP))
+
 (define (channel-busy? CHAN)
-  (not (boxed-empty? (: CHAN 'INCHAN))))
+  (not (nil? (: CHAN 'CURCHAN))))
+
+(define (channel-parent! CHAN SRV)
+  (define PARENT (: CHAN 'PARENT))
+  (if (nil? SRV)
+    (begin
+      (if (nil? PARENT)
+        (error "channel-parent!::detach"))
+      (:= PARENT 'INCHAN
+          (filter (=> (X) (!= X CHAN)) (: PARENT 'INCHAN)))
+      (:= CHAN 'PARENT Nil))
+    (begin
+      (:= CHAN 'PARENT SRV) ;; NOTE: 1st time to satisfy the integrity test above
+      (channel-parent! CHAN Nil)
+      (rpush (: SRV 'INCHAN) CHAN)
+      (:= CHAN 'PARENT SRV))))
 
 (define (channel-srv ADDR . PROC) ;; => Chan[GADDR:PORT PROXIED SRVSOCK INSOCKS]
                                   ;; if !(root?), opens a server socket at the appropriate place in the filesystem
@@ -402,7 +447,7 @@
            (:= RES 'SOCK (sock-srv TO)))
          (=> (E . OPT)
            (if (_naddr-path? TO)
-             (if (file-exists? (naddr-path TO))
+             (if (file-exists? (naddr-path TO)) ;; TODO: retrofit that (along with the exception handler) into (sock-srv)
              (begin
                (file-delete (naddr-path TO))
                (:= RES 'SOCK (sock-srv TO)))))))
@@ -454,11 +499,44 @@
     (:= RES 'MODE (car MODE)))
   RES)
 
+(define (channel-wet? CHAN) ;; => Bool [channel has data]
+  Void)
+
+(define (channel-blocking? CHAN) ;; => Bool
+  (: CHAN 'BLOCKING))
+
+(define (channel-blocking! CHAN B) ;; => Void [when blocking, does a select inside (read) if SrvChan, otherwise (sock-read)]
+  (:= CHAN 'BLOCKING B))
+
 (define (channel-accept CHAN) ;; => SrvCliChan (either kept, or either on a !(proxied?), so volatile in the latter case
   (define RES (channel-srvcli (: CHAN 'TO)))
-  (define SOCK (sock-accept (: CHAN 'SOCK)))
+  (define L Void)
+  (define PORT Void)
+  (define SOCK Void)
+  (set! L (cons (: CHAN 'SOCK)
+                (map (=> (CHAN)
+                       (: CHAN 'SOCK))
+                     (filter specified? (: CHAN 'INCHAN))))) ;; FIXME: fix this wart with (boxed-empty?) or not lists and (map)
+  (set! PORT (if (channel-blocking? CHAN)
+               (select (map cadr L) '() '())
+               (select (map cadr L) '() '() 0 10)))
+  (if (not (empty? (car PORT)))
+    (begin
+      (set! L (filter (=> (SOCK)
+                        (== (cadr SOCK) (caar PORT)))
+                      L))
+      (set! PORT (car L))
+      (set! PORT (if (== (: CHAN 'SOCK) PORT)
+                   CHAN
+                   (car (filter (=> (X) (== X PORT)) (: CHAN 'INCHAN))))))
+    (set! PORT Nil))
+  (set! SOCK
+        (if (not (nil? PORT))
+          (sock-accept (: PORT 'SOCK))
+          False))
   (if SOCK
     (begin
+      (channel-parent! RES CHAN)
       (:= RES 'MODE (: CHAN 'MODE)) ;; TODO: when the mode is at the level of the server channel ; otherwise the client sets this
       (:= RES '_FROM (ipaddr (sock-ip-address SOCK))) ;; NOTE: (sock-ip-address) is only for the 1st time ; TODO: check what
       (:= RES 'SOCK SOCK))                            ;;       we can about it (e.g. error if local address of a remote machine)
@@ -475,7 +553,7 @@
   (cond ((channel-srv? CHAN)
          (if (not (channel-busy? CHAN))
            (error "channel-write::srv+!busy"))
-         (apply channel-write `(,(car (: CHAN 'INCHAN)) ,MSG . ,OPT)))
+         (apply channel-write `(,(: CHAN 'CURCHAN) ,MSG . ,OPT)))
         ((list-in? (: CHAN 'CATEG) '(Client SrvCli))
          (if (== (: CHAN 'CATEG) 'SrvCli)
          (begin
@@ -518,15 +596,6 @@
       (channel-write CLI MSG FROM_ (gaddr-normalize TO_))
       (channel-eof! CLI))))
 
-(define (channel-wet? CHAN) ;; => Bool [channel has data]
-  Void)
-
-(define (channel-blocking? CHAN) ;; => Bool
-  Void)
-
-(define (channel-blocking! CHAN B) ;; => Void [when blocking, does a select inside (read) if SrvChan, otherwise (sock-read)]
-  Void)
-
 (define (channel-read CHAN) ;; => String <> False (no data) ; does (accept)+(read) at once => cli always does (connect)+(write)
                             ;;                                if (proxied?), does (read) on the first wet incoming kept socket
                             ;; if CliChan, one only reads on its socket
@@ -536,13 +605,14 @@
   (define CATEG (: CHAN 'CATEG))
   (define CLI Void)
   (cond ((== CATEG 'Server)
-         (if (channel-sync? CHAN)
-           (if (channel-busy? CHAN)
-             (set! CLI (car (: CHAN 'INCHAN))) ;; FIXME: improve this: one active conversation at a time, plus a number of KEEPs
-             (begin
-               (set! CLI (channel-accept CHAN))
-               (runshift (: CHAN 'INCHAN) CLI)))
+         (if (channel-busy? CHAN)
+           (begin
+             (if (not (channel-sync? CHAN))
+               (error "channel-read::!sync busy"))
+             (set! CLI (: CHAN 'CURCHAN))) ;; TODO: improve this: one active conversation at a time, plus a number of KEEPs
            (set! CLI (channel-accept CHAN)))
+         (if (channel-sync? CHAN)
+           (:= CHAN 'CURCHAN CLI))
          (set! MSG (channel-read CLI))
          (if (eof-object? MSG)
            (channel-eof! CHAN))
@@ -566,6 +636,8 @@
          MSG)))
 
 (define (channel-close CHAN) ;; => Void
+  (if (not (nil? (: CHAN 'PARENT)))
+    (channel-parent! CHAN Nil))
   (sock-close (: CHAN 'SOCK)))
 
 (define (channel-eof! CHAN) ;; => Void
@@ -573,10 +645,13 @@
   (cond ((channel-srv? CHAN)
          (if (not (channel-busy? CHAN))
            (error "channel-eof!::srv+!busy"))
-         (set! CLI (rshift (: CHAN 'INCHAN)))
+         (set! CLI (: CHAN 'CURCHAN))
+         (:= CHAN 'CURCHAN Nil)
          (channel-eof! CLI))
         (else
-         (channel-close CHAN)))) ;; FIXME: do that only if CHAN.KEEP ; otherwise, we have to sent an actual EOF object
+         (if (channel-keep? CHAN)
+           Void ;; TODO: we don't close ; so send an actual EOF object
+           (channel-close CHAN)))))
 
 ;; (channel-touch)
 (define (channel-touch ADDR . FETCH)
@@ -679,7 +754,7 @@
 ;; => IN01 && procno => allouer un procno
 ;;
 ;; 
-  (define SRV (car (: PROC 'INCHAN)))
+  (define SRV (car (: PROC 'INCHAN))) ;; TODO: (select) the appropriate (wet) server channel
   (define RECVH Void)
   (define EXTH Void)
   (define IDLEH Void)
@@ -709,11 +784,13 @@
   (if (not _START-NEVERBLOCK)
   (begin
     (set! _START-ISBLOCK True)
+    (channel-blocking! (the-srv-chan) True)
     (fcntl (the-srv) F_SETFL _START-OFLAGS)))) ;; TODO: improve this, by means of really changing the bit on the current state
 
 (define (nonblockio)
  ;(outraw "Nonblocking !!!\n")
   (set! _START-ISBLOCK False)
+  (channel-blocking! (the-srv-chan) False)
   (fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
 
 ;; Start

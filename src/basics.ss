@@ -587,7 +587,7 @@
         Void))
     Void))
 
-(define (naddr-port ADDR)
+(define (naddr-port ADDR) ;; TODO: unify (naddr-port) and (naddr-path)
   (if (number? ADDR)
     (string ADDR)
   (if (string? ADDR)
@@ -917,3 +917,13 @@
               (display S)
               (display "\n"))
             L))
+
+;; Command line
+(define (command-parm I . ALTV)
+  (define L (command-line))
+  (set! ALTV (if (empty? ALTV)
+                Void
+                (car ALTV)))
+  (if (> (list-length L) I)
+    (list-ref L I)
+    ALTV))
