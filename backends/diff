@@ -13,7 +13,16 @@
 
 (if (equal? BACKEND "geth_dev")
   (diff*! "eth"
+          "eth.ss"
           "solc"))
+
+(if (equal? BACKEND "ipc_scm0")
+  (diff*!))
+
+(if (equal? BACKEND "ipc_scm1")
+  (diff*! "channels.ss"
+          "ipc.ss"
+          "procph.ss"))
 
 (if (equal? BACKEND "libp2p_mockup")
   (diff*! "libp2p.ss"))

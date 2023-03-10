@@ -11,18 +11,18 @@
 (export #t)
 (import ./basics)
 
-(define (sock-srv PORT . IP) ;; FIXME: no need for IP ; PORT is an npath, so IP <=> (npath-machine PORT)
-  (define FAM (npath-port PORT))
+(define (sock-srv PORT) ;; NOTE: PORT is an naddr, so IP <=> (naddr-machine PORT), PATH/PORT <=> (naddr-port/path PORT)
+  (define FAM (naddr-port PORT))
   (define SOCK Void)
   (define IP Void)
   (if (string? FAM)
     (begin
-      (set! IP (npath-machine PORT))
+      (set! IP (naddr-machine PORT))
       (if (unspecified? IP)
-        (set! IP (addr-netm _VMACHINE_GADDR)))
+        (set! IP (npath-last (gaddr-phys _VMACHINE_GADDR))))
       (set! PORT (number FAM)))
     (begin
-      (set! FAM (npath-path PORT))
+      (set! FAM (naddr-path PORT))
       (if (not (string? FAM))
         (error "sock-srv"))
       (set! PORT FAM)))
@@ -36,6 +36,8 @@
       (if (not (file-exists? (dirname PORT)))
        ;(error "sock-srv: directory " (dirname PORT) " not found"))
         (mkdir (path-normalize (dirname PORT))))
+      (if (file-exists? PORT)
+        (file-delete PORT))
       (bind SOCK AF_UNIX PORT))) ;; TODO: detect interferences ; if the file exists, try to connect to it:
                                  ;; => if it doesn't work, delete the file socket, create a new one & use it ;
                                  ;; => if it works, it means that the filesocket is active, raise err["sock already in use"] ;
@@ -58,9 +60,9 @@
   (define FPATH Void)
   (if (empty? PORT)
     (begin
-      (set! FPATH (npath-path ADDR))
-      (set! PORT (npath-port ADDR))
-      (set! ADDR (npath-machine ADDR)))
+      (set! FPATH (naddr-path ADDR))
+      (set! PORT (naddr-port ADDR))
+      (set! ADDR (naddr-machine ADDR)))
     (set! PORT (car PORT)))
   (if (string? PORT)
     (set! PORT (number PORT)))
@@ -69,7 +71,7 @@
   (set! FAM (if (specified? FPATH) PF_UNIX PF_INET))
   (set! SOCK (socket FAM SOCK_STREAM 0))
   (if (== FAM PF_INET)
-    (let* ((IP (npath-machine (gaddr-npath (string+ _VMACHINE_GADDR ":00")))))
+    (let* ((IP (naddr-machine (gaddr-naddr (string+ _VMACHINE_GADDR ":00")))))
       (bind SOCK AF_INET (inet-pton AF_INET IP) 0) ;; TODO: bind to the address corresponding to the current SUBM
       (connect SOCK AF_INET (inet-pton AF_INET ADDR) PORT))
     (begin

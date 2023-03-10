@@ -46,28 +46,6 @@
     (error "gaddr " NPATH " " PROCID))
   (string+ NPATH ":" PROCID))
 
-(define (gaddr-expand . ADDR)
-  (define NPATH Void)
-  (define HOST Void)
-  (define L Void)
-  (set! ADDR (if (or (empty? ADDR)
-                     (unspecified? (car ADDR))) ":" (car ADDR)))
-  (set! NPATH (gaddr-npath ADDR))
-  (set! HOST (gaddr-host ADDR))
-  (if (unspecified? NPATH)
-    (set! NPATH "."))
-  (if (unspecified? HOST)
-    (set! HOST "0")) ;; TODO: when HOST is not given, try to have it allocated (?)
-  (set! L (filter (=> (X) (!= X "")) (npath->list NPATH)))
-  (if (== (string-ref NPATH 0) #\/)
-    (set! L (cons _PHMACHINE_GADDR L)))
-  (set! L (map (=> (X)
-                 (if (== X ".")
-                   _VMACHINE_GADDR
-                   X))
-                L))
-  (gaddr (list->npath L) HOST))
-
 (define (gaddr-normalize ADDR) ;; 127.0.0.SUBM:PROCID => NPATH/SUBM:PROCID or NPATH:00 if SUBM==255
   (define NPATH (gaddr-npath ADDR))
   (define PROCID (gaddr-host ADDR))
@@ -138,6 +116,38 @@
               (hostpath1 L)))))
   (naddr IP PATH))
 
+;; GAddrs (expand/shorten)
+(define (gaddr-expand . ADDR)
+  (define NPATH Void)
+  (define HOST Void)
+  (define L Void)
+  (set! ADDR (if (or (empty? ADDR)
+                     (unspecified? (car ADDR))) ":" (car ADDR)))
+  (set! NPATH (gaddr-npath ADDR))
+  (set! HOST (gaddr-host ADDR))
+  (if (unspecified? NPATH)
+    (set! NPATH "."))
+  (if (unspecified? HOST)
+    (set! HOST "0")) ;; TODO: when HOST is not given, try to have it allocated (?)
+  (set! L (filter (=> (X) (!= X "")) (npath->list NPATH)))
+  (if (== (string-ref NPATH 0) #\/)
+    (set! L (cons _PHMACHINE_GADDR L)))
+  (set! L (map (=> (X)
+                 (if (== X ".")
+                   _VMACHINE_GADDR
+                   X))
+                L))
+  (if (and (not (empty? L)) (not (ipaddr? (npath-first (car L))))) ;; TODO: improve that
+    (set! L (cons _PHMACHINE_GADDR L)))
+  (gaddr (list->npath L) HOST))
+
+(define (gaddr-shorten A)
+  (define AP Void)
+  (set! AP (gaddr-phys A))
+  (if (== AP _PHMACHINE_GADDR)
+    (set! A (substring A (string-length AP) (string-length A))))
+  A)
+
 ;; Machines
 (define _PHMACHINE_LADDR (ownip))      ;; Local IP address of the physical machine
 (define _PHMACHINE_GADDR (ownnpath))   ;; NPATH of the physical machine
@@ -156,7 +166,7 @@
   (set! IP (npath-ip PHYS))
   (and (== HOST "00")
     (or (and (== NPATH PHYS)
-             (or (ipaddr-private? IP)
+             (or (ipaddr-private? IP) ;; FIXME: hmmm ...
                  (hash-ref _PROXIED PHYS)))
         (hash-ref _PROXIED NPATH))))
 
@@ -167,7 +177,7 @@
 (define _KEEP (make-hashv-table))
 (define (gaddr-keep? ADDR) ;; .ini file says so : proxied machines that ask for a keep (default: they don't)
   (define NPATH (gaddr-npath ADDR))
-  (hash-ref _KEEP (npath-phys ADDR)))
+  (hash-ref _KEEP NPATH))
 
 (define (gaddr-keep! ADDR)
   (define NPATH (gaddr-npath ADDR))
@@ -543,6 +553,17 @@
     (set! RES False))
   RES)
 
+(define (gpath-unreachable? FROM TO)
+  (outraw* TO " " (gaddr-proxied? TO) " " (gaddr-npath TO) " " _PHMACHINE_GADDR "\n")
+  (and (gaddr-proxied? TO)
+       (not (== (gaddr-npath TO) _PHMACHINE_GADDR))))
+
+(let* ((L (conf-get2 "PROXIED"))) ;; Read PROXIED
+  (if (not (pair? L))
+    (set! L `(,L)))
+  (set! L (map (=> (A) (gaddr-normalize (gaddr-expand (string+ (string A) ":00")))) L))
+  (for-each gaddr-proxied! L))
+
 (define (channel-write CHAN MSG . OPT) ;; => Void ; adds FROM, TO, NONCE, ASK, SYNC]
                                        ;;           if ISANSW, it must be the right FROM+TO, and an answer to an NONCE to
                                        ;;                      which there have been no answers yet
@@ -585,15 +606,18 @@
     (begin
       (set! FROM_ (_chfrom))
       (set! TO_ ADDR)))
+  (set! FROM_ (gaddr-normalize FROM_))
+  (set! TO_ (gaddr-normalize TO_))
   (set! ADDR (gaddr-next (_chfrom) TO_))
   (set! CLI (channel-cli ADDR 'Async))
-  (if (unspecified? (: CLI 'SOCK))
+  (if (or (unspecified? (: CLI 'SOCK))
+          (gpath-unreachable? FROM_ ADDR))
     (begin
-      (if (== CHAN_LOG 2)
-        (chlog2 (string+ MSG " [" FROM_ "=>" (gaddr-normalize TO_) "] via " ADDR) "< " "!"))
+      (if (== CHAN_LOG 2) ;; FIXME: move that test into (channel-cli) (otherwise it still tries to connect before we reach here)
+        (chlog2 (string+ MSG " [" (gaddr-shorten FROM_) "=>" (gaddr-shorten TO_) "] via " (gaddr-shorten ADDR)) "< " "!"))
       Void)
     (begin
-      (channel-write CLI MSG FROM_ (gaddr-normalize TO_))
+      (channel-write CLI MSG FROM_ TO_)
       (channel-eof! CLI))))
 
 (define (channel-read CHAN) ;; => String <> False (no data) ; does (accept)+(read) at once => cli always does (connect)+(write)
@@ -672,6 +696,8 @@
 
 ;; Chlog
 (define (chlog OBJ) ;; FIXME: (outraw), (cr), etc., do not work well with redirects (1)
+  (define (addr VAR)
+    (gaddr-shorten (: OBJ VAR)))
   (cond ((channel? OBJ)
          (outraw (: OBJ 'CATEG))
          (outraw " ")
@@ -683,14 +709,14 @@
         ((chmsg? OBJ)
          (outraw (: OBJ 'MSG))
          (outraw " [")
-         (outraw (: OBJ 'FROM))
+         (outraw (addr 'FROM))
          (outraw "=>")
-         (outraw (: OBJ 'TO))
+         (outraw (addr 'TO))
          (outraw "]")
          (outraw " {")
-         (outraw (: OBJ '_FROM))
+         (outraw (addr '_FROM))
          (outraw "=>")
-         (outraw (: OBJ '_TO))
+         (outraw (addr '_TO))
          (outraw "}"))
         ((string? OBJ)
          (outraw OBJ)) ;; FIXME: not nice
