@@ -22,13 +22,5 @@
          "eth"
          "solc"))
 
-(if (equal? BACKEND "ipc_scm0")
-  (build))
-
-(if (equal? BACKEND "ipc_scm1")
-  (build "channels.ss"
-         "ipc.ss"
-         "procph.ss"))
-
 (if (equal? BACKEND "libp2p_mockup") ;; Broken
   (build "libp2p.ss"))
