@@ -15,11 +15,11 @@
 (define ERRORCATCH #t)
 (define (error_ . MSG)
   (for-each (=> (X)
-              (display X))
+              (_display X))
             MSG)
   (if (not ERRORCATCH)
   (begin
-    (cr)
+    (_newline)
     (_error)))
   (exit2))
 (set! error error_) ;; FIXME: shitty hack due to the way Guile seems to prevent redefining (error)
@@ -30,12 +30,12 @@
     (catch True
       F
       (=> (E . OPT)
-      ;;(display E)(display " ")(display OPT)
+      ;;(_display E)(_display " ")(_display OPT)
         False))))
 
 (define (errlog O)
-  (outraw "==============>\n")
-  (out O)(cr))
+  (_display "==============>\n")
+  (_write O)(_newline))
 
 ;; No operation
 (define (noop)
@@ -134,12 +134,12 @@
           (cond
            ((number? END)
             ((lambda (END)
-               (display (substring/shared S START END))
-               (display NEW)
+               (_display (substring/shared S START END))
+               (_display NEW)
                (LP (+ END SSL)))
 	     END))
            (else
-            (display (substring/shared S START))))))))))
+            (_display (substring/shared S START))))))))))
 
 ;; Strsys
 (define (strsy+ . L)
@@ -406,92 +406,6 @@
 (define == equal?) ;; FIXME: equal? works with only one parm ; == should NOT do that !!!
 (define != (=> (X Y) (not (== X Y))))
 
-;; Files
-(define (file-read FNAME . TXT)
-  (define (fetch P L0 READ) ;; Fetch data from file
-    (let ((L (READ P))
-         )
-         (if (eof-object? L)
-             L0
-             (fetch P (cons L L0) READ))))
-  (define READ (if (empty? TXT)
-                 read read-line))
-  (call-with-input-file FNAME
-    (=> (P)
-      (reverse (fetch P Nil READ)))))
-
-(define (file-write FNAME OBJ . WRITE)
-  (with-output-to-file FNAME
-    (=> ()
-      (if (empty? WRITE)
-        (write OBJ)
-        ((car WRITE) OBJ))
-      (cr))))
-
-(define (file-delete FNAME) ;; TODO: should also work under Gerbil ; verify that it is so
-  (delete-file FNAME))
-
-;; Getenv2
-(define (getenv2 VAR . ALTV)
-  (define RES (getenv VAR))
-  (if (not (string? RES))
-    (set! RES (if (empty? ALTV) Void (car ALTV))))
-  RES)
-
-;; Paths
-(define (path-abs? FPATH)
-  (and (> (string-length FPATH) 1) (== (string-ref FPATH 0) #\/)))
-
-(define (path-noseps? FPATH)
-  (define L (string->list FPATH))
-  (and (not (list-in? #\. L))
-       (not (list-in? #\/ L))))
-
-(define (path-normalize FPATH)
-  (define (p2l PATH)
-    (set! PATH (string-split PATH #\/))
-    (filter (=> (S)
-              (!= S "")) PATH))
-  (define (evp L)
-    (define RES '())
-    (define (push X)
-      (set! RES (cons X RES)))
-    (define (pop)
-      (set! RES (cdr RES)))
-    (while (not (empty? L))
-      (cond ((== (car L) ".")
-             (noop))
-            ((== (car L) "..")
-             (pop))
-            (else
-             (push (car L))))
-      (set! L (cdr L)))
-    (string+ "/" (string-join (reverse RES) "/")))
-  (define FPATH0 Void)
-  (define HOME (p2l (getenv "HOME")))
-  (define CWD (p2l (getcwd)))
-  (define ABS Void)
-  (set! FPATH (string-trim FPATH #\space))
-  (set! FPATH0 FPATH)
-  (set! ABS (path-abs? FPATH))
-  (if (== FPATH "")
-    (set! FPATH "."))
-  (set! FPATH (p2l FPATH))
-  (cond ((empty? FPATH)
-         "/")
-        ((or (== (car FPATH) ".") (== (car FPATH) ".."))
-         (evp (list-add CWD FPATH)))
-        ((== (car FPATH) "~")
-         (evp (list-add HOME (cdr FPATH))))
-        (else
-         (set! FPATH (evp FPATH))
-         (if (and (not ABS) (path-abs? FPATH) (!= FPATH0 "/"))
-           (set! FPATH (substring FPATH 1 (string-length FPATH))))
-         FPATH)))
-
-;; Self path
-(define SC_PATH (dirname (dirname (path-normalize (_getcf)))))
-
 ;; IP addresses
 (define (ipaddr? IP)
   (define L (string-split IP #\.))
@@ -553,11 +467,6 @@
          Void)))
 
 ;; Network addrs
-(define _HOST-SOCKS
-        (string+ SC_PATH "/sock"))
-(define (host-phys-socks)
-  _HOST-SOCKS)
-
 (define (_naddr-port? ADDRE)
   (string-digits? ADDRE))
 
@@ -598,18 +507,6 @@
         S
         Void))
     Void)))
-
-(define (naddr-path ADDR)
-  (if (string? ADDR)
-    (let* ((L (string-split ADDR #\:))
-           (S (if (<= (list-length L) 1)
-                (car L) (cadr L))))
-      (if (_naddr-path? S)
-        (if (eq? (string-get S 0) #\.)
-          (path-normalize (string+ (host-phys-socks) "/" S))
-          S)
-        Void))
-    Void))
 
 ;; Network paths
 (define (npath . L)
@@ -703,36 +600,19 @@
 (define (npath-ip NP)
   (npath-last (npath-phys NP)))
 
-;; Own IP ;; TODO: cache values
-(define (ownipmac)
-  (define IPMAC (sh-cmd (string+ SC_PATH "/bin/ownip")))
-  (string-split 
-    (string-replace
-      (if (pair? IPMAC) (car IPMAC) "127.0.0.255 A:B:C:D:E:F")
-      ":" ".")
-    #\space))
+;; Basic I/O (plugging in (display), (write) and (newline)
+(define _display display) ;; NOTE: prototype is: (display OBJ [PORT])
+(define _write write)
+(define _newline newline)
+(define _display2 Void) ;; NOTE: prototype is: (display OBJ [PORT])
+(define _write2 Void)
+(define _newline2 Void)
 
-(define (ownip)
-  (car (ownipmac)))
-
-(define (ownmac)
-  (cadr (ownipmac)))
-
-(define _OWNPROXY Void)
-(define (ownproxy)
-  (define IP Void)
-  (if (unspecified? _OWNPROXY)
-    (begin
-      (set! IP (sh-cmd (string+ SC_PATH "/bin/extip")))
-      (set! _OWNPROXY (if (pair? IP) (car IP) Void))))
-  _OWNPROXY)
-
-(define (ownnpath)
-  (define PROXY (ownproxy))
-  (define ADDR (ownip))
-  (if (== PROXY ADDR)
-     ADDR
-     (npath PROXY ADDR)))
+(define (init-tty DISPLAY WRITE NEWLINE)
+  (set! _display2 DISPLAY)
+  (set! _write2 WRITE)
+  (set! _newline2 NEWLINE))
+(init-tty display write newline)
 
 ;; Basic I/O
 (define _OUTP False)
@@ -751,11 +631,11 @@
     (error "outgets"))
   (get-output-string _OUTP))
 
-(define (_write X)
-  (apply write `(,X . ,(if _OUTP `(,_OUTP) '()))))
+(define (out_write X)
+  (apply _write2 `(,X . ,(if _OUTP `(,_OUTP) '()))))
 
-(define (_display X)
-  (apply display `(,X . ,(if _OUTP `(,_OUTP) '()))))
+(define (out_display X)
+  (apply _display2 `(,X . ,(if _OUTP `(,_OUTP) '()))))
 
 (define _TABSEP "")
 (define (tabsep SEP)
@@ -828,13 +708,13 @@
   (if _COL0
     (spc (indent)))
   (atcol0 0)
-  (_write X))
+  (out_write X))
 
 (define (outraw X)
   (if _COL0
     (spc (indent)))
   (atcol0 0)
-  (_display X))
+  (out_display X))
 
 (define (out* . L)
   (for-each out L))
@@ -855,7 +735,7 @@
   (if (> N 0)
     (atcol0 0))
   (while (> N 0)
-    (_display " ")
+    (out_display " ")
     (set! N (- N 1)))
   Void)
 
@@ -895,9 +775,9 @@
       (set! _OOUT out)
       (set! _OOUTRAW outraw)
       (set! _OCR cr)
-      (set! out write)
-      (set! outraw display)
-      (set! cr (=> () (display "\n"))))
+      (set! out _write)
+      (set! outraw _display)
+      (set! cr (=> () (_display "\n"))))
     (begin
       (if (unspecified? _OOUT)
         (error "rawouts"))
@@ -908,22 +788,9 @@
       (set! _OOUTRAW  Void)
       (set! _OCR Void))))
 
-;; Shell
-(define (sh-cmd-log B)
-  (set! _SH_CMD_LOG B)) ;; FIXME: _SH_CMD_LOG has to be defined inside llruntime
-
-(define (sh-display L)
+;; Shell (0)
+(define (sh-display L) ;; TODO: it's used in some examples ; scrap that at some point
   (for-each (lambda (S)
-              (display S)
-              (display "\n"))
+              (_display S)
+              (_display "\n"))
             L))
-
-;; Command line
-(define (command-parm I . ALTV)
-  (define L (command-line))
-  (set! ALTV (if (empty? ALTV)
-                Void
-                (car ALTV)))
-  (if (> (list-length L) I)
-    (list-ref L I)
-    ALTV))

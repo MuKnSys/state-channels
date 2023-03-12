@@ -221,7 +221,7 @@
   RES))
 
 ;; RSM
-(define (method-descr TYPE FNAME)
+(define (method-descr TYPE FNAME) ;; TODO: move that to rexpr.ss
   (define SLOTTY Void)
   (define DESCR Void)
   (if (unspecified? (method TYPE (sy FNAME)))

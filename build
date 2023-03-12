@@ -18,7 +18,6 @@ case $1 in
     chmod 755 backends/$SCM/scm
     chmod 755 backends/$SCM/clish.ss
     backends/build $SCM
-    backends/build ipc_scm1
     chmod 755 tests/test1.sh
     ;;
   eth_dev)

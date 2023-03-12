@@ -12,6 +12,55 @@
 (import ./socks)
 (import ./rexpr)
 
+;; Network addrs (NOTE: should be in basics.ss, but can't due to backend dependencies)
+(define _HOST-SOCKS
+        (string+ SC_PATH "/sock"))
+(define (host-phys-socks)
+  _HOST-SOCKS)
+
+(define (naddr-path ADDR)
+  (if (string? ADDR)
+    (let* ((L (string-split ADDR #\:))
+           (S (if (<= (list-length L) 1)
+                (car L) (cadr L))))
+      (if (_naddr-path? S)
+        (if (eq? (string-get S 0) #\.)
+          (path-normalize (string+ (host-phys-socks) "/" S))
+          S)
+        Void))
+    Void))
+
+;; Own IP ;; TODO: cache values
+(define (ownipmac)
+  (define IPMAC (sh-cmd (string+ SC_PATH "/bin/ownip")))
+  (string-split
+    (string-replace
+      (if (pair? IPMAC) (car IPMAC) "127.0.0.255 A:B:C:D:E:F")
+      ":" ".")
+    #\space))
+
+(define (ownip)
+  (car (ownipmac)))
+
+(define (ownmac)
+  (cadr (ownipmac)))
+
+(define _OWNPROXY Void)
+(define (ownproxy)
+  (define IP Void)
+  (if (unspecified? _OWNPROXY)
+    (begin
+      (set! IP (sh-cmd (string+ SC_PATH "/bin/extip")))
+      (set! _OWNPROXY (if (pair? IP) (car IP) Void))))
+  _OWNPROXY)
+
+(define (ownnpath)
+  (define PROXY (ownproxy))
+  (define ADDR (ownip))
+  (if (== PROXY ADDR)
+     ADDR
+     (npath PROXY ADDR)))
+
 ;; GAddrs
 ;; NPATH:HOST ;; NPATH == [NETM(i)/]*NETM(n)
 ;;
@@ -457,7 +506,7 @@
            (:= RES 'SOCK (sock-srv TO)))
          (=> (E . OPT)
            (if (_naddr-path? TO)
-             (if (file-exists? (naddr-path TO)) ;; TODO: retrofit that (along with the exception handler) into (sock-srv)
+             (if (fexists? (naddr-path TO)) ;; TODO: retrofit that (along with the exception handler) into (sock-srv)
              (begin
                (file-delete (naddr-path TO))
                (:= RES 'SOCK (sock-srv TO)))))))

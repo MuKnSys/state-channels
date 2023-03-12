@@ -8,11 +8,9 @@
 ;    the terms of the Apache 2.0 License or (at your option) any later version.
 ;
 
-(import ./llruntime
-        ./basics
-        ./rexpr ./json
+(import ./rexpr
+        ./socks ./json
         ./inits
-        ./socks
         ./channels
         ./aliases
         ./scheds
@@ -29,12 +27,10 @@
         ./cli ./apimon)
 
 (export
-  (import: ./llruntime)
-  (import: ./basics)
   (import: ./rexpr)
+  (import: ./socks)
   (import: ./json)
   (import: ./inits)
-  (import: ./socks)
   (import: ./channels)
   (import: ./aliases)
   (import: ./scheds)

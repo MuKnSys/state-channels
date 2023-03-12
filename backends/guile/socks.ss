@@ -9,7 +9,7 @@
 ;
 
 (export #t)
-(import ./basics)
+(import ./rexpr)
 
 (define (sock-srv PORT) ;; NOTE: PORT is an naddr, so IP <=> (naddr-machine PORT), PATH/PORT <=> (naddr-port/path PORT)
   (define FAM (naddr-port PORT))
@@ -33,10 +33,10 @@
    ;(bind SOCK AF_INET INADDR_ANY PORT) ;; All interfaces
     (bind SOCK AF_INET (inet-pton AF_INET IP) PORT) ;; Specific address
     (begin
-      (if (not (file-exists? (dirname PORT)))
-       ;(error "sock-srv: directory " (dirname PORT) " not found"))
-        (mkdir (path-normalize (dirname PORT))))
-      (if (file-exists? PORT)
+      (if (not (fexists? (path-dir PORT)))
+       ;(error "sock-srv: directory " (path-dir PORT) " not found"))
+        (mkdir (path-normalize (path-dir PORT))))
+      (if (fexists? PORT)
         (file-delete PORT))
       (bind SOCK AF_UNIX PORT))) ;; TODO: detect interferences ; if the file exists, try to connect to it:
                                  ;; => if it doesn't work, delete the file socket, create a new one & use it ;
@@ -75,9 +75,9 @@
       (bind SOCK AF_INET (inet-pton AF_INET IP) 0) ;; TODO: bind to the address corresponding to the current SUBM
       (connect SOCK AF_INET (inet-pton AF_INET ADDR) PORT))
     (begin
-      (if (not (file-exists? (dirname FPATH)))
-       ;(error "sock-cli: directory " (dirname FPATH) " not found"))
-        (mkdir (path-normalize (dirname FPATH))))
+      (if (not (fexists? (path-dir FPATH)))
+       ;(error "sock-cli: directory " (path-dir FPATH) " not found"))
+        (mkdir (path-normalize (path-dir FPATH))))
       (connect SOCK AF_UNIX FPATH)))
  `(sock ,SOCK False ,ADDR0)) ;; FIXME: there should be no "False" in (sock ...)
 
@@ -98,7 +98,7 @@
              (boolean (car NL))))
   (if NL
     (set! MSG (string+ MSG "\n")))
-  (display MSG (cadr SOCK))) ;; FIXME: (display) has to become (write), here ;; ah no wouldn't work, we need the newline
+  (_display MSG (cadr SOCK))) ;; FIXME: (_display) has to become (_write), here ;; ah no wouldn't work, we need the newline
 
 (define (sock-close SOCK)
   (close (cadr SOCK)))

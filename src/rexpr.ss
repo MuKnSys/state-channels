@@ -11,10 +11,12 @@
 (export #t)
 (import ./llruntime)
 (import ./basics)
+(import ./files)
 
 (export
   (import: ./llruntime)
-  (import: ./basics))
+  (import: ./basics)
+  (import: ./files))
 
 ;; Heaps
 (define (heap)
@@ -255,7 +257,7 @@
   (if (not (list-in? 'no-unlink OPT))
     (set! O (rexpr-unlink O)))
   (set! RES (with-output-to-string (=> ()
-                                     (write O))))
+                                     (_write O))))
   (if (not (list-in? 'no-unlink OPT))
     (set! O (rexpr-link O)))
   (string-replace RES "#<unspecified>" "Unspecified"))
@@ -520,7 +522,7 @@
                                      " "))
                       L)
                  "\n")
-    display))
+    _display))
 
 ;; Init
 (heap-set! _TYPES '@type '@type) ;; Bootstrap ; TODO: add type "type"

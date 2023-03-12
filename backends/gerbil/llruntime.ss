@@ -108,18 +108,8 @@
 (define (dirname PATH)
   (string-trim-right (path-directory PATH) #\/))
 
-(define (open-input-pipe CMD)
-  (error "open-input-pipe: !Yet"))
-
-(define (close-pipe)
-  (error "close-pipe: !Yet"))
-
 (define (_getcf) ;; FIXME: not exactly the current source file ; (import) should keep this info updated
   (list-ref (command-line) 0))
-
-;; Paths
-;(define (path-normalize PATH) ;; TODO: throw this away
-;  (string-trim-right (path-expand PATH) #\/))
 
 ;; Procedures
 (define (procedure-name F)
@@ -152,18 +142,6 @@
   (eval `(import ,FNAME) (interaction-environment)))
 
 ;; Shell
-(define _SH_CMD_LOG #f)
-(define (sh-cmd CMD)
-  (if _SH_CMD_LOG
-  (begin
-    (display ":> ")
-    (display CMD)
-    (display "\n")))
+(define (shell CMD)
   (let* ((RES (shell-command CMD #t)))
-    (set! RES (string-split (cdr RES) (string-ref "\n" 0)))
-    (if _SH_CMD_LOG
-    (begin
-      (display "=> ")
-      (display RES)
-      (display "\n")))
-    RES))
+    (string-split (cdr RES) (string-ref "\n" 0))))

@@ -53,7 +53,7 @@
 (define _HOSTID ((=> ()
                    (define VAL (channel-touch ":0" 1))
                    (if (unspecified? VAL)
-                     (if (file-exists? _SOCK0A)
+                     (if (fexists? _SOCK0A)
                        (file-delete _SOCK0A))
                      (if (atom? VAL)
                        VAL (: VAL 'MSG))))))

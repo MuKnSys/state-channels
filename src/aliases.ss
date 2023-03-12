@@ -23,7 +23,7 @@
                               ROOT ,(rexpr Void '())
                               ALIAS ,(rexpr Void '())
                               ADDR ,(rexpr Void '()))))
-  (if (and (string? FNAME) (file-exists? FNAME))
+  (if (and (string? FNAME) (fexists? FNAME))
   (let* ((VAL (file-read FNAME)))
     (if (not (empty? VAL))
       (set! RES (rexpr-link (car VAL))))))

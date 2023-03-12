@@ -90,7 +90,7 @@
                         (:= VAL0 VAR (val VAL))))
                     (:= RES VAR (val VAL))))))
               S))
-  (if (and (string? FNAME) (file-exists? FNAME))
+  (if (and (string? FNAME) (fexists? FNAME))
     (parse (file-read FNAME 1)))
   RES)
 
@@ -101,7 +101,7 @@
                 (path-normalize (car FNAME))))
   (set! RES (rexpr tinits `(FNAME ,FNAME
                             DATA ,(rexpr Void '()))))
- ;(if (and (string? FNAME) (file-exists? FNAME))
+ ;(if (and (string? FNAME) (fexists? FNAME))
  ;(let* ((VAL (file-read FNAME)))
  ;  (if (not (empty? VAL))
  ;    (set! RES (rexpr-link (car VAL))))))
@@ -144,9 +144,19 @@
 (define (conf-get2 VAR . ALTV)
   (getenv2 VAR (apply conf-get `(,VAR . ,ALTV))))
 
+;; Getenv2
+(define (getenv2 VAR . ALTV)
+  (define RES (env-get VAR))
+  (if (not (string? RES))
+    (set! RES (if (empty? ALTV) Void (car ALTV))))
+  RES)
+
+;; Self path
+(define SC_PATH (path-dir (path-dir (path-normalize (current-source-file)))))
+
 ;; BOOT.ini
 (init-conf (string+ SC_PATH "/BOOT.ini"))
-(merge-conf (getenv "SC_BOOT"))
+(merge-conf (env-get "SC_BOOT"))
 
 ;; Inits
 (set! ERRORCATCH (boolean (conf-get "ERROR_CATCH" ERRORCATCH)))

@@ -16,18 +16,18 @@
   (error "clish <PROG> [SCRIPT] expected"))
 
 (define PROG (string+ "../examples/" (list-ref L 1) ".ss")) ;; FIXME: make that s$&t work in case $1 is a full path ; need a way to substract 2 paths
-(define PROGFP (string+ (dirname (_getcf)) "/" PROG))
+(define PROGFP (string+ (path-dir (current-source-file)) "/" PROG))
 
 (define SCRIPT False)
 (if (> (list-length L) 2)
   (set! SCRIPT (if (path-noseps? (list-ref L 2))
-                 (string+ (dirname (_getcf)) "/../examples/" (list-ref L 2) ".scsh")
+                 (string+ (path-dir (current-source-file)) "/../examples/" (list-ref L 2) ".scsh")
                  (path-normalize (list-ref L 2)))))
 
-(if (not (file-exists? PROGFP))
+(if (not (fexists? PROGFP))
   (error "File " PROGFP " not found"))
 
-(if (and SCRIPT (not (file-exists? SCRIPT)))
+(if (and SCRIPT (not (fexists? SCRIPT)))
   (error "File " SCRIPT " not found"))
 
 (loadi PROG (car L))
