@@ -15,14 +15,14 @@
         ./aliases
         ./scheds
         ./procs
+        ./accounts
         ./ipc
         ./calls
-        ./procg
         ./procl
+        ./procg
         ./proch
         ./procph
         ./eth
-        ./accounts
         ./proceth)
 
 (export
@@ -34,12 +34,12 @@
   (import: ./aliases)
   (import: ./scheds)
   (import: ./procs)
+  (import: ./accounts)
   (import: ./ipc)
   (import: ./calls)
-  (import: ./procg)
   (import: ./procl)
+  (import: ./procg)
   (import: ./proch)
   (import: ./procph)
   (import: ./eth)
-  (import: ./accounts)
   (import: ./proceth))

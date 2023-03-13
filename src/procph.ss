@@ -10,10 +10,13 @@
 
 (export #t)
 (import ./rexpr)
+(import ./channels)
 (import ./scheds)
 (import ./procs)
 (import ./ipc)
 (import ./calls)
+(import ./procl)
+(import ./proch)
 
 (export
   (import: ./scheds)
@@ -101,9 +104,6 @@
   (net-send MSG))
 
 ;; Context
-(define (the-procph0)
-  (: (host-proc) 'PROCPH0))
-
 (define (the-srv-chan)
   (car (: (the-procph0) 'INCHAN)))
 
@@ -115,6 +115,25 @@
   (if (specified? SOCK)
     (set! SOCK (cadr SOCK)))
   SOCK)
+
+;; Blocking/nonblocking modes
+(define _START-OFLAGS Void)
+(define _START-ISBLOCK True)
+(define _START-NEVERBLOCK False)
+
+(define (blockio)
+ ;(outraw "Blocking !!!\n")
+  (if (not _START-NEVERBLOCK)
+  (begin
+    (set! _START-ISBLOCK True)
+    (channel-blocking! (the-srv-chan) True)
+    (filep-fcntl (the-srv) F_SETFL _START-OFLAGS))))
+
+(define (nonblockio)
+ ;(outraw "Nonblocking !!!\n")
+  (set! _START-ISBLOCK False)
+  (channel-blocking! (the-srv-chan) False)
+  (filep-fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
 
 ;; Init (host-proc)
 (if (and DHT_LOG (not (defined? '__STANDALONE__))) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
@@ -165,6 +184,45 @@
                 (set! _START-OFLAGS (filep-fcntl (the-srv) F_GETFL))) ;; TODO: always be async, and only block by means of (select)
               (=> (E . OPT)
                 Void))) ;; FIXME: integrate this inside procph0
+
+;; Start
+(define (start . TIMES)
+  (define SOCK Void)
+  (define MSG Void)
+  (define RES Void)
+  (define ONCE (list-in? 'Once TIMES)) ;; FIXME: improve this (1)
+  (define ONCENB (if (> (list-length TIMES) 1) (cadr TIMES) 0))
+  (define FINI False)
+  (while (not FINI)
+  (begin
+    ((: (the-procph0) 'ACTIONH)
+     (the-procph0))
+    (if (and ONCE (<= ONCENB 0)) ; (not RES)) ;; RES from inside (the-procph0).ACTIONH ; in case we need it, return it
+      (begin
+        (set! SOCK False)
+        (set! FINI True))
+      (begin
+       ;(errlog _START-ISBLOCK)
+        (set! SOCK (channel-accept (the-srv-chan)))))
+    (if (and ONCE (> ONCENB 0) (not SOCK))
+      (set! ONCENB (- ONCENB 1)))
+    (if (!= SOCK False)
+    (begin
+      (set! MSG (channel-read SOCK))
+      (if CHAN_LOG
+        (chlog2 MSG ">  "))
+      (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
+               (not (procph0-reroute (the-procph0) MSG)))
+        (begin
+          (set! RES
+                ((: (the-procph0) 'RECVH)
+                 (the-procph0)
+                 MSG))
+          (if (specified? RES)
+            (channel-write SOCK RES))
+          (if (and ONCE (> ONCENB 0))
+            (set! ONCENB (- ONCENB 1)))))
+      (channel-eof! SOCK))))))
 
 ;(if (== _HOSTID "0")
 ;  (start))

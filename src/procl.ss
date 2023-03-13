@@ -260,10 +260,6 @@
     (:+ PROC 'IN! MSG)
     MSG))
 
-(define (_incmsgno MSG)
-  (define NO (if (unspecified? (: MSG 'MSGNO)) 0 (+ (: MSG 'MSGNO) 1)))
-  (:= MSG 'MSGNO NO))
-
 (define (proc-send-acks PROC PROCG MSG)
   (define PEER (filter (=> (UID)
                          (!= UID (: PROC 'UID)))

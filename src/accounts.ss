@@ -37,7 +37,7 @@
   (hash-ref (allaccounts 2) NO))
 
 (define (accounts-length)
-  (hash-count (const True) (allaccounts 2)))
+  (hash-length (allaccounts 2)))
 
 (define (accounts-list)
   (define I 0)

@@ -284,3 +284,6 @@
   (if (not (or (nil? PROC) (procph? PROC)))
     (error "host-proc! : not a physical host proc"))
   (set! _HOSTPROC PROC))
+
+(define (the-procph0)
+  (: (host-proc) 'PROCPH0))

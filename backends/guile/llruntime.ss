@@ -30,6 +30,9 @@
 (define make-hashq-table make-hash-table)
 (define make-hashv-table make-hash-table)
 
+(define (hash-length HT)
+  (hash-count (const True) HT))
+
 ;; Files
 (define (file-exists? FNAME)
   (access? FNAME F_OK))

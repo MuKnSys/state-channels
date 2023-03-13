@@ -42,7 +42,7 @@
 
 ;; Fcntl
 (define (filep-fcntl FP CMD . VAL)
-  (error "filesocks_dummy::filep-fcntl"))
+  Void) ;(error "filesocks_dummy::filep-fcntl"))
 
 ;; Paths [those ones we keep them] ; TODO: move that in the non-backendified code
 (define (path-dir FPATH) ;; TODO: find a better name
@@ -100,7 +100,7 @@
 
 ;; Shell
 (define (sh-cmd CMD)
-  (error "filesocks_dummy::sh-cmd"))
+  '("")) ;(error "filesocks_dummy::sh-cmd"))
 
 ;; Command line
 (define (command-parm I . ALTV)

@@ -14,11 +14,20 @@
 
 ;; Env
 (define (env-get VAR)
-  (getenv VAR))
+  (define RES Void)
+  (catch True
+    (=> ()
+      (set! RES (getenv VAR)))
+    (=> (E)
+      Void))
+  RES)
 
 ;; Current source file
 (define (current-source-file)
-  (_getcf))
+  (define RES (_getcf))
+  (if (== RES "")
+    (string+ (current-working-directory) "/A/B.x") ;; FIXME: hack
+    RES))
 
 ;; Current working directory
 (define (current-working-directory) ;; TODO: find a better name

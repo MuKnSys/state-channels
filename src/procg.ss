@@ -14,6 +14,7 @@
 (import ./procs)
 (import ./ipc)
 (import ./calls)
+(import ./procl)
 
 (export
   (import: ./scheds)

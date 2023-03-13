@@ -10,7 +10,9 @@
 
 (export #t)
 (import ./rexpr)
+(import ./socks)
 (import ./procs)
+(import ./procph)
 
 ;; CLI API & methods
 (define tcli (type "cli" '(API AUTORUN) (empty)))
@@ -77,7 +79,7 @@
                                (and (not VARGS) (!= (list-length PARM) (list-length TYPES))))
                          (begin
                            (outraw "")
-                           (error CMD " : " (list-length TYPES) " parameters expected"))
+                           (error F " : " (list-length TYPES) " parameters expected"))
                          (map cvt PARM (list-head TYPES (list-length PARM))))
                        PARM)) ;; TODO: implement repeat in TYPES for VARGS (clif)s
   (apply F PARM)))

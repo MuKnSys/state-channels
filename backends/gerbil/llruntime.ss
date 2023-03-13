@@ -9,15 +9,15 @@
 ;
 
 (export #t)
-(import :gerbil/gambit/os
-        :gerbil/gambit/threads
+(import ./llioruntime
+        :gerbil/gambit/ports
         :std/srfi/1
         :std/srfi/13
         :std/srfi/125
         :std/srfi/132)
 (export
-  (import: :gerbil/gambit/os)
-  (import: :gerbil/gambit/threads)
+  (import: ./llioruntime)
+  (import: :gerbil/gambit/ports)
   (import: :std/srfi/1)
   (import: :std/srfi/13)
   (import: :std/srfi/125)
@@ -35,13 +35,18 @@
          .
          ,(cddr L))))
 
+(define (defined? SYMB) ;; SYMB exists in the current namespace
+  #f)
+
 ;; Exceptions & error
 (define (exit2)
   (display "\n" (current-error-port))
   (exit))
 
-(define (catch FLAG FUNC ERR) ;; TODO: implement it
-  (FUNC))
+(define (catch FLAG FUNC ERR)
+  (with-exception-handler
+    ERR
+    FUNC))
 
 (define (_error)
   (exit 1))
@@ -51,6 +56,10 @@
   (eq? X ((lambda () (if #f 1234)))))
 
 ;(defsyntax (_ X) Unspecified) Unused at the moment
+
+;; Numbers
+(define (logior X Y)
+  #f)
 
 ;; Strings
 (define (_string X) (string X))
@@ -83,6 +92,9 @@
 (define (make-hashv-table)
   (make-hash-table equal?))
 
+(define (hash-length HT)
+  (hash-table-size HT))
+
 (define (hash-ref HT KEY)
   (hash-table-ref/default HT KEY #f))
 
@@ -101,26 +113,9 @@
 (define (hash-map->list FUNC HT)
   (hash-table-map->list FUNC HT))
 
-;; Files
-(define (getcwd)
-  (string-trim-right (current-directory) #\/))
-
-(define (dirname PATH)
-  (string-trim-right (path-directory PATH) #\/))
-
-(define (_getcf) ;; FIXME: not exactly the current source file ; (import) should keep this info updated
-  (list-ref (command-line) 0))
-
-(define (fcntl FP CMD . VAL) ;; TODO: implement it ; no: only implement (select), rather
-  Void)
-
 ;; Procedures
 (define (procedure-name F)
   (error "procedure-name: !Yet"))
-
-;; Threads
-(define (sleep SECS)
-  (thread-sleep! (seconds->time (+ (time->seconds (current-time)) SECS))))
 
 ;; Modules
 (define (loadi FNAME . PRGPATH)
@@ -143,8 +138,3 @@
     (set! FNAME (string-join FNAME "/"))))
   (set! FNAME (string->symbol FNAME))
   (eval `(import ,FNAME) (interaction-environment)))
-
-;; Shell
-(define (shell CMD)
-  (let* ((RES (shell-command CMD #t)))
-    (string-split (cdr RES) (string-ref "\n" 0))))

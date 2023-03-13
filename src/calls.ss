@@ -42,6 +42,10 @@
   (:= RES 'REDIR False)
   RES)
 
+(define (_incmsgno MSG) ;; TODO: remove this ; unused, it seems
+  (define NO (if (unspecified? (: MSG 'MSGNO)) 0 (+ (: MSG 'MSGNO) 1)))
+  (:= MSG 'MSGNO NO))
+
 ;; Encryption & identities
 (define (sign O UID VAR)
   (if (not (and (list? (: O VAR))

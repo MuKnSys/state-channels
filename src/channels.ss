@@ -11,6 +11,7 @@
 (export #t)
 (import ./socks)
 (import ./rexpr)
+(import ./inits)
 
 ;; Network addrs (NOTE: should be in basics.ss, but can't due to backend dependencies)
 (define _HOST-SOCKS
@@ -173,8 +174,10 @@
         (gaddr-npath (gaddr-normalize  ;; TODO: check that it's actually located inside PHMACHINE
           (conf-get2 "MACHINE" (npath _PHMACHINE_GADDR "0")))))
 
+;; Proxied channels
+(define _PROXIED (make-hashv-table)) ;; Physical (root) address => CliChans [outcoming kept sockets to (mainly proxied) procs]
+
 ;; Relays
-(define _PROXIED (make-hashv-table))
 (define (gaddr-proxied? ADDR) ;; Either physical machines with private IPs, or .ini file says so
   (define NPATH (gaddr-npath ADDR))
   (define HOST (gaddr-host ADDR))
@@ -333,9 +336,6 @@
   (if (not (or (nil? PROC) (== (typeof PROC) tprocph0)))
     (error "current-procph0! : not a procph0" (typeof PROC)))
   (set! _CURPROCPH0 PROC))
-
-;; Proxied channels
-(define _PROXIED (make-hashv-table)) ;; Physical (root) address => CliChans [outcoming kept sockets to (mainly proxied) procs]
 
 ;; Chmsgs
 (define tchmsg (type "chmsg"
@@ -817,61 +817,3 @@
           (RECVH MSG))
         (if (specified? EXTH)
           (EXTH MSG))))))
-
-;; Blocking/nonblocking modes
-(define _START-OFLAGS Void)
-(define _START-ISBLOCK True)
-(define _START-NEVERBLOCK False)
-
-(define (blockio)
- ;(outraw "Blocking !!!\n")
-  (if (not _START-NEVERBLOCK)
-  (begin
-    (set! _START-ISBLOCK True)
-    (channel-blocking! (the-srv-chan) True)
-    (filep-fcntl (the-srv) F_SETFL _START-OFLAGS))))
-
-(define (nonblockio)
- ;(outraw "Nonblocking !!!\n")
-  (set! _START-ISBLOCK False)
-  (channel-blocking! (the-srv-chan) False)
-  (filep-fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
-
-;; Start
-(define (start . TIMES)
-  (define SOCK Void)
-  (define MSG Void)
-  (define RES Void)
-  (define ONCE (list-in? 'Once TIMES)) ;; FIXME: improve this (1)
-  (define ONCENB (if (> (list-length TIMES) 1) (cadr TIMES) 0))
-  (define FINI False)
-  (while (not FINI)
-  (begin
-    ((: (the-procph0) 'ACTIONH)
-     (the-procph0))
-    (if (and ONCE (<= ONCENB 0)) ; (not RES)) ;; RES from inside (the-procph0).ACTIONH ; in case we need it, return it
-      (begin
-        (set! SOCK False)
-        (set! FINI True))
-      (begin
-       ;(errlog _START-ISBLOCK)
-        (set! SOCK (channel-accept (the-srv-chan)))))
-    (if (and ONCE (> ONCENB 0) (not SOCK))
-      (set! ONCENB (- ONCENB 1)))
-    (if (!= SOCK False)
-    (begin
-      (set! MSG (channel-read SOCK))
-      (if CHAN_LOG
-        (chlog2 MSG ">  "))
-      (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
-               (not (procph0-reroute (the-procph0) MSG)))
-        (begin
-          (set! RES
-                ((: (the-procph0) 'RECVH)
-                 (the-procph0)
-                 MSG))
-          (if (specified? RES)
-            (channel-write SOCK RES))
-          (if (and ONCE (> ONCENB 0))
-            (set! ONCENB (- ONCENB 1)))))
-      (channel-eof! SOCK))))))

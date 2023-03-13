@@ -10,11 +10,14 @@
 
 (export #t)
 (import ./rexpr)
+(import ./json)
 (import ./scheds)
 (import ./procs)
 (import ./ipc)
 (import ./calls)
 (import ./accounts)
+(import ./procl)
+(import ./eth)
 
 ;; Ethereum proc
 (set! tproceth (type `("proceth" ,tproc)  ;; Ethereum process

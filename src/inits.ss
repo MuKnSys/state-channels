@@ -112,7 +112,7 @@
                          (: (: I 'DATA) NAME)))
 
 (method! tinits 'set! (=> (I NAME VAL)
-                            (:= (: A 'DATA) NAME ADDR)))
+                            (:= (: I 'DATA) NAME VAL)))
 
 (method! tinits 'save (=> (I)
   (if (specified? (: I 'FNAME))
@@ -152,7 +152,7 @@
   RES)
 
 ;; Self path
-(define SC_PATH (path-dir (path-dir (path-normalize (current-source-file)))))
+(set! SC_PATH (path-dir (path-dir (path-normalize (current-source-file)))))
 
 ;; BOOT.ini
 (init-conf (string+ SC_PATH "/BOOT.ini"))

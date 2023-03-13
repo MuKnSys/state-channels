@@ -565,7 +565,7 @@
   (define PREF (npath-prefix NP1 NP2))
   (define L1 Void)
   (define L2 Void)
-  (define N)
+  (define N Void)
   (if (nil? PREF)
     NP1
     (begin
@@ -795,3 +795,6 @@
               (_display S)
               (_display "\n"))
             L))
+
+;; SC_PATH
+(define SC_PATH Void)
