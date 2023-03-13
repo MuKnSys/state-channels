@@ -118,8 +118,8 @@
   (define PORT Void)
   (while (and (boxed-empty? SCRIPT) (^ 'autorun CLI) DOIT)
   (begin
-    (set! PORT (select `(,(current-input-port)
-                         ,(the-srv)) '() '()))
+    (set! PORT (sock-select `(,(current-input-port)
+                              ,(the-srv)) '() '()))
    ;(out PORT)(cr)
     (set! PORT (caar PORT))
    ;(outraw "Select fired[")

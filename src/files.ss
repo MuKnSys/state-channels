@@ -107,7 +107,7 @@
          FPATH)))
 
 ;; Shell
-(define _SH_CMD_LOG #f)
+(define _SH_CMD_LOG False)
 (define (sh-cmd-log B)
   (set! _SH_CMD_LOG B))
 
@@ -134,3 +134,34 @@
   (if (> (list-length L) I)
     (list-ref L I)
     ALTV))
+
+;; Own IP ;; TODO: cache values
+(define (ownipmac)
+  (define IPMAC (sh-cmd (string+ SC_PATH "/bin/ownip")))
+  (string-split
+    (string-replace
+      (if (pair? IPMAC) (car IPMAC) "127.0.0.255 A:B:C:D:E:F")
+      ":" ".")
+    #\space))
+
+(define (ownip)
+  (car (ownipmac)))
+
+(define (ownmac)
+  (cadr (ownipmac)))
+
+(define _OWNPROXY Void)
+(define (ownproxy)
+  (define IP Void)
+  (if (unspecified? _OWNPROXY)
+    (begin
+      (set! IP (sh-cmd (string+ SC_PATH "/bin/extip")))
+      (set! _OWNPROXY (if (pair? IP) (car IP) Void))))
+  _OWNPROXY)
+
+(define (ownnpath)
+  (define PROXY (ownproxy))
+  (define ADDR (ownip))
+  (if (== PROXY ADDR)
+     ADDR
+     (npath PROXY ADDR)))

@@ -9,6 +9,7 @@
 ;
 
 (import ./runtime)
+(import ./cli ./apimon)
 
 (define L (command-line))
 

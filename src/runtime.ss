@@ -23,8 +23,7 @@
         ./procph
         ./eth
         ./accounts
-        ./proceth
-        ./cli ./apimon)
+        ./proceth)
 
 (export
   (import: ./rexpr)
@@ -43,6 +42,4 @@
   (import: ./procph)
   (import: ./eth)
   (import: ./accounts)
-  (import: ./proceth)
-  (import: ./cli)
-  (import: ./apimon))
+  (import: ./proceth))

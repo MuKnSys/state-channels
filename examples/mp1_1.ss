@@ -1,4 +1,6 @@
 (import ../src/runtime)
+(import ../src/cli)
+(import ../src/apimon)
 (import ./mp1)
 
 ;; Creating the proc snapshots

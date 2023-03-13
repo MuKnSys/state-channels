@@ -30,37 +30,6 @@
         Void))
     Void))
 
-;; Own IP ;; TODO: cache values
-(define (ownipmac)
-  (define IPMAC (sh-cmd (string+ SC_PATH "/bin/ownip")))
-  (string-split
-    (string-replace
-      (if (pair? IPMAC) (car IPMAC) "127.0.0.255 A:B:C:D:E:F")
-      ":" ".")
-    #\space))
-
-(define (ownip)
-  (car (ownipmac)))
-
-(define (ownmac)
-  (cadr (ownipmac)))
-
-(define _OWNPROXY Void)
-(define (ownproxy)
-  (define IP Void)
-  (if (unspecified? _OWNPROXY)
-    (begin
-      (set! IP (sh-cmd (string+ SC_PATH "/bin/extip")))
-      (set! _OWNPROXY (if (pair? IP) (car IP) Void))))
-  _OWNPROXY)
-
-(define (ownnpath)
-  (define PROXY (ownproxy))
-  (define ADDR (ownip))
-  (if (== PROXY ADDR)
-     ADDR
-     (npath PROXY ADDR)))
-
 ;; GAddrs
 ;; NPATH:HOST ;; NPATH == [NETM(i)/]*NETM(n)
 ;;
@@ -577,8 +546,8 @@
                        (: CHAN 'SOCK))
                      (filter specified? (: CHAN 'INCHAN))))) ;; FIXME: fix this wart with (boxed-empty?) or not lists and (map)
   (set! PORT (if (channel-blocking? CHAN)
-               (select (map cadr L) '() '())
-               (select (map cadr L) '() '() 0 10)))
+               (sock-select (map cadr L) '() '())
+               (sock-select (map cadr L) '() '() 0 10)))
   (if (not (empty? (car PORT)))
     (begin
       (set! L (filter (=> (SOCK)
