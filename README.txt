@@ -17,8 +17,7 @@ to build it for GNU Guile.
 Or alternatively:
 ./build gerbil
 
-To build it for Gerbil Scheme [this latter one is broken
-at the moment].
+To build it for Gerbil Scheme.
 
 
 Then, you can run the tests:
