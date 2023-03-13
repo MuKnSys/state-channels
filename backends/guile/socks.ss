@@ -46,6 +46,23 @@
     `(socksrvi ,SOCK False False)
     `(socksrvf ,SOCK ,PORT False)))
 
+(define (sock-select LRD LWR LXC . TIMINGS)
+  (define SECS Void)
+  (define USECS Void)
+  (if (>= (list-length TIMINGS) 1)
+    (begin
+      (set! SECS (car TIMINGS))
+      (if (>= (list-length TIMINGS) 2)
+      (set! USECS (cadr TIMINGS)))))
+  (if (or (specified? SECS) (specified? USECS))
+    (begin
+      (if (unspecified? SECS)
+        (set! SECS 0))
+      (if (unspecified? USECS)
+        (set! USECS 0))
+      (select LRD LWR LXC SECS USECS))
+    (select LRD LWR LXC)))
+
 (define (sock-accept SRV)
   (define TAG (if (== (car SRV) 'socksrvi) 'socksrvclii 'socksrvclif))
   (define SOCK (accept (cadr SRV)))
