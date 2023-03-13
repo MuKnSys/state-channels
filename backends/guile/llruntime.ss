@@ -18,7 +18,7 @@
 
 ;; Exceptions & error
 (define (exit2)
-  (display "\n")
+  (display "\n" (current-error-port))
   (exit))
 
 (define _error error)
