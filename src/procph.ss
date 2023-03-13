@@ -111,7 +111,10 @@
   (: (the-srv-chan) 'SOCK))
 
 (define (the-srv)
-  (cadr (the-srv-sock)))
+  (define SOCK (the-srv-sock))
+  (if (specified? SOCK)
+    (set! SOCK (cadr SOCK)))
+  SOCK)
 
 ;; Init (host-proc)
 (if (and DHT_LOG (not (defined? '__STANDALONE__))) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
@@ -158,7 +161,10 @@
   (channel-mode! (the-srv-chan) 'Sync)
 
   ;; Blocking/nonblocking modes (init)
-  (set! _START-OFLAGS (fcntl (the-srv) F_GETFL))) ;; FIXME: integrate this inside procph0
+  (catch True (=> ()
+                (set! _START-OFLAGS (fcntl (the-srv) F_GETFL))) ;; FIXME: backendify (fcntl) properly
+              (=> (E . OPT)
+                Void))) ;; FIXME: integrate this inside procph0
 
 ;(if (== _HOSTID "0")
 ;  (start))

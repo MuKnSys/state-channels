@@ -11,6 +11,13 @@
           "clish.ss"     ;; TODO: for commands, have the launcher automatically generated
           "scm"))
 
+(if (equal? BACKEND "filesocks_unix")
+  (diff*! "files.ss"))
+
+(if (equal? BACKEND "filesocks_dummy")
+  (diff*! "files.ss"
+          "socks.ss"))
+
 (if (equal? BACKEND "geth_dev")
   (diff*! "eth"
           "eth.ss"

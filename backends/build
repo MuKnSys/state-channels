@@ -17,6 +17,13 @@
          "clish.ss"
          "scm"))
 
+(if (equal? BACKEND "filesocks_unix")
+  (build "files.ss"))
+
+(if (equal? BACKEND "filesocks_dummy")
+  (build "files.ss"
+         "socks.ss"))
+
 (if (equal? BACKEND "geth_dev")
   (build "eth.ss"
          "eth"

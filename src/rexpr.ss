@@ -471,7 +471,9 @@
                                       (> (string-length S) 0))
                                     (map string-trim
                                          (string-split L #\space)))))
-                 (file-read FNAME 1)))
+                 (if (fexists? FNAME)
+                   (file-read FNAME 1)
+                   '())))
   (define CONS Void)
   (set! TY (rexpr-link-type TY))
   (cond ((type? TY)

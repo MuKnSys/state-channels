@@ -15,11 +15,11 @@
 (define ERRORCATCH #t)
 (define (error_ . MSG)
   (for-each (=> (X)
-              (_display X))
+              (_display X (current-error-port)))
             MSG)
   (if (not ERRORCATCH)
   (begin
-    (_newline)
+    (_newline (current-error-port))
     (_error)))
   (exit2))
 (set! error error_) ;; FIXME: shitty hack due to the way Guile seems to prevent redefining (error)
@@ -429,7 +429,8 @@
 (define (ipaddr-loopback? IP)
   (if (not (ipaddr? IP))
     (error "ipaddr-loopback"))
-  (== (substring IP 0 8) "127.0.0."))
+  (and (>= (string-length IP) 8)
+       (== (substring IP 0 8) "127.0.0.")))
 
 (define (ipaddr-phys? IP)
   (if (not (ipaddr? IP))
