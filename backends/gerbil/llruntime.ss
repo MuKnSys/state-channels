@@ -111,6 +111,9 @@
 (define (_getcf) ;; FIXME: not exactly the current source file ; (import) should keep this info updated
   (list-ref (command-line) 0))
 
+(define (fcntl FP CMD . VAL) ;; TODO: implement it ; no: only implement (select), rather
+  Void)
+
 ;; Procedures
 (define (procedure-name F)
   (error "procedure-name: !Yet"))

@@ -829,13 +829,13 @@
   (begin
     (set! _START-ISBLOCK True)
     (channel-blocking! (the-srv-chan) True)
-    (fcntl (the-srv) F_SETFL _START-OFLAGS)))) ;; TODO: improve this, by means of really changing the bit on the current state
+    (filep-fcntl (the-srv) F_SETFL _START-OFLAGS))))
 
 (define (nonblockio)
  ;(outraw "Nonblocking !!!\n")
   (set! _START-ISBLOCK False)
   (channel-blocking! (the-srv-chan) False)
-  (fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
+  (filep-fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
 
 ;; Start
 (define (start . TIMES)

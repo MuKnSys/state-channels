@@ -52,6 +52,13 @@
 (define (file-delete FNAME) ;; TODO: should also work under Gerbil ; verify that it is so
   (delete-file FNAME))
 
+;; Fcntl
+(define (filep-fcntl FP CMD . VAL) ;; TODO: get rid of this, directly implement a command to make ports blocking or nonblocking
+  (define PARM `(,FP ,CMD . ,(if (empty? VAL)
+                               '()
+                               `(,(car VAL)))))
+  (apply fcntl PARM))
+
 ;; Paths
 (define (path-dir FPATH) ;; TODO: find a better name
   (dirname FPATH))

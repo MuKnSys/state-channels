@@ -162,7 +162,7 @@
 
   ;; Blocking/nonblocking modes (init)
   (catch True (=> ()
-                (set! _START-OFLAGS (fcntl (the-srv) F_GETFL))) ;; FIXME: backendify (fcntl) properly
+                (set! _START-OFLAGS (filep-fcntl (the-srv) F_GETFL))) ;; TODO: always be async, and only block by means of (select)
               (=> (E . OPT)
                 Void))) ;; FIXME: integrate this inside procph0
 

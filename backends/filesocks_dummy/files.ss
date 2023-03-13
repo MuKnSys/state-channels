@@ -40,6 +40,10 @@
 (define (file-delete FNAME)
   (error "filesocks_dummy::file-delete"))
 
+;; Fcntl
+(define (filep-fcntl FP CMD . VAL)
+  (error "filesocks_dummy::filep-fcntl"))
+
 ;; Paths [those ones we keep them] ; TODO: move that in the non-backendified code
 (define (path-dir FPATH) ;; TODO: find a better name
   (dirname FPATH))
