@@ -136,7 +136,7 @@
   (filep-fcntl (the-srv) F_SETFL (logior O_NONBLOCK _START-OFLAGS)))
 
 ;; Init (host-proc)
-(if (and DHT_LOG (not (defined? '__STANDALONE__))) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
+(if (and (boolean DHT_LOG) (not (defined? '__STANDALONE__))) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
   (chlog2 (gaddr (current-machine) _HOSTID) "<< "))
 (define (init0)
   (host-proc! (if (or (== _HOSTID "00") (== _HOSTID "0"))
