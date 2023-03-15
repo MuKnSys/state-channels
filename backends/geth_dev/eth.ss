@@ -64,7 +64,9 @@
                         "\",\"params\":"
                         PARMS
                         ",\"id\":0}' --url 127.0.0.1:8545 2>/dev/null")))
-  (json-parse (car RES)))
+  (if (or (empty? RES) (== (car RES) ""))
+    (rexpr Void '(result ()))
+    (json-parse (car RES))))
 
 ;; Current block number
 (define (eth-blockNumber)

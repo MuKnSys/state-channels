@@ -1,3 +1,4 @@
+(export #t)
 (import ../src/runtime)
 (import ../src/cli)
 (import ../src/apimon)
@@ -71,3 +72,6 @@
 
 (^ 'step PR1)
 (lstp)
+
+(define (main)
+  Void)
