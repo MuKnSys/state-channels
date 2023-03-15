@@ -17,7 +17,7 @@
 ;  [\] Implement a code reader/parser ;
 ;  [\] Implement a "pretty"-printer for the parsed code ;
 ;  [ ] Generate Javascript code, source-to-source ;
-;  [ ] Read several modules, recursively ; flatten the module structure ;
+;  [\] Read several modules, recursively ; flatten the module structure ;
 ;  [ ] Have an function to list the undefined identifiers ;
 ;  [X] Implement decoding the CLI parameters of the compiler command ;
 ;
@@ -145,8 +145,12 @@
 (define (code-parse SRC) ;; NOTE: SRC is for syntactic parse trees ; TXT would be for code as a string
   (define RES (class 'Module ""))
   (define (imp ENV LST)
+    (set! LST (map (=> (NAME)
+                     (define A (addr 'Ext NAME tmodule))
+                     A)
+                   LST))
     (for-each (=> (IMP)
-                (rpush (: ENV 'IMPORT) IMP)) ;; TODO: (loadmod ENV IMP)
+                (rpush (: ENV 'IMPORT) IMP))
               LST))
   (define (dec ENV NAME VAL)
     (env-enter ENV NAME Void VAL))
@@ -255,13 +259,15 @@
          (outraw* (: SCODE 'CATEG)
                   " "
                   (: SCODE 'NAME))
+         (if (specified? (: SCODE 'FNAME))
+            (outraw* " [" (: SCODE 'FNAME) "]"))
          (cr)
          (set! L (: SCODE 'IMPORT))
          (outraw* "IMPORT = ")
          (if (boxed-empty? L)
            (outraw "_")
            (for-each (=> (I)
-                       (outraw* I " "))
+                       (outraw* (: I 'NAME) " "))
                      L))
          (cr)
          (outraw "SLOT = ")
@@ -292,10 +298,87 @@
            (pretty-linstr SCODE)))))
 
 ;; Compiling
-(define (code-compile SCODE) ;; => lower-level SCODE
-  Void)
+(define (compile-addr ADDR)
+  (outraw* (: ADDR 'NAME)))
 
-(define (code-generate SCODE) ;; => TXT, in a given syntax
+(define (compile-instr I)
+  (if (instr? I)
+    (begin
+      (outraw* (: I 'TAG))
+      (for-each (=> (J)
+                  (if (pair? J)
+                    (begin
+                      (indent+ 2)
+                      (cr)
+                      (compile-instr J)
+                      (indent+ -2))
+                    (begin
+                      (outraw " ")
+                      (compile-instr J))))
+                (: I 'PARM)))
+    (outraw I)))
+
+(define (compile-linstr L)
+  (indent+ 2)
+  (for-each (=> (I)
+              (cr)
+              (compile-instr I))
+            L)
+  (indent+ -2))
+
+(define (compile-code SCODE) ;; => lower-level SCODE
+  (define TY (typeof SCODE))
+  (define L Void)
+  (cond ((== TY tclass)
+         (outraw* (: SCODE 'CATEG)
+                  " "
+                  (: SCODE 'NAME))
+         (if (specified? (: SCODE 'FNAME))
+            (outraw* " [" (: SCODE 'FNAME) "]"))
+         (if (!= (: SCODE 'CATEG) 'Function)
+           (begin
+             (cr)
+             (set! L (: SCODE 'IMPORT))
+             (outraw* "IMPORT = ")
+             (if (boxed-empty? L)
+               (outraw "_")
+               (for-each (=> (I)
+                           (outraw* (: I 'NAME) " "))
+                         L))))
+         (if (== (: SCODE 'CATEG) 'Function)
+           (begin
+             (if (boxed-empty? (: SCODE 'SLOT))
+               (outraw " _")
+               (for-each (=> (X)
+                           (outraw " ")
+                           (compile-code X))
+                         (: SCODE 'SLOT))))
+           (begin
+             (indent+ 2)
+             (if (boxed-empty? (: SCODE 'SLOT))
+               (outraw "_")
+               (for-each (=> (X)
+                           (cr)
+                           (compile-code X))
+                         (: SCODE 'SLOT)))
+             (indent+ -2)))
+         (compile-code (: SCODE 'SCODE)))
+        ((== TY taddr)
+         (compile-addr SCODE)
+         (if (specified? (: SCODE 'VAL))
+           (begin
+             (outraw " ")
+             (compile-code (: SCODE 'VAL)))))
+        (else
+         (if (boxed-empty? SCODE)
+           (begin
+             (indent+ 2)
+             (cr)
+             (outraw "_")
+             (indent+ -2))
+           (compile-linstr SCODE)))))
+
+(define (generate-code SCODE) ;; => TXT, in a given syntax
   Void)
 
 ;; Reading
@@ -312,6 +395,7 @@
 
 (define (code-read FNAME . FETCHMODS)
   (define MOD Void)
+  (define L Void)
   (if (not (string? FNAME))
     (error "to-pretty(0)"))
   (set! FNAME (path-normalize FNAME))
@@ -323,8 +407,40 @@
       (set! MOD (code-parse (file-read FNAME)))
       (:= MOD 'NAME (path-fname FNAME))
       (:= MOD 'FNAME FNAME)
-      (rpush MODTABLE MOD)))
+      (rpush MODTABLE MOD)
+      (set! L (: MOD 'IMPORT)) ;; Loading submodules
+      (if (not (boxed-empty? L))
+         (for-each (=> (I)
+                     (:= I 'VAL (mod-load MOD (: I 'NAME))))
+                   L))))
   MOD)
+
+(define (mod-load ENV IMP)
+  (define EFPATH (: ENV 'FNAME))
+  (define FPATH Void)
+  (define RES Void)
+  (set! IMP (string IMP))
+  (set! FPATH (if (path-abs? IMP)
+                IMP
+                (string+ (path-dir EFPATH) "/" IMP)))
+  (set! FPATH (path-normalize FPATH))
+  (if (unspecified? (path-ext FPATH))
+    (set! FPATH (string+ FPATH ".ss")))
+ ;(outraw* "Loading " FPATH "\n")
+  (set! RES (code-read FPATH))
+  RES)
+
+(define (mod-sort MOD)
+  (define RES (empty))
+  (define (sort MOD)
+    (define L (: MOD 'IMPORT)) ;; Submodules come first
+    (if (not (boxed-empty? L))
+       (for-each (=> (I)
+                   (sort (mod-find (: (: I 'VAL) 'FNAME))))
+                 L))
+    (rpush RES MOD))
+  (sort MOD)
+  RES)
 
 ;; Core app commands
 (define (to-pretty FNAME)
@@ -341,17 +457,35 @@
 (define MOD Void)
 (define FIRST True)
 
-(cond ((specified? (: LDC "prs"))
-       (set! MOD (code-read (: LDC "prs")))
-       (if (specified? (: LDC "a"))
-         (if (not (boxed-empty? MODTABLE))
-           (for-each (=> (M)
-                       (if FIRST
-                         (set! FIRST False)
-                         (cr))
-                       (pretty-code M))
-                     MODTABLE))
-         (pretty-code MOD)))
-      (else
-       (>> LDC)))
+(define TRANS (rexpr Void `(AST ,pretty-code
+                            Javascript ,compile-code)))
+(define LANG (cond ((specified? (: LDC "ast")) 'AST)
+                   ((specified? (: LDC "js")) 'Javascript)
+                   (else
+                    'AST)))
+(define FTRANS (: TRANS LANG))
+(define IN (car (reverse LDC))) ;; TODO: implement access to the non-attribute slots of an rexpr
+(if (pair? IN)
+  (set! IN (if (atom? (cadr IN)) ;; FIXME: crappy hack ; we need a way to specify the arity of the flags in (command-line-parse)
+             (cadr IN)
+             False)))
+(define OUT (if (specified? (: LDC "o"))
+               (: LDC "o")
+               False))
+(define ALL (specified? (: LDC "a")))
+
+(if (and IN
+         LANG (specified? FTRANS))
+  (begin
+    (set! MOD (code-read IN))
+    (if ALL
+      (if (not (boxed-empty? MODTABLE))
+        (for-each (=> (M)
+                    (if FIRST
+                      (set! FIRST False)
+                      (outraw* "\n---\n"))
+                    (FTRANS M))
+                  (mod-sort MOD)))
+      (FTRANS MOD)))
+  (>> LDC))
 (cr)

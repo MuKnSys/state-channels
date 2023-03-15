@@ -72,6 +72,20 @@
 (define (path-dir FPATH) ;; TODO: find a better name
   (dirname FPATH))
 
+(define (path-fname FPATH . FULL) ;; TODO: find a better name
+  (define RES Void)
+  (set! FULL (not (empty? FULL)))
+  (set! RES (basename FPATH))
+  (if (not FULL)
+    (set! RES (car (string-split RES #\.))))
+  RES)
+
+(define (path-ext FPATH)
+  (define L (string-split FPATH #\.))
+  (if (> (list-length L) 1)
+    (cadr L)
+    Void))
+
 (define (path-abs? FPATH)
   (and (> (string-length FPATH) 1) (== (string-ref FPATH 0) #\/)))
 
@@ -150,6 +164,26 @@
   (if (> (list-length L) I)
     (list-ref L I)
     ALTV))
+
+(define (command-line-parse . LDC)
+  (define RES (rexpr Void '()))
+  (define VAR Void)
+  (set! LDC (if (empty? LDC)
+              (cdr (command-line))
+              (car LDC)))
+  (for-each (=> (S)
+                (if (== (string-ref S 0) #\-)
+                  (begin
+                    (if (specified? VAR)
+                      (:= RES VAR True))
+                    (set! VAR (substring S 1 (string-length S))))
+                  (begin
+                    (if (specified? VAR)
+                      (:= RES VAR S)
+                      (list-push RES S))
+                    (set! VAR Void))))
+            LDC)
+  RES)
 
 ;; Own IP ;; TODO: cache values
 (define (ownipmac)
