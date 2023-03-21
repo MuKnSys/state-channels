@@ -128,7 +128,7 @@
 
 ;; Procs
 (define (strpid PR) ;; FIXME: for physical hosts, display the HOSTID as a name, or as an ID
-  (define L (string-split (string (: PR 'ID)) #\@))
+  (define L (string-split (string2 (: PR 'ID)) #\@))
   (if (== (list-length L) 1)
     L
     (let* ((TY (list-get L 1)))
@@ -350,7 +350,7 @@
   (define HOST (proch 'USER USER
                       'UID UID))
   (_npr HOST) ;; FIXME: _npr should not be necessary, but is used in the shell
-  HOST)
+  Void) ;HOST) ;; FIXME: desactivated at the moment ; f$%cks up JSON serialization, with a proc it's too big
 
 (define (_proc USER UID SELF)
   (define PR (procl 'USER USER 'UID UID))
@@ -379,7 +379,7 @@
                            0
                            (eth-nextId CNAME))))
           (outraw (eth-create CNAME))
-          (set! CNAME (string+ CNAME "@" (string NEXTID)))
+          (set! CNAME (string+ CNAME "@" (string2 NEXTID)))
           (indent+ -2) ;; FIXME: crappy reindenting due to not being able to save & restore output contexts
           (^ 'save _ETHALIASES)
           (indent+ 2)
@@ -434,9 +434,9 @@
 
 (define (_ethwait N)
   (define BN (eth-blockNumber))
- ;(outraw (string+ "Waiting " (string N) " blocks, starting at "))(outraw BN)(cr)
+ ;(outraw (string+ "Waiting " (string2 N) " blocks, starting at "))(outraw BN)(cr)
   (eth-waitNBlocks N)
-  (outraw (string+ "Waited " (string N) " blocks: " (string BN) " => " (string (eth-blockNumber)))))
+  (outraw (string+ "Waited " (string2 N) " blocks: " (string2 BN) " => " (string2 (eth-blockNumber)))))
 
 (define (_procm UID USER)
   (define PR (net-map UID))
@@ -637,7 +637,7 @@
 
 (define (_cobj VAR FUNC . L) ;; Create obj
   (define O Void)
-  (if (== "$" (string (string-get VAR 0)))
+  (if (== "$" (string2 (string-get VAR 0)))
     (set! VAR (substring VAR 1 (string-length VAR))))
   (set! O (apply FUNC L))
   (hash-set! OBJS VAR O))
@@ -653,7 +653,7 @@
   (if BLK (blockio) (nonblockio)))
 
 (define (_mesg VAR FUNC . PARM) ;; Message
-  (if (== "$" (string (string-get VAR 0))) ;; Message to obj
+  (if (== "$" (string2 (string-get VAR 0))) ;; Message to obj
   (let* ((OBJ Void))
     (set! VAR (substring VAR 1 (string-length VAR)))
     (set! OBJ (hash-ref OBJS VAR))
@@ -662,7 +662,7 @@
         (set! PARM (cons OBJ PARM))
         (set! PARM (cons FUNC PARM))
        ;(out PARM)
-        (apply ^? PARM))
+        (apply mcallv PARM)) ;; ^?
       (begin
         (outraw "Object ")
         (outraw VAR)
@@ -676,7 +676,7 @@
           (set! PARM (cons PR PARM))
           (set! PARM (cons (if MULTI 'send* 'send) PARM))
          ;(out PARM)
-          (apply ^ PARM)
+          (apply mcall PARM) ;; ^
           (if (^ 'autorun APIMON)
           (begin
             (step)
@@ -803,7 +803,8 @@
               _APIMONEthAccounts)))
 
 ;; Start
-(if (not (defined? '__STANDALONE__)) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
-(begin
+;(if (not (defined? '__STANDALONE__)) ;; FIXME: fix that shit (& add (defined?) to Gerbil's llruntime)
+;(begin
   (init0)
-  (start 'Once)))
+  (start 'Once)
+;))

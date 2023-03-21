@@ -24,7 +24,7 @@
 (define _error error)
 
 ;; Strings
-(define _string string) ;; FIXME: find why, in Gerbil, that says that string is unspecified
+;(define _string string) ;; FIXME: find why, in Gerbil, that says that string is unspecified
 
 ;; Hash tables
 (define make-hashq-table make-hash-table)

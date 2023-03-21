@@ -34,7 +34,8 @@ global.isNumber=function (X) { return _proto(X)==_proto(1); }
 global.toNumber=function (X) { return Number(X); }
 global.isString=function (X) { return _proto(X)==_proto("A"); }
 global.toString=function (X) { return String(X); }
-global.isArray=function (X) { return _proto(X)==_proto([]); } // TODO: boxed atoms, objects & functions
+global.isArray=function (X) { return _proto(X)==_proto([]); }
+global.isObject=function (X) { return _proto(X)==_proto({}); } // TODO: boxed atoms, objects & functions
 
 global.setprop=function (O,NAME,GET,SET,E,C) {
   if (!isString(NAME)) error("setprop");
@@ -70,9 +71,26 @@ global.out=function (S) {
     (_OUTFOCUS==null?document.body:_OUTFOCUS).appendChild(E);
   }
 }
+var _OUTINDENT=0;
+global.indentInc=function (INC) {
+  _OUTINDENT+=INC;
+  if (_OUTINDENT<0) _OUTINDENT=0;
+}
+global.spc=function (N) {
+  if (isUndefined(N)) N=1;
+  while (N--) {
+    if (inServer()) console.log("");
+               else out("&nbsp;");
+  }
+}
+global.indent=function () {
+  var N=_OUTINDENT;
+  while (N--) spc();
+}
 global.cr=function () {
   if (inServer()) console.log("");
              else out("<br>");
+  indent();
 }
 
 global.out.focus=function (ID) {
@@ -86,6 +104,18 @@ global.jsonParse=function (S) {
 }
 
 // HTTP
+global.cgiParms=function (URL) {
+  var RES={},
+      L=URL.split("?"),L2;
+  if (L.length>1) {
+    L=L[1].split("&");
+    for (var S of L) {
+      L2=S.split("=");
+      RES[L2[0]]=L2[1];
+    }
+  }
+  return RES;
+}
 global.httpSend=function (METHOD,HREF,PARMS,DATA,CALLBACK) {
   var REQ,RES=null,
       ASYNC=isDefined(CALLBACK);
@@ -142,4 +172,41 @@ function cli_msg(CONN,O) {
     return PARMS;
   }
   return send(exp(O));
+}
+async function cr_srv(CR) {
+  if (isUndefined(CR)) await cli_msg(CONN,["cr"]);
+  cr();
+}
+
+// Generate UIDs
+function gen_uid() {
+  return crypto.randomUUID();
+}
+
+// Main loop
+var _IDLEH;
+function idle_handler(FN) {
+  _IDLEH=FN;
+}
+var _IDLE_STATUS=0;
+function idle_start(B) {
+  var OSTAT=_IDLE_STATUS;
+  _IDLE_STATUS=B;
+  if (!OSTAT && B) idle_main();
+}
+function idle_main() {
+  if (isDefined(_IDLEH)) _IDLEH();
+  if (_IDLE_STATUS) requestIdleCallback(idle_main);
+}
+
+// App init
+async function init(URL) {
+  com_connect(URL);
+  await host();
+  idle_main();
+  idle_handler(function () {
+    sched_step();
+    var L=net_poll();
+    if (L.length>0) sched_recv(L);
+  });
 }

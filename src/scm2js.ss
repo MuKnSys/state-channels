@@ -10,15 +10,27 @@
 ;  TODO:
 ;  1)  Compiler
 ;  [X] Implement the basic datastructures one needs in a compiler:
-;      [X] -> types (extends to classes, functions and modules ; atomic datatypes, too) ;
-;      [X] -> addresses/abstract values (variable/slot declarations ; appears in types) ;
-;      [X] -> code : expressions & instructions ;
-;      [ ] -> bytecode (perhaps) ;
+;      [X] types (extends to classes, functions and modules ; atomic datatypes, too) ;
+;      [X] addresses/abstract values (variable/slot declarations ; appears in types) ;
+;      [X] code : expressions & instructions ;
+;      [ ] bytecode (perhaps) ;
 ;  [\] Implement a code reader/parser ;
+;      [ ] finish parsing code:
+;          [ ] dot in a func's parms ;
+;          [ ] if, while, cond, etc. ;
+;          [ ] let, let*, lambda, etc. ;
+;          [ ] quote, backquote, dot ;
+;  [\] Implement linking ;
+;      [ ] implement declaration visibility that works forward, in a module ;
 ;  [\] Implement a "pretty"-printer for the parsed code ;
-;  [ ] Generate Javascript code, source-to-source ;
+;  [\] Generate Javascript code, source-to-source ;
+;      [ ] rewrite scheme identifiers containing "-", "*", "!", "?", etc. ;
+;      [ ] generate the return instructions at the position of the last leaves of a given function's code ;
 ;  [\] Read several modules, recursively ; flatten the module structure ;
-;  [ ] Have an function to list the undefined identifiers ;
+;      [ ] seems it loops when reading src/account.ss ; see what's going on (circular dependencies ?) ; 
+;          [ ] no, it's in fact super slow ; same (not so bad) with src/procs.ss ; fix this ;
+;  [X] Have a function to list the undefined identifiers ;
+;  [\] Have an option to automatically generate stubs for these identifiers ;
 ;  [X] Implement decoding the CLI parameters of the compiler command ;
 ;
 ;  2)  Runtime
@@ -76,6 +88,7 @@
 (define tclass (type "class"
                      '(CATEG   ;; Atom, Type, Function, Module
                        NAME    ;; Name of the datatype
+                       ENV     ;; Its env (classes are created in a given environment)
                        SLOT    ;; Slots (for Types, Functions & Modules)
                        METHOD  ;; Functions (for Types & Modules)
                        FNAME   ;; The path of the source code (modules)
@@ -89,6 +102,12 @@
 (define (class? A)
   (inherits? (typeof A) tclass))
 
+(define (module? A)
+  (and (class? A) (== (: A 'CATEG) 'Module)))
+
+(define (function? A)
+  (and (class? A) (== (: A 'CATEG) 'Function)))
+
 (define (class CATEG NAME . PARM)
   (define RES Void)
   (define L (list-group PARM))
@@ -96,6 +115,7 @@
                             NAME ,NAME
                             .
                            ,L)))
+  (:? RES 'ENV Nil)
   (:? RES 'SLOT (empty))
   (:? RES 'METHOD (empty))
   (:? RES 'IMPORT (empty))
@@ -128,7 +148,9 @@
     (begin
       (:= RES 'CONST True)
       Void ;; TODO: calculate TYA  by means of VAL
-      (:= RES 'VAL VAL)))
+      (:= RES 'VAL VAL)
+      (if (class? VAL)
+        (:= VAL 'ENV ENV))))
   (:= RES 'TYA TYPE)
   (:= RES 'ENV ENV)
   (rpush (: ENV 'SLOT) RES)
@@ -138,12 +160,12 @@
   (cond ((== TAG 'if) 'If)
         ((== TAG '<=) 'InfEq)
         ((== TAG '*) 'Mul)
-        ((== TAG '-) 'Minus)
+        ((== TAG '-) 'Sub)
         (else
          Void)))
 
-(define (code-parse SRC) ;; NOTE: SRC is for syntactic parse trees ; TXT would be for code as a string
-  (define RES (class 'Module ""))
+(define (code-parse SRC NAME) ;; NOTE: SRC is for syntactic parse trees ; TXT would be for code as a string
+  (define RES (class 'Module NAME))
   (define (imp ENV LST)
     (set! LST (map (=> (NAME)
                      (define A (addr 'Ext NAME tmodule))
@@ -153,7 +175,7 @@
                 (rpush (: ENV 'IMPORT) IMP))
               LST))
   (define (dec ENV NAME VAL)
-    (env-enter ENV NAME Void VAL))
+    (env-enter ENV NAME Void (code ENV VAL)))
   (define (def ENV NAME PARM BODY)
     (define RES (class 'Function NAME))
     (define VAR Void)
@@ -177,32 +199,126 @@
         (if (unspecified? TAG_)
           (set! TAG_ 'Call)
           (set! O (cdr O)))
-        (instr TAG_ (map (=> (I)
-                           (code ENV I))
-                         O)))
+        (instr TAG_ (dotted-map (=> (I)
+                                  (code ENV I))
+                                O)))
       O))
   (define (body ENV SRC)
     (for-each (=> (O)
                 (define TAG Void)
                 (define PARM Void)
                 (if (not (pair? O))
-                  (error "code-parse::atom: " O))
-                (set! TAG (car O))
-                (set! PARM (cdr O))
-                (cond ((== TAG 'export)
-                       Void)
-                      ((== TAG 'import)
-                       (imp ENV PARM))
-                      ((== TAG 'define)
-                       (if (symbol? (car PARM))
-                         (dec ENV (car PARM) (cadr PARM))
-                         (def ENV (caar PARM) (cdar PARM) (cdr PARM))))
-                      (else
-                       (rpush (: ENV 'SCODE) (code ENV O)))))
+                  (rpush (: ENV 'SCODE) (code ENV O)) ;(error "code-parse::atom: " O))
+                  (begin
+                    (set! TAG (car O))
+                    (set! PARM (cdr O))
+                    (cond ((== TAG 'export)
+                           Void)
+                          ((== TAG 'import)
+                           (imp ENV PARM))
+                          ((== TAG 'define)
+                           (if (symbol? (car PARM))
+                             (dec ENV (car PARM) (cadr PARM))
+                             (def ENV (caar PARM) (cdar PARM) (cdr PARM))))
+                          (else
+                           (rpush (: ENV 'SCODE) (code ENV O)))))))
               SRC))
   (:= RES 'TXT SRC)
   (body RES SRC)
   RES)
+
+;; Linking
+(define (env-root ENV)
+  (define RES ENV)
+  (while (!= ENV Nil)
+    (set! RES ENV)
+    (set! ENV (: ENV 'ENV)))
+  RES)
+
+(define (env-find ENV NAME)
+  (define L (: ENV 'SLOT))
+  (define RES Nil)
+  (define ENV0 Void)
+  (if (not (boxed-empty? L))
+    (begin
+      (set! RES (filter (=> (A)
+                          (== (: A 'NAME) NAME))
+                        L))
+      (set! RES (if (pair? RES)
+                  (car RES)
+                  Nil))))
+  (if (nil? RES)
+    (begin
+      (set! ENV0 (env-root ENV))
+     ;(outraw* (: ENV 'NAME) " => " (: ENV0 'NAME) "\n")
+      (if (!= ENV0 ENV)
+        (set! RES (env-find ENV0 NAME)))))
+  (if (nil? RES)
+    (begin
+      (set! L (: ENV0 'IMPORT))
+      (if (not (boxed-empty? L))
+        (while (and (nil? RES) (not (empty? L)))
+          (set! ENV (: (car L) 'VAL))
+          (set! RES (env-find ENV NAME))
+          (set! L (cdr L))))))
+  RES)
+
+(define (link-addr ADDR) ;; dunno if it is needed
+  Void)
+
+(define _UNDEFIDF (empty))
+(define (link-idf ENV O)
+  (define A Void)
+  (if (not (atom? O))
+    (error "link-idf"))
+  (if (symbol? O)
+    (begin
+      (set! A (env-find ENV O))
+      (if (and (nil? A) (not (list-in? O _UNDEFIDF)))
+        (rpush _UNDEFIDF O))))
+  Void)
+
+(define (link-instr ENV I)
+  (if (instr? I)
+    (for-each (=> (J)
+                (link-instr ENV J))
+              (: I 'PARM))
+    (link-idf ENV I)))
+
+(define (link-linstr ENV L)
+  (if (not (boxed-empty? L))
+    (for-each (=> (I)
+                (link-instr ENV I))
+              L)))
+
+(define (link-mod ADDR)
+  Void)
+
+(define (link-code SCODE . ENV)
+  (define TY (typeof SCODE))
+  (define L Void)
+  (set! ENV (if (empty? ENV) Nil (car ENV)))
+  (cond ((== TY tclass)
+        ;(if (== (: SCODE 'CATEG) 'Module)
+        ;  (outraw* "Linking " (: SCODE 'NAME) "...\n"))
+         (set! L (: SCODE 'IMPORT))
+         (if (not (boxed-empty? L))
+           (for-each (=> (I)
+                       (link-mod I))
+                     L))
+         (if (not (boxed-empty? (: SCODE 'SLOT)))
+           (for-each (=> (X)
+                       (link-code X))
+                     (: SCODE 'SLOT)))
+         (link-linstr SCODE (: SCODE 'SCODE)))
+        ((== TY taddr)
+         (link-addr SCODE)
+         (if (specified? (: SCODE 'VAL))
+           (link-code (: SCODE 'VAL) (: SCODE 'ENV))))
+        (else
+         (if (nil? ENV)
+           (error "link-code::else " SCODE))
+         (link-instr ENV SCODE))))
 
 ;; Pretty-printing
 (define (addr-categ->str CATEG)
@@ -270,6 +386,11 @@
                        (outraw* (: I 'NAME) " "))
                      L))
          (cr)
+         (outraw* "ENV = ")
+         (if (nil? (: SCODE 'ENV))
+           (outraw "_")
+           (outraw (: (: SCODE 'ENV) 'NAME)))
+         (cr)
          (outraw "SLOT = ")
          (indent+ 2)
          (if (boxed-empty? (: SCODE 'SLOT))
@@ -281,102 +402,174 @@
          (indent+ -2)
          (cr)
          (outraw "BODY = ")
-         (pretty-code (: SCODE 'SCODE)))
+         (set! L (: SCODE 'SCODE))
+         (if (boxed-empty? L)
+           (begin
+             (indent+ 2)
+             (cr)
+             (outraw "_")
+             (indent+ -2))
+           (pretty-linstr L)))
         ((== TY taddr)
          (pretty-addr SCODE)
          (if (specified? (: SCODE 'VAL))
            (begin
              (outraw " ")
              (pretty-code (: SCODE 'VAL)))))
+        ((== TY tinstr)
+         (pretty-instr SCODE))
         (else
-         (if (boxed-empty? SCODE)
-           (begin
-             (indent+ 2)
-             (cr)
-             (outraw "_")
-             (indent+ -2))
-           (pretty-linstr SCODE)))))
+         (outraw SCODE))))
 
 ;; Compiling
 (define (compile-addr ADDR)
-  (outraw* (: ADDR 'NAME)))
+  (define VAL (: ADDR 'VAL))
+  (if (not (and (class? VAL) (== (: VAL 'CATEG) 'Function)))
+    (outraw* (: ADDR 'NAME))))
+
+(define (instr-instr? I)
+  (list-in? (: I 'TAG) '(If While)))
+
+(define (instr-op? I)
+  (list-in? (: I 'TAG) '(And Or Not
+                         Eq Neq
+                         Inf InfEq Sup SupEq
+                         Add Sub Mul Div)))
+
+(define _OPTAGS (rexpr Void '(If "if" While "while"
+                              And "&&" Or "||" Not "!"
+                              Eq "==" Neq "!="
+                              Inf "<" InfEq "<=" Sup ">" SupEq ">="
+                              Add "+" Sub "-" Mul "*" Div "/")))
+(define (optag->string TAG)
+  (define RES (: _OPTAGS TAG))
+  (if (unspecified? RES) "??" RES))
 
 (define (compile-instr I)
+  (define (call I)
+    (define PARM (: I 'PARM))
+    (define FIRST True)
+    (outraw* (car PARM) "(")
+    (for-each (=> (J)
+                (if FIRST
+                  (set! FIRST False)
+                  (outraw ","))
+                (compile-instr J))
+              (cdr PARM))
+    (outraw ")"))
+  (define (op I)
+    (define PARM (: I 'PARM))
+    (if (empty? (cdr PARM))
+      (begin
+        (outraw (optag->string (: I 'TAG)))
+        (compile-instr (car PARM)))
+      (begin
+        (compile-instr (car PARM))
+        (outraw (optag->string (: I 'TAG)))
+        (compile-instr (cadr PARM)))))
+  (define (instr I)
+    (define PARM (: I 'PARM))
+    (define FIRST True)
+    (outraw* (optag->string (: I 'TAG)) " (")
+    (compile-instr (car PARM))
+    (outraw ") {")
+    (indent+ 2)
+    (for-each (=> (J)
+                (cr)
+                (compile-instr J))
+              (cdr PARM))
+    (indent+ -2)
+    (cr)
+    (outraw "}"))
+  (define TAG Void)
   (if (instr? I)
     (begin
-      (outraw* (: I 'TAG))
-      (for-each (=> (J)
-                  (if (pair? J)
-                    (begin
-                      (indent+ 2)
-                      (cr)
-                      (compile-instr J)
-                      (indent+ -2))
-                    (begin
-                      (outraw " ")
-                      (compile-instr J))))
-                (: I 'PARM)))
+      (set! TAG (: I 'TAG))
+      (cond ((== TAG 'Call)
+             (call I))
+            ((instr-op? I)
+             (op I))
+            ((instr-instr? I)
+             (instr I))
+            (else
+             (outraw (optag->string TAG))
+             (for-each (=> (J)
+                         (indent+ 2)
+                         (cr)
+                         (compile-instr J)
+                         (indent+ -2))
+                       (: I 'PARM)))))
     (outraw I)))
 
 (define (compile-linstr L)
-  (indent+ 2)
-  (for-each (=> (I)
-              (cr)
-              (compile-instr I))
-            L)
-  (indent+ -2))
+  (if (not (boxed-empty? L))
+    (for-each (=> (I)
+                (cr)
+                (compile-instr I)
+                (outraw ";"))
+              L)))
 
 (define (compile-code SCODE) ;; => lower-level SCODE
-  (define TY (typeof SCODE))
-  (define L Void)
+  (define (imp SCODE)
+    (define L Void)
+    (cr)
+    (set! L (: SCODE 'IMPORT))
+    (outraw* "IMPORT = ")
+    (if (boxed-empty? L)
+      (outraw "_")
+      (for-each (=> (I)
+         (outraw* (: I 'NAME) " "))
+       L)))
+  (define (parms SCODE)
+    (define FIRST True)
+    (outraw "(")
+    (if (not (boxed-empty? (: SCODE 'SLOT)))
+      (for-each (=> (X)
+                  (if FIRST
+                    (set! FIRST False)
+                    (outraw " "))
+                  (compile-addr X))
+                (: SCODE 'SLOT)))
+    (outraw ")"))
+  (define (dec SCODE)
+    (set! VAL (: SCODE 'VAL))
+    (if (specified? VAL)
+      (if (function? VAL)
+        (compile-code VAL)
+        (outraw* "var " (: SCODE 'NAME)))))
+  (define (lvars SCODE)
+    (if (not (boxed-empty? (: SCODE 'SLOT)))
+      (for-each (=> (X)
+                  (cr)
+                  (dec X))
+                (: SCODE 'SLOT))))
+  (define TY (if (atom? SCODE)
+               False ;; TODO: improve this
+               (typeof SCODE))) ;; TODO: (typeof) should _definitely_ return a non-null value, for _any_ input value, now.
+  (define CATEG Void)
+  (define NAME Void)
+  (define VAL Void)
   (cond ((== TY tclass)
-         (outraw* (: SCODE 'CATEG)
-                  " "
-                  (: SCODE 'NAME))
-         (if (specified? (: SCODE 'FNAME))
-            (outraw* " [" (: SCODE 'FNAME) "]"))
-         (if (!= (: SCODE 'CATEG) 'Function)
+         (set! CATEG (: SCODE 'CATEG))
+         (set! NAME (: SCODE 'NAME))
+         (cond ((== CATEG 'Module)
+                (outraw* "// Module " NAME)
+               ;(imp SCODE)
+                (lvars SCODE)
+                )
+               ((== CATEG 'Function)
+                (outraw* "function " NAME)
+                (parms SCODE) ;; TODO: add (lvars) for functions, too
+                (outraw " {")
+                (indent+ 2)))
+         (compile-linstr (: SCODE 'SCODE))
+         (if (== CATEG 'Function)
            (begin
+             (indent+ -2)
              (cr)
-             (set! L (: SCODE 'IMPORT))
-             (outraw* "IMPORT = ")
-             (if (boxed-empty? L)
-               (outraw "_")
-               (for-each (=> (I)
-                           (outraw* (: I 'NAME) " "))
-                         L))))
-         (if (== (: SCODE 'CATEG) 'Function)
-           (begin
-             (if (boxed-empty? (: SCODE 'SLOT))
-               (outraw " _")
-               (for-each (=> (X)
-                           (outraw " ")
-                           (compile-code X))
-                         (: SCODE 'SLOT))))
-           (begin
-             (indent+ 2)
-             (if (boxed-empty? (: SCODE 'SLOT))
-               (outraw "_")
-               (for-each (=> (X)
-                           (cr)
-                           (compile-code X))
-                         (: SCODE 'SLOT)))
-             (indent+ -2)))
-         (compile-code (: SCODE 'SCODE)))
-        ((== TY taddr)
-         (compile-addr SCODE)
-         (if (specified? (: SCODE 'VAL))
-           (begin
-             (outraw " ")
-             (compile-code (: SCODE 'VAL)))))
+             (outraw "}"))))
         (else
-         (if (boxed-empty? SCODE)
-           (begin
-             (indent+ 2)
-             (cr)
-             (outraw "_")
-             (indent+ -2))
-           (compile-linstr SCODE)))))
+         (compile-instr SCODE))))
 
 (define (generate-code SCODE) ;; => TXT, in a given syntax
   Void)
@@ -393,19 +586,18 @@
                            MODTABLE))
       MOD)))
 
-(define (code-read FNAME . FETCHMODS)
+(define (code-read-bis FNAME . FETCHMODS)
   (define MOD Void)
   (define L Void)
   (if (not (string? FNAME))
-    (error "to-pretty(0)"))
+    (error "code-read-bis(0) " FNAME))
   (set! FNAME (path-normalize FNAME))
   (if (not (fexists? FNAME))
-    (error "to-pretty::file " FNAME " not found"))
+    (error "code-read-bis::file " FNAME " not found"))
   (set! MOD (mod-find FNAME))
   (if (unspecified? MOD)
     (begin
-      (set! MOD (code-parse (file-read FNAME)))
-      (:= MOD 'NAME (path-fname FNAME))
+      (set! MOD (code-parse (file-read FNAME) (path-fname FNAME)))
       (:= MOD 'FNAME FNAME)
       (rpush MODTABLE MOD)
       (set! L (: MOD 'IMPORT)) ;; Loading submodules
@@ -419,7 +611,7 @@
   (define EFPATH (: ENV 'FNAME))
   (define FPATH Void)
   (define RES Void)
-  (set! IMP (string IMP))
+  (set! IMP (string2 IMP))
   (set! FPATH (if (path-abs? IMP)
                 IMP
                 (string+ (path-dir EFPATH) "/" IMP)))
@@ -427,7 +619,7 @@
   (if (unspecified? (path-ext FPATH))
     (set! FPATH (string+ FPATH ".ss")))
  ;(outraw* "Loading " FPATH "\n")
-  (set! RES (code-read FPATH))
+  (set! RES (code-read-bis FPATH))
   RES)
 
 (define (mod-sort MOD)
@@ -441,6 +633,27 @@
     (rpush RES MOD))
   (sort MOD)
   RES)
+
+(define (code-read FNAME . FETCHMODS)
+  (define MOD (apply code-read-bis `(,FNAME . ,FETCHMODS)))
+  (for-each link-code
+            (mod-sort MOD))
+  MOD)
+
+;; Generating stubs
+(define (compile-stubs)
+  (define FIRST True)
+  (if (not (boxed-empty? _UNDEFIDF))
+    (begin
+      (outraw "// Stubs for unimplemented functions\n")
+      (for-each (=> (NAME)
+                  (if FIRST
+                    (set! FIRST False)
+                    (cr))
+                  (outraw* "function " NAME "(...X) {\n")
+                  (outraw* "  error(\"" NAME ": not implemented\\n\");\n")
+                  (outraw* "}"))
+                _UNDEFIDF))))
 
 ;; Core app commands
 (define (to-pretty FNAME)
@@ -464,6 +677,8 @@
                    (else
                     'AST)))
 (define FTRANS (: TRANS LANG))
+(define NM (specified? (: LDC "nm")))
+
 (define IN (car (reverse LDC))) ;; TODO: implement access to the non-attribute slots of an rexpr
 (if (pair? IN)
   (set! IN (if (atom? (cadr IN)) ;; FIXME: crappy hack ; we need a way to specify the arity of the flags in (command-line-parse)
@@ -478,14 +693,23 @@
          LANG (specified? FTRANS))
   (begin
     (set! MOD (code-read IN))
-    (if ALL
-      (if (not (boxed-empty? MODTABLE))
-        (for-each (=> (M)
+    (if NM
+      (if (== LANG 'Javascript)
+        (compile-stubs)
+        (for-each (=> (I)
                     (if FIRST
                       (set! FIRST False)
-                      (outraw* "\n---\n"))
-                    (FTRANS M))
-                  (mod-sort MOD)))
-      (FTRANS MOD)))
+                      (cr))
+                    (write I))
+                  _UNDEFIDF))
+      (if ALL
+        (if (not (boxed-empty? MODTABLE))
+          (for-each (=> (M)
+                      (if FIRST
+                        (set! FIRST False)
+                        (outraw* "\n---\n"))
+                      (FTRANS M))
+                    (mod-sort MOD)))
+        (FTRANS MOD))))
   (>> LDC))
 (cr)

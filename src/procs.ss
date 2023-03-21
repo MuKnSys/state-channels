@@ -66,7 +66,7 @@
            "m")
           (else
            (error "_procId.postfix"))))
-  (define ID (string (: PROC 'ID)))
+  (define ID (string2 (: PROC 'ID)))
   (string+ (car (list-last (string-split ID #\@))) (postfix)))
 
 (define (_getProc PID)

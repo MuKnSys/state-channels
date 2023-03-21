@@ -72,7 +72,7 @@
          (if DHT_LOG
            (chlog2 MSG ">> "))
          (set! _HOSTIDNB (+ _HOSTIDNB 1))
-         (string _HOSTIDNB))
+         (string2 _HOSTIDNB))
         ((and (pair? MSG) (== (car MSG) 'enter))
          (if DHT_LOG
            (chlog2 MSG ">> "))

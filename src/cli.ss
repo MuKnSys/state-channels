@@ -60,7 +60,7 @@
       ((== TY 'sy)
        (sy VAL))
       ((== TY 'str)
-       (string VAL))
+       (string2 VAL))
       ((== TY 'var)
        (eval (sy VAL) (interaction-environment)))
       (else

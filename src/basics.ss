@@ -52,6 +52,14 @@
 (define (nil? X)
   (null? X))
 
+;; Basic I/O (0)
+(define _display display) ;; NOTE: prototype is: (display OBJ [PORT])
+(define _write write)
+(define _newline newline)
+(define _display2 Void) ;; NOTE: prototype is: (display OBJ [PORT])
+(define _write2 Void)
+(define _newline2 Void)
+
 ;; Booleans
 (define True #t)
 (define False #f)
@@ -76,10 +84,10 @@
 (define (number O)
   (if (number? O)
     O
-    (string->number (string O))))
+    (string->number (string2 O))))
 
 ;; Symbols
-(define (sy S) ;; TODO: perhaps return (string->symbol (string S))
+(define (sy S) ;; TODO: perhaps return (string->symbol (string2 S))
   (if (string? S)
     (string->symbol S)
     S))
@@ -93,7 +101,7 @@
       (eq? C #\5) (eq? C #\6) (eq? C #\7) (eq? C #\8) (eq? C #\9)))
 
 ;; Strings
-(define (string O)
+(define (string2 O)
   (cond ((unspecified? O)
          "#u")
         ((null? O)
@@ -103,7 +111,7 @@
         ((number? O)
          (number->string O))
         ((char? O)
-         (_string O))
+         (string O))
         ((symbol? O)
          (symbol->string O))
         (else
@@ -148,7 +156,7 @@
   (if (empty? L)
     (error "strsy+"))
   (set! SY (symbol? (car L)))
-  (set! L (map string L))
+  (set! L (map string2 L))
   (set! RES (apply string+ L))
   (if SY
     (sy RES)
@@ -312,6 +320,31 @@
       (set! L (cdr L))))
   RES)
 
+(define (dotted-for-each FUNC L . DOTFUNC)
+  (set! DOTFUNC (if (empty? DOTFUNC)
+                  Void
+                  (car DOTFUNC)))
+  (while (pair? L)
+    (FUNC (car L))
+    (set! L (cdr L)))
+  (if (not (nil? L))
+    (begin
+      (if (specified? DOTFUNC)
+        (DOTFUNC))
+      (FUNC L))))
+
+(define SymbDot (string->symbol (string2 #\.)))
+(define (dotted-map FUNC L . DOT)
+  (define RES '())
+  (set! DOT (if (empty? DOT)
+              SymbDot
+              (car DOT)))
+  (dotted-for-each (=> (X)
+                     (set! RES (cons (FUNC X) RES)))
+                   L
+                   (=> () (set! RES (cons DOT RES))))
+  (reverse RES))
+
 ;; Queues
 (define (queue)
   (empty))
@@ -398,7 +431,7 @@
 ;; Hash tables
 (define (hash-for-each-in-order FUNC HT)
   (set! HT (sort (hash-map->list cons HT)
-                 (=> (ELT1 ELT2) (string< (string (car ELT1)) (string (car ELT2)))))) ;; TODO: see if it's always OK with string comparisons
+                 (=> (ELT1 ELT2) (string< (string2 (car ELT1)) (string2 (car ELT2)))))) ;; TODO: see if it's always OK with string comparisons
   (for-each (=> (ELT) (FUNC (car ELT) (cdr ELT)))
             HT))
 
@@ -487,7 +520,7 @@
   (if (and (not (_naddr-path? PATH))
            (not (_naddr-port? PATH)))
     (error "naddr"))
-  (string+ MACH ":" (string PATH)))
+  (string+ MACH ":" (string2 PATH)))
 
 (define (naddr-machine ADDR)
   (if (string? ADDR)
@@ -499,7 +532,7 @@
 
 (define (naddr-port ADDR) ;; TODO: unify (naddr-port) and (naddr-path)
   (if (number? ADDR)
-    (string ADDR)
+    (string2 ADDR)
   (if (string? ADDR)
     (let* ((L (string-split ADDR #\:))
            (S (if (<= (list-length L) 1)
@@ -601,14 +634,7 @@
 (define (npath-ip NP)
   (npath-last (npath-phys NP)))
 
-;; Basic I/O (plugging in (display), (write) and (newline)
-(define _display display) ;; NOTE: prototype is: (display OBJ [PORT])
-(define _write write)
-(define _newline newline)
-(define _display2 Void) ;; NOTE: prototype is: (display OBJ [PORT])
-(define _write2 Void)
-(define _newline2 Void)
-
+;; Basic I/O (2) => plugging in (display), (write) and (newline)
 (define (init-tty DISPLAY WRITE NEWLINE)
   (set! _display2 DISPLAY)
   (set! _write2 WRITE)
@@ -732,7 +758,9 @@
 (define (indent+ INC)
   (indent (+ (indent) INC)))
 
-(define (spc N)
+(define (spc . N)
+  (set! N (if (empty? N)
+            1 (car N)))
   (if (> N 0)
     (atcol0 0))
   (while (> N 0)
@@ -748,10 +776,10 @@
 (define _HASCOLORS True) ;; Seems Guile always has ANSI emulation ; in case some Scheme has not, disable printing escape codes in the functions below
 
 (define (color-red)
-  (outraw (string-append (string #\esc) "[31;49m"))) ;; TODO: temporary s$%t ; fix this having a parm for the color, with names for these ...
+  (outraw (string-append (string2 #\esc) "[31;49m"))) ;; TODO: temporary s$%t ; fix this having a parm for the color, with names for these ...
 
 (define (color-white)
-  (outraw (string-append (string #\esc) "[39;49m")))
+  (outraw (string-append (string2 #\esc) "[39;49m")))
 
 (define (cursor-move DIRN . N)
   (set! N (if (empty? N) 1 (car N)))
@@ -760,10 +788,10 @@
                    ((== DIRN 'Down) "B")
                    ((== DIRN 'Up) "A")
                    (else (error "cursor-move"))))
-  (outraw (string+ (string #\esc) "[" (string N) DIRN)))
+  (outraw (string+ (string2 #\esc) "[" (string2 N) DIRN)))
 
 (define (clreol)
-  (outraw (string+ (string #\esc) "[0K")))
+  (outraw (string+ (string2 #\esc) "[0K")))
 
 (define _OOUT Void)
 (define _OOUTRAW Void)

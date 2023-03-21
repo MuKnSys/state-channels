@@ -99,7 +99,7 @@
         (if (and (specified? FROM) (unspecified? (: FROM 'UID)))
           (:= FROM 'UID (string+ UIDG "#0")))
         (while (<= I NPEER)
-          (set! L (cons (string+ UIDG "#" (string I)) L))
+          (set! L (cons (string+ UIDG "#" (string2 I)) L))
           (set! I (+ I 1)))
         (:= RES 'PEER (reverse L))))
     RES)))

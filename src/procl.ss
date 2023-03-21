@@ -34,7 +34,7 @@
 
 ;; Call
 (define (fname-isret? F)
-  (set! F (string F))
+  (set! F (string2 F))
   (let* ((LF (string-length F))
          (LP (string-length "/return")))
     (and (> LF LP)
@@ -78,8 +78,8 @@
             (:= CALL 'PARM (cdr (mvparms (: CALL 'FUNC)
                                          (cons (: PR 'SELF)
                                                (: CALL 'PARM)))))
-            (apply ^? `(,FNAME ,SELF . (,CALL)))))
-        (apply ^? `(,FNAME ,SELF . ,PARM))))
+            (apply mcallv `(,FNAME ,SELF . (,CALL))))) ;; ^?
+        (apply mcallv `(,FNAME ,SELF . ,PARM)))) ;; ^?
     (call-switchin SELF '_switchout)
     (call-switchin SELF '_leave)
     RES)))
@@ -101,7 +101,7 @@
                              `(,(: CALL 'FUNC) ,(: CALL 'INNB)))
                            (: MASTER 'IN!))))
     (for-each (=> (CALL)
-                (^ 'send (: PROC 'GROUP) (sy (string+ (string (car CALL)) "/return")) (cadr CALL)))
+                (^ 'send (: PROC 'GROUP) (sy (string+ (string2 (car CALL)) "/return")) (cadr CALL)))
               RL0)))))
 
 ;; Proc send
@@ -156,7 +156,7 @@
   (current-proc! PROC)
   (sender-proc! SPROC)
   (current-call! MSG)
-  (set! RES (apply ^ `(call ,PROC ,(: MSG 'FUNC) . ,(: MSG 'PARM))))
+  (set! RES (apply mcall `(call ,PROC ,(: MSG 'FUNC) . ,(: MSG 'PARM)))) ;; ^
   (:= MSG 'RESULT RES)
   (current-proc! OPROC)
   (sender-proc! Nil)
@@ -214,7 +214,7 @@
                     (^ 'schedule PROC))))
   (if RES
   (begin
-   ;(outraw (string+ "Proc " (: PROC 'UID) " fired[" (string RES) "]\n"))
+   ;(outraw (string+ "Proc " (: PROC 'UID) " fired[" (string2 RES) "]\n"))
    ;(errlog PROC)
     (noop)
   ))

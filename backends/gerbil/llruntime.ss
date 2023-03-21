@@ -62,7 +62,7 @@
   #f)
 
 ;; Strings
-(define (_string X) (string X))
+;(define (_string X) (string X))
 
 ;(define (string-trim-both X Y) ;; SRFI-13
 ;  #f)

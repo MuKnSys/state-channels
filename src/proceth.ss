@@ -39,7 +39,7 @@
   (define FROM (current-proc))
   (define CNAME (eth-cname (: PROC 'UID)))
   (json-parse (eth-callMethod CNAME (: PROC 'UID)
-                                    (string FNAME)
+                                    (string2 FNAME)
                                     PARM))))
 
 ;; Send
@@ -51,9 +51,9 @@
   (if (not ACC)
     (error "eth.send::ACC"))
   (eth-callMethod CNAME (: PROC 'UID)
-                        (string FNAME)
+                        (string2 FNAME)
                         (list-add PARM `(,(: FROM 'UID) ,(string+ "x"
-                                                                  (string (list-length (: FROM 'OUT))))))
+                                                                  (string2 (list-length (: FROM 'OUT))))))
                                                                   ;; FIXME: the shitty "x" stems from the fact that "0" is
                                                                   ;;        turned to an empty string by web3.js when in fact,
                                                                   ;;        rather than this, it should be encoded as "30000..."

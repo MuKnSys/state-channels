@@ -1,0 +1,35 @@
+<html><head>
+  <script language="javascript" src="runtime.js"></script>
+  <script language="javascript" src="com_srv0.js"></script>
+  <script language="javascript" src="procs.js"></script>
+  <script language="javascript" src="cli.js"></script>
+  <script language="javascript">
+    async function start() {
+      await init("http://localhost:1234");
+      out.focus("out1");
+      cli_prompt(0);
+      hid();
+      pr("Bob1");
+      pr("Bob2");
+      iam("Bob1");
+    /*
+      Try (in the "Inspect" pane of the browser):
+      lp();
+      lp(1);
+      run();
+      iam();
+      send("Bob2","say","blih");
+      send("Bob2","say","blah");
+      lp(1);*/
+    /*
+      And then:
+      send("Carol1","say","bloh");
+
+      Look at the server's logs! To this end do (display on the server's console):
+      srv();*/
+    }
+  </script>
+</head>
+<body onLoad="start()"><pre style="font-size: 13;"><code id="out1">
+</code></pre>
+</body></html>

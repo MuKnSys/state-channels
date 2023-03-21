@@ -3,9 +3,10 @@
   <script language="javascript">
     async function start() {
       var CONN=cli_conn("http://localhost:1234");
-      out(await cli_msg(CONN,[["npr", "0h"],
+    /*out(await cli_msg(CONN,[["npr", "0h"],
                               ["netlist", "HOST1"]])),cr();
-      out(await cli_msg(CONN,["netlist", "HOST1"])),cr();
+      out(await cli_msg(CONN,["netlist", "HOST1"])),cr();*/
+      out(await cli_msg(CONN,["func1", 1234, "5678"])),cr();
       out(await cli_msg(CONN,{ _:"call", PARM:[{ A:1234, B:5678 }, 12, 34]}));
     }
   </script>

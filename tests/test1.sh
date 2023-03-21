@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SC_HOME=`dirname $0`/..
 cd "$SC_HOME" 2> /dev/null ; SC_HOME=`pwd` ; cd - > /dev/null

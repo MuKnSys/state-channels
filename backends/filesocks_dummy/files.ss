@@ -57,6 +57,7 @@
        (not (list-in? #\/ L))))
 
 (define (path-normalize FPATH)
+  (define RES Void)
   (define (p2l PATH)
     (set! PATH (string-split PATH #\/))
     (filter (=> (S)
