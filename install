@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Local install for testing purposes, at the moment
+#
+if [[ $1 == "" ]]; then
+  DIR="./mukn_sc"
+else
+  DIR=$1
+fi
+
+SC_HOME=`realpath $DIR`
+rm -fr $SC_HOME
+mkdir $SC_HOME
+cd $SC_HOME
+git init
+git pull https://github.com/MuKnSys/state-channels
+
+chmod 755 ./build
+./build
+
+# Basic test
+#
+# ./build gerbil
+# backends/build filesocks_dummy
+#
+# export GERBIL_LOADPATH=$SC_HOME
+# bin/scm examples/mp1_1.ss
