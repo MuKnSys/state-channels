@@ -65,13 +65,13 @@
 (define False #f)
 
 (define (boolean O)
-  (if (boolean? O)
-    O
-  (if (number? O)
-    (!= O 0)
-  (if (string? O)
-    (!= O "0")
-    True))))
+  (cond ((or (unspecified? O) (nil? O)) False)
+        ((boolean? O) O)
+        ((number? O) (!= O 0))
+        ((string? O)
+          (!= O "0"))
+        (else
+          True)))
 
 (define (ifTrue TEST FN)
   (if (and TEST (not (unspecified? TEST)))

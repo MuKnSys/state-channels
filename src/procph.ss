@@ -66,7 +66,7 @@
   (set! _HOSTID "0"))
 
 (define _HOSTIDNB 0)
-(define DHT_LOG (com-log "dht"))
+(define DHT_LOG (boolean (com-log "dht")))
 (define (_handler0 MSG)
   (cond ((== MSG Void)
          (if DHT_LOG
@@ -209,7 +209,7 @@
     (if (!= SOCK False)
     (begin
       (set! MSG (channel-read SOCK))
-      (if CHAN_LOG
+      (if (!= CHAN_LOG 0)
         (chlog2 MSG ">  "))
       (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
                (not (procph0-reroute (the-procph0) MSG)))

@@ -222,7 +222,8 @@
 
 (define tproceth Void)
 (define (proceth? PROC)
-  (== (typeof PROC) tproceth))
+  (and (specified? PROC)             ;; FIXME: find a general solution such as when tprocxyz==Void, we don't
+       (== (typeof PROC) tproceth))) ;;        have (procxyz? Void)=>True ; (procxyz? Void) should always be False
 
 ;; (define)s for calls
 (define tcall Void)

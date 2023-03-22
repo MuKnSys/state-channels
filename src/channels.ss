@@ -572,7 +572,7 @@
   RES)
 
 (define (gpath-unreachable? FROM TO)
-  (outraw* TO " " (gaddr-proxied? TO) " " (gaddr-npath TO) " " _PHMACHINE_GADDR "\n")
+ ;(outraw* TO " " (gaddr-proxied? TO) " " (gaddr-npath TO) " " _PHMACHINE_GADDR "\n")
   (and (gaddr-proxied? TO)
        (not (== (gaddr-npath TO) _PHMACHINE_GADDR))))
 
@@ -808,7 +808,7 @@
  ;(set! IDLEH (: PROC 'IDLEH)) ;; TODO: manage IDLEH by means of (select) & nonblocking socks
   (while True
     (set! MSG (channel-read SRV))
-    (if CHAN_LOG
+    (if (!= CHAN_LOG 0)
       (chlog2 MSG ">  "))
     (if (and (chmsg? MSG) ;; FIXME: temporary fix ; remove this asap
              (not (procph0-reroute PROC MSG)))

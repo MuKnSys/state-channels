@@ -365,7 +365,8 @@
 (define (rexpr-parse S . OPT) ;; links to when they exists, or creates folded entries for IDed rexprs
   Nil)
 
-(define >> rexpr-serialize)
+(define (>> O . OPT)
+  (apply rexpr-serialize (cons O OPT)))
 
 ;; Pretty-printing
 ;; TODO: add loop protection
@@ -472,7 +473,7 @@
 
 (define (mcallv F . PARM)
   (set! PARM (mvparms F PARM))
-  (apply mcall `(,F . ,PARM)))
+  (apply mcall (cons F PARM)))
 
 ;(define ^ mcall) ;; TODO: improve this ugly thing
 ;(define ^? mcallv)
