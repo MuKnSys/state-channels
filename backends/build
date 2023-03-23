@@ -1,4 +1,4 @@
-#!/usr/bin/guile --no-auto-compile
+#!/usr/bin/env -S guile --no-auto-compile
 !#
 (load "buildlib.scm")
 
