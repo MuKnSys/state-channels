@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+export STATE_CHAN_BIN="$(cd `dirname $0`; pwd)"
+export STATE_CHAN_SRC=$(cd $STATE_CHAN_BIN/.. ; pwd)
+export GERBIL_HOME=$STATE_CHAN_SRC/gerbil
+
+make_gerbil() {
+    cd $GERBIL_HOME ;
+    ./configure PACKAGE_VERSION=v0.16-MuKn-0.1
+    make ensure-gx-version ;
+    cd src && ./build.sh;
+}
+
+make_state() {
+    export PATH="$STATE_CHAN_BIN:$PATH"
+    cd $STATE_CHAN_SRC; ./build.ss "$@"
+}
+
+if [[ "$1" == 'gerbil' ]]; then
+    make_gerbil
+    exit $?
+else
+    if [[ ! -e $GERBIL_HOME/bin/gxi ]];  then
+        make_gerbil
+    fi
+    make_state "$@"
+fi

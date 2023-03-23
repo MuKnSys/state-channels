@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+myPath="$(cd `dirname $0`; pwd)"
+export STATE_CHAN_SRC=$(cd $myPath/.. ; pwd)
+export GERBIL_HOME="$STATE_CHAN_SRC/gerbil"
+$GERBIL_HOME/bin/gxi "$@"
