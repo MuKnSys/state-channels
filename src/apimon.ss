@@ -460,7 +460,7 @@
       (set! UID (current-proc))
       (if (nil? UID)
         (outraw "No current proc")
-        (outraw (: UID 'ID))))))
+        (outraw (: UID 'UID))))))
 
 (define (_cprh . UID)
   (set! UID (if (empty? UID)

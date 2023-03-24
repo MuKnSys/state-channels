@@ -1,0 +1,87 @@
+
+# Initializing everything
+autorun 1
+proch system Host1
+chost Host1
+$MP0 ! cmicropay bob carol dave
+$MP1 ! micropay bob 0 carol 0 dave 0
+$MP2 ! micropay bob 0 carol 0 dave 0
+$MP3 ! micropay bob 0 carol 0 dave 0
+proc blockchain Master $MP0
+proc bob Bob1 $MP1
+proc carol Carol1 $MP2
+proc dave Dave1 $MP3
+
+# We start with 3 procs/ledgers, each empty, joined in a state
+#           [ channel, with a master process in the blockchain,
+#           [ containing the validated balances (also empty at
+#                                                      [ start)
+join Group1 Master Bob1 Carol1 Dave1
+netlist
+
+state Master
+
+state Bob1
+
+state Carol1
+
+state Dave1
+
+# Initializing the players' balances in the master/contract
+iam Bob1
+Master ^ deposit 10
+iam Carol1
+Master ^ deposit 10
+iam Dave1
+Master ^ deposit 10
+
+netlist Bob1
+
+netlist Carol1
+
+netlist Dave1
+
+netlist Master
+
+state Master
+
+# Trying a start action on Bob1
+iam Bob1
+Group1 ^ start
+
+netlist Bob1
+
+state Bob1
+
+# Downloading the players' balances in the state channel
+#sync Bob1
+
+#netlist Bob1
+
+#netlist Carol1
+
+#netlist Dave1
+
+#state Bob1
+
+#state Carol1
+
+#state Dave1
+
+# We can now start
+#Group1 ^ start
+
+#netlist Bob1
+
+#netlist Carol1
+
+#netlist Dave1
+
+#state Bob1
+
+#state Carol1
+
+#state Dave1
+
+# Quitting
+#q

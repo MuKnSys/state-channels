@@ -30,6 +30,7 @@
        V)))
   (define (parse S)
     (define PREVVAR Void)
+    (define L Void)
     (set! S (filter (=> (X) (!= X "")) S))
     (set! S (map (=> (S2) (map (=> (S)
                                  (define ST (string-trim S))
@@ -88,7 +89,14 @@
                       (if (unspecified? VAR)
                         (rcons VAL0 (val VAL))
                         (:= VAL0 VAR (val VAL))))
-                    (:= RES VAR (val VAL))))))
+                    (begin
+                      (set! L (string-split VAR #\.))
+                      (if (== (list-length L) 1) ;; TODO: enable fetching all values of VAR when VAR.var(i) exist in the environment
+                        (:= RES VAR (val VAL))
+                        (begin
+                          (if (unspecified? (: RES (car L)))
+                            (:= RES (car L) (rexpr Void '())))
+                          (:= (: RES (car L)) (cadr L) (val VAL)))))))))
               S))
   (if (and (string? FNAME) (fexists? FNAME))
     (parse (file-read FNAME 1)))

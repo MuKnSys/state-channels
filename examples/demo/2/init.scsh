@@ -1,0 +1,21 @@
+
+# Initializing everything
+autorun 1
+proch system Host1
+chost Host1
+$STR1 ! str abcd
+$STR2 ! str efgh
+proc bob Bob1 $STR1
+proc carol Carol1 $STR2
+
+# Grouping Bob1 & Carol1
+join Group1 _ Bob1 Carol1
+
+# Looking at things
+netlist
+
+iam Bob1
+#Group1 ^ set Hello
+
+# Quitting
+#q

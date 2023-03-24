@@ -1,0 +1,43 @@
+
+# Initializing everything
+autorun 1
+proch system Host1
+chost Host1
+$MP1 ! micropay bob 10 carol 10 dave 10
+$MP2 ! micropay bob 10 carol 10 dave 10
+$MP3 ! micropay bob 10 carol 10 dave 10
+proc bob Bob1 $MP1
+proc carol Carol1 $MP2
+proc dave Dave1 $MP3
+join Group1 _ Bob1 Carol1 Dave1
+
+# We start with 3 procs/ledgers, each containing $10, joined
+#                                       [ in a state channel
+netlist
+
+state Bob1
+
+state Carol1 
+
+state Dave1
+
+# First transfer
+netlist Bob1
+
+#iam Bob1
+#Group1 ^ transfer carol 2
+
+#netlist Bob1
+
+#state Bob1
+
+# Second transfer
+#iam Carol1 
+#Group1 ^ transfer dave 7
+
+#netlist Bob1
+
+#state Bob1
+
+# Quitting
+#q

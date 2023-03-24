@@ -1,0 +1,30 @@
+
+# Initializing everything
+autorun 1
+proch system Host1
+chost Host1
+netlist-acc 1
+
+# First netlist
+netlist
+
+# Showing the accounts
+#acc
+
+# Creating the contract's image
+#proce blockchain Master Micropay@8
+#netlist
+
+#netlist Master
+
+#state Master
+
+# Contract mapping
+#sync Master
+
+#netlist Master
+
+#state Master
+
+# Quitting
+#q
