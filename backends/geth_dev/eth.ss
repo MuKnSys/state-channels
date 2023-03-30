@@ -153,7 +153,7 @@
     (set! LOGIN "")
     (let* ((USER (car LOGIN))
            (PASS (cadr LOGIN)))
-      (set! LOGIN (string+ "," (string USER) ",\"" PASS "\""))))
+      (set! LOGIN (string+ "," (string2 USER) ",\"" PASS "\""))))
   (car (reverse (eth-execcmd "runtime" (string+ "callMethod(" ABI ",\""
                                                               ADDR "\",\""
                                                               FNAME "\","

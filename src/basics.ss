@@ -59,6 +59,8 @@
 (define _display2 Void) ;; NOTE: prototype is: (display OBJ [PORT])
 (define _write2 Void)
 (define _newline2 Void)
+(define _COLOR_RED Void)
+(define _COLOR_WHITE Void)
 
 ;; Booleans
 (define True #t)
@@ -641,6 +643,15 @@
   (set! _newline2 NEWLINE))
 (init-tty display write newline)
 
+(define (init-tty-colors RED WHITE)
+  (set! _COLOR_RED RED)
+  (set! _COLOR_WHITE WHITE))
+(init-tty-colors
+  (=> ()
+    (outraw (string-append (string2 #\esc) "[31;49m"))) ;; TODO: temporary s$%t ; fix this having a parm for the color, with names for these ...
+  (=> ()
+    (outraw (string-append (string2 #\esc) "[39;49m"))))
+
 ;; Basic I/O
 (define _OUTP False)
 (define (outopen MODE)
@@ -659,10 +670,14 @@
   (get-output-string _OUTP))
 
 (define (out_write X)
-  (apply _write2 `(,X . ,(if _OUTP `(,_OUTP) '()))))
+  (if _OUTP
+    (write X _OUTP)
+    (_write2 X)))
 
 (define (out_display X)
-  (apply _display2 `(,X . ,(if _OUTP `(,_OUTP) '()))))
+  (if _OUTP
+    (display X _OUTP)
+    (_display2 X)))
 
 (define _TABSEP "")
 (define (tabsep SEP)
@@ -776,10 +791,10 @@
 (define _HASCOLORS True) ;; Seems Guile always has ANSI emulation ; in case some Scheme has not, disable printing escape codes in the functions below
 
 (define (color-red)
-  (outraw (string-append (string2 #\esc) "[31;49m"))) ;; TODO: temporary s$%t ; fix this having a parm for the color, with names for these ...
+  (_COLOR_RED))
 
 (define (color-white)
-  (outraw (string-append (string2 #\esc) "[39;49m")))
+  (_COLOR_WHITE))
 
 (define (cursor-move DIRN . N)
   (set! N (if (empty? N) 1 (car N)))

@@ -1,0 +1,32 @@
+<html><head><title>cli_2</title>
+  <script language="javascript" src="runtime.js"></script>
+  <script language="javascript" src="com_srv0.js"></script>
+  <script language="javascript" src="sched.js"></script>
+  <script language="javascript" src="sc_js.js"></script>
+  <script src="sc_lib.js"></script>
+  <script>
+    async function rcv() {
+      await poll(1);
+      var M=_COM_MSG[0];
+      M["TYPE"]="@call";
+      var S=JSON.stringify(M)
+      await net_post(S);
+      await netlist("PR4");
+      await step("PR4");
+    }
+    async function start() {
+      await init("http://localhost:1234");
+      out.focus("out1");
+      await proch("system","HOST2");
+      await chost("HOST2");
+      await objc("$MP1","micropay","smith","10","dupont","10","durand","10");
+      await lsto("$MP1");await sc_cr();
+      await proc("smith","PR4","$MP1");
+      await netlist();await sc_cr();
+    //await iam("PR4");
+    }
+  </script>
+</head>
+<body onLoad="start()"><pre style="font-size: 13;"><code id="out1">
+</code></pre>
+</body></html>

@@ -1,3 +1,7 @@
+# Creating the host
+proch system HOST1
+chost HOST1
+
 # Creating the proc snapshots
 $MP1 ! micropay smith 10 dupont 10 durand 10
 $MP2 ! micropay smith 10 dupont 10 durand 10
@@ -19,7 +23,7 @@ npr 0
 npr 1
 npr 2
 lsp
-_sc! _ PR1 PR2 PR3
+_sc! GR1 _ PR1 PR2 PR3
 lsp
 
 # Test the obj micropayment
@@ -28,7 +32,7 @@ lsp
 
 # Doing a micropayment
 cpr PR1
-* ^ transfer dupont 5
+GR1 ^ transfer dupont 5
 lsp
 prs PR1
 lsp
@@ -39,6 +43,12 @@ prs PR3
 $MP1 ^ lst
 $MP2 ^ lst
 $MP3 ^ lst
+
+# Listing the procs
+prs PR1
+lsp2 PR1 
+lsp2 PR2 
+lsp2 PR3 
 
 # Quitting
 q

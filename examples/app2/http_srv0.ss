@@ -39,9 +39,11 @@
   (:= _PROCL (sy UID) (empty)))
 
 (define (proc-msg MSG)
-  (define UID Void)
+  (define UID (: MSG 'TO))
+  (define _TO (: MSG '_TO))
   (define PRE Void)
-  (set! UID (: MSG 'TO))
+  (if (not (unspecified? _TO))
+    (set! UID _TO))
   (set! PRE (: _PROCL (sy UID)))
   (if (unspecified? PRE)
     (enter-proc UID Void))

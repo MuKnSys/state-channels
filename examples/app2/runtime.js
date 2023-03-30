@@ -62,13 +62,20 @@ global.dom.fetch=function (ID) {
 
 // Out() et al.
 global._OUTFOCUS=null;
+var _COLOR=null;
+global.color=function (C) {
+  if (!isString(C)) _COLOR=null;
+               else _COLOR=C;
+}
 global.out=function (S) {
   if (inServer()) process.stdout.write(util.inspect(S));
   else {
     var E=document.createElement("span");
+    if (!isNull(_COLOR)) E.style="color: "+_COLOR+";";
     if (!isString(S)) S=JSON.stringify(S);
     E.innerHTML=S;
     (_OUTFOCUS==null?document.body:_OUTFOCUS).appendChild(E);
+    E.scrollIntoView();
   }
 }
 var _OUTINDENT=0;

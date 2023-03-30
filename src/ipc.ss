@@ -74,6 +74,21 @@
       (set! HOST (: HOST 'HOST))))
   HOST)
 
+(define (scm2escm O)
+  (define RES (rexpr-copy O 1))
+  (define (rec O)
+    (if (pair? O)
+      (while (pair? O)
+        (if (and (symbol? (car O)) (not (attr? (car O))))
+          (set-car! O (sy (string+ "'" (string2 (car O)))))
+          (if (pair? (car O))
+            (rec (car O))))
+        (set! O (cdr O)))
+      O))
+  (rec RES)
+  RES)
+
+(define _host-send False)
 (define (host-send PROC MSG)
   (define HOSTA (: (the-procph0) 'GADDR))
   (define ADDR Void)
@@ -86,7 +101,25 @@
   (set! ADDR (if (or (not ADDR) (== ADDR HOSTA))
                (gaddr-up HOSTA)
                ADDR))
-  (channel-send ADDR (sexpr-serialize MSG)))
+  (if _host-send
+    (_host-send (if (string? PROC) PROC (: PROC 'UID)) (scm2escm MSG)) ;(sexpr-serialize MSG)))
+    (channel-send ADDR (sexpr-serialize MSG))))
+
+(define (init-ipc HSEND)
+  (set! _host-send HSEND))
+
+(define (net-post MSG)
+  (set! MSG (json-parse MSG))
+  (set! TY (<- MSG 'TYPE))
+  (set! MSG (cons `(,(attr 'TYPE) ,TY) (cons '(:ID 1234) MSG)))
+  (let* ((ADDR (hash-ref (net-phys) (: MSG (if (specified? (: MSG '_TO)) '_TO ;; TODO: clean this wart
+                                                                         (if (: MSG 'ACK) 'FROM 'TO))))))
+    (if (not ADDR)
+      (begin
+        (outraw* "Proc " (: MSG 'TO) " is not here")
+        (cr)
+        Void)
+      (net-send MSG))))
 
 ;; Networks
 (define tnetwork (type "network"

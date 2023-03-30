@@ -1,0 +1,32 @@
+<html><head><title>pr1</title>
+  <script language="javascript" src="runtime.js"></script>
+  <script language="javascript" src="com_srv0.js"></script>
+  <script language="javascript" src="sched.js"></script>
+  <script language="javascript" src="sc_js.js"></script>
+  <script src="sc_lib.js"></script>
+  <script>
+    function snd() {
+      prcall("GR1","set","Salut");
+    }
+    async function start() {
+      await init("http://localhost:1234");
+      out.focus("out1");
+    //await autorun("1");
+      await proch("system","HOST1");
+      await chost("HOST1");
+      await objc("$MP1","sc0","Hello");
+      await lsto("$MP1");await sc_cr();
+      await proc("bob","PR1","$MP1");
+      await procm("PR2","carol");
+      await netlist();await sc_cr();
+      await netlist("PR1");await sc_cr();
+      await state("PR1");await sc_cr();
+      await join("GR1","_","PR1","PR2");
+      await netlist();await sc_cr();
+      await iam("PR1");
+    }
+  </script>
+</head>
+<body onLoad="start()"><pre style="font-size: 13;"><code id="out1">
+</code></pre>
+</body></html>

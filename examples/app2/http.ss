@@ -48,6 +48,7 @@
                           _CTYPE)))
   (string+ "HTTP/1.1 200 OK\n"
            CTYL "\n"
+           "Access-Control-Allow-Origin: *\n"
            "Connection: closed\n"
            "Content-length: " (string2 (string-length S)) "\n\n"
            S))

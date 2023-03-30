@@ -260,7 +260,7 @@
                                      (_write O))))
   (if (not (list-in? 'no-unlink OPT))
     (set! O (rexpr-link O)))
-  (string-replace RES "#<unspecified>" "Unspecified"))
+  (string-replace RES "#<unspecified>" "Unspecified")) ;; FIXME: Guile-specific ; no need to do that with Gambit
 
 (define (sexpr-parse S . OPT)
   (define (repl O) ;; FIXME: f$%&/(g s)=??y way, due to the fact that there is no 1st class representation for #<unspecified>

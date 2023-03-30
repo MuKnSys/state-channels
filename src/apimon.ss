@@ -311,7 +311,7 @@
   (apply error L))
 
 (define (_pr USER UID)
-  (proc 'USER USER 'UID UID))
+  (procl 'USER USER 'UID UID))
 
 (define (_pr- PID)
   (hash-remove! (allprocs) PID))
@@ -322,6 +322,7 @@
       (:= PR A V))))
 
 (define (_prog! PID P1)
+  (set! PID (string2 PID))
   (let* ((PR (hash-ref (allprocs) PID)))
     (if (proc? PR)
       (let* ((OBJ Void))
@@ -475,7 +476,7 @@
       (set! UID (current-proch))
       (if (nil? UID)
         (outraw "No current host proc")
-        (outraw (: UID 'ID))))))
+        (outraw (: UID 'UID))))))
 
 (define (_sc NAME . UID)
   (let* ((LP (map (=> (NAME)
@@ -490,7 +491,8 @@
          (RES (apply proc-group+attach LP)))
     (:= RES 'UID NAME)
     (:= RES 'USER "nobody")
-    RES))
+    RES
+    Void)) ;; FIXME: due to shitty compilation to JS : stackov inside _scm2host()
 
 (define (_gr UID CMASTER CPEER . PETNAMES)
   (define RES Void)
@@ -536,7 +538,8 @@
 (define (_prs UID)
   (define PR (netrsv UID))
   (if PR
-    (^ 'step PR)
+    (begin
+      (^ 'step PR))
     (outraw (string+ "Proc " UID " is not on the net"))))
 
 (define (_prs* UID)
@@ -764,7 +767,7 @@
 (apimon '("lsp2" "netlist") _lsp2 '(str) 'VARGS True)
 (apimon "netlist-acc" netlist-acc '(bool) 'VARGS True)
 (apimon '("lso" "dump") _lso '(str) 'VARGS True)
-(apimon '("lso2" "print") _lso2 '(str) 'VARGS True)
+(apimon '("lso2" "print") _lso2 '(str str str str str str str str str) 'VARGS True)
 (apimon "state" _state '(str))
 (apimon "statef" _statef '(str))
 

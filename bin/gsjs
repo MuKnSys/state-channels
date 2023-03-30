@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+if [[ "$1" == "" ]]; then
+  echo "gsjs <SCM> expected"
+else
+  gsc -target js -exe $1.scm
+  mv $1 $1.js
+fi
