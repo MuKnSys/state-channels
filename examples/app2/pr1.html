@@ -15,12 +15,12 @@
       await proch("system","HOST1");
       await chost("HOST1");
       await objc("$MP1","sc0","Hello");
-      await lsto("$MP1");await sc_cr();
+    //await lsto("$MP1");await sc_cr();
       await proc("bob","PR1","$MP1");
       await procm("PR2","carol");
-      await netlist();await sc_cr();
-      await netlist("PR1");await sc_cr();
-      await state("PR1");await sc_cr();
+    //await netlist();await sc_cr();
+    //await netlist("PR1");await sc_cr();
+    //await state("PR1");await sc_cr();
       await join("GR1","_","PR1","PR2");
       await netlist();await sc_cr();
       await iam("PR1");
