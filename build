@@ -12,6 +12,7 @@ case $1 in
     fi
     chmod 755 bin/cli
     chmod 755 bin/extip
+    chmod 755 bin/gsjs
     mkdir sock
     gcc src/ownip.c -o bin/ownip
     chmod 755 backends/build
