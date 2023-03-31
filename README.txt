@@ -12,6 +12,9 @@ to download the library ; and then:
 chmod 755 ./build
 ./build guile
 
+or simply:
+./build
+
 to build it for GNU Guile.
 
 Or alternatively:

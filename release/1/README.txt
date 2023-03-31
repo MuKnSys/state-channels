@@ -20,50 +20,8 @@ on top of LibP2P.
 
 2) Installation
 
-Take the install script at:
-https://github.com/MuKnSys/state-channels/blob/main/install
-
-Create a tmp/ directory, and run the install inside it, e.g.:
-
-/home/henri>mkdir tmp
-/home/henri>cd tmp
-/home/henri/tmp>vi install  [inside vi, paste the contents of the script ; save]
-/home/henri/tmp>
-/home/henri/tmp>bash install
-Initialized empty Git repository in /home/henri/tmp/mukn_sc/.git/
-remote: Enumerating objects: 1206, done.
-remote: Counting objects: 100% (1205/1205), done.
-remote: Compressing objects: 100% (398/398), done.
-remote: Total 1206 (delta 818), reused 1165 (delta 780), pack-reused 1
-......................................................................
-/home/henri/tmp>_
-
-
-It creates a directory mukn_sc/ inside tmp/ ; go inside it:
-
-/home/henri/tmp>cd mukn_sc
-/home/henri/tmp/mukn_sc>_
-
-
-To be sure that everything went fine, run the first of the library's
-integration tests:
-
-/home/henri/tmp/mukn_sc>bin/scm examples/app2/http_srv0.ss
-smith : 10
-dupont : 10
-durand : 10
-smith : 10
-dupont : 10
-durand : 10
-smith : 10
-dupont : 10
-durand : 10
-...........
-/home/henri/tmp/mukn_sc>_
-
-
-It should produce the same output as:
-https://github.com/MuKnSys/state-channels/blob/main/tests/OUT1_1.txt
+Follow the installation procedure given at:
+https://github.com/MuKnSys/state-channels/blob/main/README.txt
 
 
 3) Running the example
@@ -72,7 +30,7 @@ The example is a webapp made of two HTML files (plus a number of Javascript
 components) ; these files must be published by means of a webserver.
 
 So for example with Apache (supposing that the library has been installed
-in /home/henri/tmp/mukn_sc, as shown above), you would do:
+in the directory /home/henri/tmp/mukn_sc), you would do:
 
 /home/henri/tmp/mukn_sc>sudo bash
 [sudo] password for henri:
