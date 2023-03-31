@@ -24,6 +24,11 @@ Follow the installation procedure given at:
 https://github.com/MuKnSys/state-channels/blob/main/README.txt
 
 
+Don't configure the library for the dev Ethereum chain, it's not needed
+for the current demo ; but you should run the test, to be sure that
+everything went fine.
+
+
 3) Running the example
 
 The example is a webapp made of two HTML files (plus a number of Javascript
