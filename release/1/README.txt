@@ -60,7 +60,7 @@ In the browser, open two tabs ; one that points at:
 http://localhost/demo1/pr1.html
 
 And another one that points at:
-http://localhost/demo1/pr1.html
+http://localhost/demo1/pr2.html
 
 
 On each one of these two tabs, in the beginning, the list of existing
