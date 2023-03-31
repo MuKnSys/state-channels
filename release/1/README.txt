@@ -148,11 +148,12 @@ you now see that the incoming, outcoming and replay lists
 of PR1 and PR2 are populated by a number of messages, i.e.
 you should see, for PR1 (in the first tab):
 
-PR1 bob ^?
+PR1 bob ^
 in:
   <0 0>set PR1=>GR1 (Salut) (S bob)
+  <0 0>set PR1=>GR1 (Salut) (S bob carol)!!
 rl:
-  <0 0>set PR1=>GR1 (Salut) (S bob)
+  <0 0>set PR1=>GR1 (Salut) (S bob carol)!*
 out:
   <0 _>set PR1=>GR1 (Salut) (S bob)
 
