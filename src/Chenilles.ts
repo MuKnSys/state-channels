@@ -16,10 +16,10 @@ type Address = string; // e.g. on Ethereum, "0xb0bb1ed229f5Ed588495AC9739eD1555f
 // Accounts
 interface Account {
   readonly petname: Petname;
-  readonly network: Network|undefined;
+  readonly network: Network|null;
   readonly address: Address;
 
-  constructor(petname: Petname, network: Network|undefined, address: Address);
+  constructor(petname: Petname, network: Network|null, address: Address);
   isAccount(): boolean;
 }
 
@@ -63,7 +63,7 @@ type ChenilleState = {
 // Our State Channel interface
 interface Chenille {
   readonly network : Network, // blockchain network on which the state channel is managed
-  readonly parent : Address|undefined, // address for the contract that manages the channel
+  readonly parent : Address|null, // address for the contract that manages the channel
   readonly nonce : string, // nonce identifying the state channel within the network or contract
 
   async constructor(initialDeposit: PetLedger);
