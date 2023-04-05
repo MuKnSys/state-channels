@@ -104,6 +104,10 @@
 (define-type Assets
   (HashTable BigInt <- AssetId))
 
+;; NamedAssets for use in user-level frontends rather than contract-level backends.
+(define-type NamedAssets
+  (HashTable BigInt <- AssetName))
+
 ;; Balances are a table mapping addresses to assets
 ;; Note that in the context of Chenilles, the AddressBytes could be the digest of some ChenilleTerms
 (define-type Balances
@@ -290,17 +294,14 @@
     proposed: [ProposedState] ;; typically a Nested
     witness: [Bytes]))) ;; the witnesses for each terms under the *current* terms for
 
-;; Open a simple state channel between two participants,
-;; wherein the balances
+;; Open a simple state channel between two known participants,
+;; wherein the initial balances will match for each petnamed participant the named assets.
 (declare-type state-channel-open
-  (Fun Chenille <- ChenillesContext (List (Tuple Participant Assets))))
+  (Fun Chenille <- ChenillesContext (List (Tuple Petname NamedAssets))))
 ;; Deposit, Withdraw, etc.
 (declare-type state-channel-deposit (Fun Bool <- Chenille Assets))
 (declare-type state-channel-withdraw (Fun Bool <- Chenille Assets))
 (declare-type state-channel-close (Fun Bool <- Chenille Balances))
-
-;; Return current state of a Chenille
-(declare-type chenille-onchain-state (Fun ChenilleState <- Chenille))
 
 ;; Send a micropayment on a Chenille
 (declare-type chenille-send (Fun Bool <- Chenille Petname Assets))
