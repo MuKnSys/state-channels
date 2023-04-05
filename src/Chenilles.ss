@@ -213,6 +213,8 @@
 
    LnHtlc: Bytes ;; parameters for a HTLC compatible with the Bitcoin Lightning Network
    StaticCall: (Tuple Address Bytes) ;; parameters to a STATICCALL to some validating contract.
+   ;; Groth16: ... ;; validating contract interactions via a Groth16 zk SNARK ?
+   ;; Plonk: ... ;; validating contract interactions via a Plonk zk SNARK ?
    |#))
 
 (define-type ProposedState
@@ -276,7 +278,7 @@
 (declare-type post-chenille-transaction
   (Fun Bool <- ChenilleTransaction))
 
-;; HIGH-LEVEL API TO IMPLEMENT IN TERMS OF THE ABOVE
+;; HIGH-LEVEL STATE CHANNEL API TO IMPLEMENT IN TERMS OF THE ABOVE
 
 ;; TODO: design the State Channel properly on top of Chenilles, adding the speculation needed,
 ;; any feature desired.
@@ -304,7 +306,7 @@
 (declare-type state-channel-close (Fun Bool <- Chenille Balances))
 
 ;; Send a micropayment on a Chenille
-(declare-type chenille-send (Fun Bool <- Chenille Petname Assets))
+(declare-type state-channel-send (Fun Bool <- Chenille Petname Assets))
 
 ;; TODO: adversarial challenge API for the State Channel (NB: invisible to end-user).
 
