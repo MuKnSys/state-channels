@@ -31,8 +31,8 @@
   (Record
    ;;class: (Exactly 'Account)
    petname: [Petname] ;; petname of the account
-   network: [(Maybe Network)] ;; network to which the account is restricted, if any
-   address: [Address])) ;; address of the account, which might span multiple networks (BTC+BCH, ETH+ETC)
+   network: [NetworkName] ;; network to which the account is restricted, if any
+   address: [Bytes])) ;; address of the account, which might span multiple networks (BTC+BCH, ETH+ETC)
 
 ;; Login to an account, allowing us to use it in an active role.
 ;; The first argument is a ChenillesContext.
@@ -93,17 +93,15 @@
 
 ;; Create a new Chenille from context and inital ledger
 (declare-type chenille-open (Fun Chenille <- ChenillesContext ChenilleState))
-
-;; Return current state of a Chenille
-
-(declare-type chenille-onchain-state (Fun ChenilleState <- Chenille))
-
-;; Send a micropayment on a Chenille
-(declare-type chenille-send (Fun Bool <- Chenille Petname Assets)
-
 ;; Deposit, Withdraw, etc.
 (declare-type chenille-deposit (Fun Bool <- Chenille Assets))
 (declare-type chenille-withdraw (Fun Bool <- Chenille Assets))
 (declare-type chenille-close (Fun Bool <- Chenille PetLedger))
+
+;; Return current state of a Chenille
+(declare-type chenille-onchain-state (Fun ChenilleState <- Chenille))
+
+;; Send a micropayment on a Chenille
+(declare-type chenille-send (Fun Bool <- Chenille Petname Assets))
 
 ;; TODO: in a UTXO context, a multiple deposit/withdraw to/from multiple UTXOs with sigs or scripts
