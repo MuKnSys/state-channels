@@ -38,7 +38,7 @@
 
 ;; An AddressInContext contains both the AddressContextName and
 ;; the bytes of an address within the specified network.
-(define-type AddressInContext (Tuple AddressContextName AddressBytes))
+(define-type AddressInContext (Tuple AddressContextId AddressBytes))
 
 ;; A participant has one address on each of several contexts,
 ;; A chenille participant MUST include at least:
@@ -57,7 +57,7 @@
 ;; as well as "LaconicTestnet", etc. But it is probably safer to have separate addresses,
 ;; if not separate participants, on test networks vs production networks.
 (define-type Participant
-  (HashTable NetworkAddressBytes <- AddressContextName))
+  (HashTable AddressBytes <- AddressContextId))
 
 ;; A petnaming is a user-specific private mapping from petname to participant,
 ;; never to be shared or trusted on the network.
@@ -66,6 +66,8 @@
 
 (define-type ChenilleContext
   (Record
+   user: [(Maybe Petname)] ;; current user
+   ;; TODO: add cryptographic context about known private keys
    petnames: [Petnaming]
    peers: [Participant]
    ;; peers: For each supported AddressContextName, the contact point URL,
@@ -78,14 +80,14 @@
    ))
 
 ;; Login to an account, allowing us to use it in an active role.
-;; The first argument is a ChenillesContext.
+;; The first argument is a ChenilleContext.
 ;; The second argument is a Petname (String).
 ;; If needed, a UI request for passphrase, 2FA access, etc., will be requested from the user,
 ;; but not if the user or a super-user of it was already logged in.
-(declare-type login (Fun Bool <- ChenillesContext Petname))
+(declare-type login (Fun Bool <- ChenilleContext Petname))
 
 ;; Return the current participant petname
-(declare-type whoami (Fun (Maybe Petname) <- ChenillesContext))
+(declare-type whoami (Fun (Maybe Petname) <- ChenilleContext))
 
 ;; Asset name; e.g. "ETH", "LNT", "USDC"...
 (define-type AssetName String)
@@ -115,14 +117,14 @@
 
 ;; digest of the network name and chenille peer address on that network,
 ;; e.g. "Ethereum" followed by the address of the Ethereum Chenilles contract.
-(define-type ParentId Digest)
+(define-type AddressContextId Digest)
 
 ;; ChenilleIdentificationBytes are what a ChenilleId is a digest of. Its design is necessary
 ;; to ensure security, so you cannot be rugpulled into signing a message that ends up being
 ;; interpreted in a state channel that was not initialized to what you believed it would be.
 (define-type ChenilleIdentificationBytes
   (Record
-   nonce: [Digest] ;; for security, participants hash the parent-id with a mutually random number
+   nonce: [Digest] ;; for security, participants hash the AddressContextId with a mutually random number
    initial-balances: [Balances] ;; the assets to be deposited upon channel creation.
    initial-state: [Digest])) ;; digest of the initial state
 
@@ -163,14 +165,14 @@
    ;; that match the claimed inputs and initial state.
    ;; Spending witnesses for the claimed inputs and outputs are issued.
 
-   Ecdsa: Address
+   Ecdsa: AddressBytes
    ;; Valid on input if transaction authorized by standard EOA ECDSA signature.
    ;; Witness: the signature by that address of the entire ChenilleTransaction.
    ;; Spending Witnesses: digest of the UTXOs being claimed by the transaction.
    ;; Always valid on output.
 
    Outputs: (ContentAddressed (HashTable ChenilleState <- ChenilleId))
-   ;; Valid on inputs if the outputs exactly matches the digested chenilles and states.
+   ;; Valid on transaction input if the specified outputs exactly matches the digested chenilles and states.
    ;; Witness: empty.
    ;; Spending Witnesses: digest of this UTXOs being accounted for.
    ;; Always valid on output.
@@ -191,7 +193,7 @@
 
    Challenge: (ContentAddressed
                (Record
-                control: [ChenilleTerms] ;; who can post a challenge update
+                control: [ChenilleTerms] ;; who can post a challenge update or settlement
                 proposed: [ProposedState]))
    ;; Valid on input if one of either
    ;; (a) the witness starts with a challenge update prefix (and the deadline hasn't passed?),
@@ -206,13 +208,13 @@
    ;; Usually used in disjunction with a multisig for settlemetnsl
 
    #| TO BE IMPLEMENTED LATER:
-   EthSchnorr: Address
+   EthSchnorr: AddressBytes
    ;; valid if authorized by Ethereum-modified Schnorr signature as per chainlink code.
    ;; witness: the signature by that address of the entire ChenilleTransaction
    ;; input data consumed: none. output data produced: none. -- but checked by the signature
 
    LnHtlc: Bytes ;; parameters for a HTLC compatible with the Bitcoin Lightning Network
-   StaticCall: (Tuple Address Bytes) ;; parameters to a STATICCALL to some validating contract.
+   StaticCall: (Tuple AddressBytes Bytes) ;; parameters to a STATICCALL to some validating contract.
    ;; Groth16: ... ;; validating contract interactions via a Groth16 zk SNARK ?
    ;; Plonk: ... ;; validating contract interactions via a Plonk zk SNARK ?
    |#))
@@ -246,10 +248,16 @@
 (define-type Heap
   (HashTable Bytes32 <- Bytes32))
 
-;; Type of the data in the overall Ethereum Chenilles contract
+;; ChenilleStates: A collection of chenilles with their state,
+;; notably to be used as inputs or outputs to a transaction.
+(define-type ChenilleStates
+  (HashTable ChenilleState <- ChenilleId))
+
+;; Type of the data in the overall Ethereum Chenilles contract:
+;; the current states of the chenilles, plus additional data associated to them.
 (define-type ChenillesContractState
   (Record
-   states: (HashTable ChenilleState <- ChenilleId)
+   states: ChenilleStates
    heaps: (HashTable Heap <- ChenilleId)))
 
 ;; a ChenilleTransaction is very similar to a Bitcoin transaction with UTXOs,
@@ -299,14 +307,14 @@
 ;; Open a simple state channel between two known participants,
 ;; wherein the initial balances will match for each petnamed participant the named assets.
 (declare-type state-channel-open
-  (Fun Chenille <- ChenillesContext (List (Tuple Petname NamedAssets))))
+  (Fun Chenille <- ChenilleContext (List (Tuple Petname NamedAssets))))
 ;; Deposit, Withdraw, etc.
-(declare-type state-channel-deposit (Fun Bool <- Chenille Assets))
-(declare-type state-channel-withdraw (Fun Bool <- Chenille Assets))
-(declare-type state-channel-close (Fun Bool <- Chenille Balances))
+(declare-type state-channel-deposit (Fun Bool <- Chenille NamedAssets))
+(declare-type state-channel-withdraw (Fun Bool <- Chenille NamedAssets))
+(declare-type state-channel-close (Fun Bool <- Chenille))
 
-;; Send a micropayment on a Chenille
-(declare-type state-channel-send (Fun Bool <- Chenille Petname Assets))
+;; Send a micropayment on a Chenille State Channel
+(declare-type state-channel-send (Fun Bool <- Chenille Petname NamedAssets))
 
 ;; TODO: adversarial challenge API for the State Channel (NB: invisible to end-user).
 
@@ -323,7 +331,7 @@ or peer to peer handshake in person.
 (define Bob ...)
 
 2. They agree on putting respectively 10 ETH and 20 ETH in a common channel
-on the Ethereum Chenilles Contract with its known parent-id.
+on the Ethereum Chenilles Contract with its known AddressContextId.
 
 3. They each pick a random number that they commit to then reveal to each other via libp2p,
 based on which they can generate the ChenilleId with a state reflecting the initial balances,
