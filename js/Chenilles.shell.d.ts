@@ -21,7 +21,7 @@ export interface ChenilleContext {
 // The second argument is a Petname (string).
 // If needed, a UI request for passphrase, 2FA access, etc., will be requested from the user,
 // but not if the user or a super-user of it was already logged in.
-export function login (ctx: ChenilleContext, petname: Petname) : boolean;
+export async function login (ctx: ChenilleContext, petname: Petname) : boolean;
 
 // Return the current participant petname
-export function whoami (ctx: ChenilleContext) : Petname | null;
+export async function whoami (ctx: ChenilleContext) : Petname | null;
