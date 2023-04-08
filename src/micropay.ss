@@ -13,5 +13,26 @@
 (import ../examples/mp1)
 (import ../examples/mp2)
 
+;; Micropays
 (set! tsc_micropay (type `("sc_micropay" ,tstatech) ;; State channel for micropayments
                          '()))
+
+;; Constructor
+(define (sc_micropay CLASS . ACC)
+  Void)
+
+;; Basic methods
+(method! tsc_micropay 'deposit (=> (X)
+  Void))
+
+(method! tsc_micropay 'transfer (=> (X)
+  Void))
+
+(method! tsc_micropay 'withdraw (=> (X)
+  Void))
+
+(method! tsc_micropay 'close (=> (X)
+  Void))
+
+(method! tsc_micropay 'panic (=> (X)
+  Void))

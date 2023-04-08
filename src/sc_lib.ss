@@ -12,5 +12,23 @@
 (import ./runtime)
 (import ./micropay)
 
+;; State channel library
 (set! tsc_lib (type "sc_lib"  ;; Class for the whole library ; it's a singleton
                     '()))
+
+;; Constructor
+(define (sc_lib)
+  ;; create [avec host identity]
+  Void)
+
+;; Fetch various kinds of things
+;=> accounts ;
+;=> classes (?) ;
+;=> hosts ;
+;=> endpoints ;
+;=> groups ;
+
+;; Identities
+;whoami
+;login
+;iam
