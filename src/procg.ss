@@ -143,7 +143,10 @@
       (set! PROC (net-resolve? UID)) ;; Check if UID exists somewhere
       (if (not PROC)
         (set! PROC (if (!= NAME (proc-petname (current-proc)))
-                     (net-map UID)
+                     (let* ((PROC (net-map UID)))
+                       (:= PROC 'USER NAME)
+                       (^ 'attach GR PROC)
+                       PROC)
                      (create))))))
   PROC))
 

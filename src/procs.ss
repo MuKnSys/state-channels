@@ -250,7 +250,7 @@
                (account? PROC) ;; TODO: hsss ... check this (how exactly accounts can become the current proc)
                (and (== (typeof PROC) tprocl)
                     (== (: PROC 'ROLE) 'Core))))
-    (error "current-proc! : not a proc" (typeof PROC)))
+    (error "current-proc! : not a proc " (typeof PROC)))
   (set! _CURPROC PROC)
   (if (and (not (nil? PROC))
            (not (account? PROC))) ;; TODO: hsss ... keep the current proch in case of accounts is a trick
