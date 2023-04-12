@@ -1,0 +1,27 @@
+
+# Initializing everything
+autorun 1
+proch system HOST1
+chost HOST1
+#netlist-acc 1
+
+# We start with 2 procs/ledgers, each containing $10, joined
+#                                       [ in a state channel
+iam Bob
+channel GR1 Bob Carol
+
+netlist
+
+iam GR1#1
+#deposit GR1 10
+
+#transfer GR1 Carol 2
+
+#state GR1#0
+
+#state GR1#1
+
+#state GR1#2
+
+# Quitting
+#q
