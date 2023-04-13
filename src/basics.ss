@@ -222,7 +222,7 @@
     Unspecified))
 
 (define (list-in? X L)
-  (specified? (list-find (=> (E) (== E X)) L)))
+  (specified? (list-find (=> (E) (== E X)) L))) ;; FIXME(?): use (eq?) here, not "=="/(equal?)
 
 (define (list-find-prev F L)
   (define PREV Unspecified)

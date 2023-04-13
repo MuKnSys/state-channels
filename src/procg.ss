@@ -53,6 +53,7 @@
 (set! tprocg (type `("procg" ,tproc)  ;; Proc group
                    '(PARENT           ;; Parent process (master of the group's interaction)
                      PEER             ;; Peers
+                     PEERA            ;; Peers' account names
                      CPEER            ;; Peers' SELF constructor
                     )))
 
@@ -63,6 +64,7 @@
 (define (procg . PARM)
   (define RES (apply proc `(,tprocg . ,PARM)))
   (:? RES 'PEER '())
+  (:? RES 'PEERA '())
   (^ 'host-init RES)
   RES)
 

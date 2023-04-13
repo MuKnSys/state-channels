@@ -81,6 +81,10 @@
            (hash-set! (net-phys) UID ADDR)
           ;(hash-set! (net-procs) UID PROC) ; TODO: create a mapping (?)
            Void))
+        ((and (pair? MSG) (== (car MSG) 'enter-group))
+         (if DHT_LOG
+           (chlog2 MSG ">> "))
+         Void)
         ((and (pair? MSG) (== (car MSG) 'leave))
          (if DHT_LOG
            (chlog2 MSG ">> "))

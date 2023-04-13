@@ -347,6 +347,12 @@
     (error "_npr- : proc " PID " not found"))
   (net-leave PR))
 
+(define (_nprg PID)
+  (define PR (_getProc PID))
+  (if (not PR)
+    (error "_nprg : proc " PID " not found"))
+  (net-enter-group PR))
+
 (define (_proch USER UID)
   (define HOST (proch 'USER USER
                       'UID UID))
@@ -500,10 +506,11 @@
   (define MASTER Void)
   (set! MASTER (procl 'USER "blockchain"))
   (^ 'prog! MASTER MSELF)
-  (set! RES (proc-group (procg 'UID UID)
+  (set! RES (proc-group (procg 'UID UID 'PEERA (list-copy PETNAMES)) ;; TODO: take care that PEERA is always initialized
                         MASTER (list-length PETNAMES)))
   (:= RES 'CPEER CPEER)
   (_npr MASTER)
+  (_nprg RES)
   RES)
 
 (define (_gre UID)
