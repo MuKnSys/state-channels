@@ -4,12 +4,12 @@
 1) Rationale
 
 This first release of the state channel library (and of an example
-that enables seeing it in action) is meant to provide the proof that
-the core mechanism of state channels has been fully ported in the
-Javascript-in-a-browser-tab environment.
+that enables seeing it in action) is meant to release a first version
+of a state channel-based micropayment class, that works on top of
+a com layer like LibP2P.
 
-It is based on a simple communication layer, which operates by means
-of a server that acts as a mailbox for the messages.
+In its simplest incarnation, it is based on a simple server that receives
+and broadcasts the received messages to all connected hosts.
 
 It contains a clean and complete implementation of the main loop in
 Javascript, plus the interfaces that are needed to plug the library
