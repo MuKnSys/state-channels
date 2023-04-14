@@ -125,7 +125,7 @@ then a deposit of 10 monetary units is done for Bob in the state channel's ledge
 
 To verify this, inside the inspect pane of the first tab, do:
 
-netlist("GR1#1");
+state("GR1#1");
 
 
 It gives:
