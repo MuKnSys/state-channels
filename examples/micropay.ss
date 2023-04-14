@@ -36,13 +36,17 @@
                 PETNAMES)))
   (if (not ISCORE)
     (:= (: GR 'PARENT) 'ROLE 'Mapping)) ;; FIXME: doesn't work ; when created before, GR.PARENT can't be a pure mapping ; and we must create it with a self being an instance of cmicropay, because of the methods peerId & peerInit that are used in (procg::endpoint)
-  GR)
+  GR
+  Void) ;; FIXME: due to shitty compilation to JS : promise remains pending if we return a too complex object
 
 (define (sc_micropay NAME . PETNAMES)
   (apply _sc_micropay `(,True ,NAME . ,PETNAMES)))
 
 (define (sc_recv_micropay NAME . PETNAMES)
-  (apply _sc_micropay `(,False ,NAME . ,PETNAMES)))
+  (define OEG _ENTER_GROUP)
+  (net-enter-group False)
+  (apply _sc_micropay `(,False ,NAME . ,PETNAMES))
+  (net-enter-group OEG))
 
 ;; Basic methods
 (method! tsc_micropay 'deposit (=> (MP AMOUNT)

@@ -5,17 +5,11 @@
 
 This first release of the state channel library (and of an example
 that enables seeing it in action) is meant to release a first version
-of a state channel-based micropayment class, that works on top of
-a com layer like LibP2P.
-
-In its simplest incarnation, it is based on a simple server that receives
-and broadcasts the received messages to all connected hosts.
+of a state channel-based micropayment class, that works on top of LibP2P.
 
 It contains a clean and complete implementation of the main loop in
 Javascript, plus the interfaces that are needed to plug the library
-to the communication layer and to the main loop ; this interfaces
-remain the same when we will reimplement the communication layer
-on top of LibP2P.
+to the LibP2P-based communication layer and to the main loop.
 
 
 2) Installation

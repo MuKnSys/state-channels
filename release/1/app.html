@@ -1,0 +1,37 @@
+<html><head><title>app</title>
+  <script src="runtime.js"></script>
+  <script src="com_libp2p0.js"></script>
+  <script src="com.js"></script>
+  <script src="sched.js"></script>
+  <script src="sc_lib.js"></script>
+  <script src="sc_js.js"></script>
+  <script>
+    async function start() {
+      await init("http://localhost:1234");
+      out.focus("out1");
+    //await autorun("1");
+      await proch("system","HOST1"); // FIXME: hsss ...
+      await chost("HOST1");
+    }
+  </script>
+</head>
+<!--
+  On the first host, do:
+  => run()
+     iam("Bob")        // login("Bob",1234)
+     channel("GR2","Bob","Carol")
+     iam("GR2#1")      // take("GR2")
+     deposit("GR2","10")
+     transfer("GR2","Carol","2")
+     state("GR2#1")    // state("GR2")   => state of the appropriate endpoint
+     netlist("GR2#1")  // netlist("GR2") => lists the appropriate endpoint
+
+  On the second host, do:
+  => run()
+     iam("Carol")      // login("Carol",5678)
+     state("GR2#2")
+     netlist("GR2#2")
+-->
+<body onLoad="start()"><pre style="font-size: 13;"><code id="out1">
+</code></pre>
+</body></html>

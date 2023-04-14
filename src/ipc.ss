@@ -166,10 +166,14 @@
       (hash-set! (net-procs) UID PROC)
       (host-send "0" `(enter ,UID ,ADDR))))))))
 
+(define _ENTER_GROUP True)
 (define (net-enter-group GR)
  ;(outraw* (: GR 'UID) (: GR 'PEERA))
  ;(cr)
-  (host-send "0" `(enter-group ,(: GR 'UID) ,(: GR 'PEERA)))
+  (if (atom? GR)
+    (set! _ENTER_GROUP (boolean GR))
+    (if _ENTER_GROUP
+      (host-send "0" `(enter-group ,(: GR 'UID) ,(: GR 'PEERA)))))
   Void)
 
 (define (net-leave PROC)
