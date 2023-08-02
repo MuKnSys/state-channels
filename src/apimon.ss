@@ -251,7 +251,8 @@
     (outraw "SELF")
     (cr)))
   (hash-for-each-in-order (=> (UID PR)
-                            (if (or (netlist-acc) (and (not (netlist-acc)) (not (account? PR))))
+                            (if (or (netlist-acc) (and (not (netlist-acc)) (and (not (account? PR))
+                                                                                (not (procc? PR)))))
                             (begin
                               (if FIRST
                                 (set! FIRST False)

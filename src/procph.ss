@@ -120,6 +120,32 @@
     (set! SOCK (cadr SOCK)))
   SOCK)
 
+(define (the-srv-chan2 PR) ;; FIXME: these ones must replace the previous ones
+  (car (: PR 'INCHAN)))
+
+(define (the-srv-sock2 PR)
+  (: (the-srv-chan2 PR) 'SOCK))
+
+(define (the-srv2 PR)
+  (define SOCK (the-srv-sock2 PR))
+  (if (specified? SOCK)
+    (set! SOCK (cadr SOCK)))
+  SOCK)
+
+;; Physical input sock
+(define (proc-sockin PR)
+  (cond ((procph0? PR)
+         (the-srv2 PR))
+        ((procc? PR)
+         (^ 'inp PR))
+        (else
+          Void)))
+
+(define (by-sockin SOCK L)
+  (list-find (=> (PR)
+               (== (proc-sockin PR) SOCK))
+             L))
+
 ;; Blocking/nonblocking modes
 (define _START-OFLAGS Void)
 (define _START-ISBLOCK True)
@@ -180,6 +206,7 @@
         (set! RES (sexpr-parse RES))
         ((: (: PROC 'PROCPH) 'HANDLER) RES)))
   (current-procph0! (the-procph0))
+  (all-srv! `(,(the-procph0)))
 
   (channel-mode! (the-srv-chan) 'Sync)
 
@@ -227,6 +254,44 @@
           (if (and ONCE (> ONCENB 0))
             (set! ONCENB (- ONCENB 1)))))
       (channel-eof! SOCK))))))
+
+;; Main loop
+(define (main-loop) ;; able to take into account several input channels
+  (define DOIT True)
+  (define PORT Void)
+  (define LSTP Void)
+  (define PR Void)
+  (define FINISHED (list False))
+  (define CLI (: (stdinout) 'CLI))
+  (define (autorun)
+    (if (specified? CLI)
+      (^ 'autorun CLI)
+      True))
+  (start 'Once)
+  (while (not (car FINISHED))
+  (begin
+    (if (not (^ 'inbuf-empty? (stdinout)))
+      (set! PR (stdinout))
+      (while DOIT
+        (begin
+          (set! LSTP (list-copy (all-con-sockin)))
+          (if (autorun)
+            (set! LSTP (append (all-srv-sockin) LSTP))) ;; TODO: use (append!) [and add the corresponding func in basics.ss]
+          (set! PORT (sock-select LSTP '() '()))
+         ;(out PORT)(cr)
+          (set! PORT (caar PORT))
+         ;(outraw "Select fired[")
+         ;(outraw (if (== PORT (the-srv)) "STDIN" "KBD"))
+         ;(outraw "]!\n")
+          (set! PR (by-sockin PORT (all-srv)))
+          (if (unspecified? PR)
+            (set! PR (by-sockin PORT (all-con))))
+          (if (procc? PR)
+            (set! DOIT False)
+            (start 'Once 1)))))
+    (if (autorun)
+      (start 'Once))
+    (^ 'step PR FINISHED))))
 
 ;(if (== _HOSTID "0")
 ;  (start))

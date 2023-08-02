@@ -23,7 +23,8 @@
         ./proch
         ./procph
         ./eth
-        ./proceth)
+        ./proceth
+        ./procc)
 
 (export
   (import: ./rexpr)
@@ -42,4 +43,5 @@
   (import: ./proch)
   (import: ./procph)
   (import: ./eth)
-  (import: ./proceth))
+  (import: ./proceth)
+  (import: ./procc))

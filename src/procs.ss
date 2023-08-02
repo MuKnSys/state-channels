@@ -60,6 +60,8 @@
            "g")
           ((== (typeof PROC) tproceth)
            "eth")
+          ((== (typeof PROC) tprocc)
+           "con")
           ((== (typeof PROC) taccount)
            "acc")
           ((and (^ 'mapping? PROC) (== (typeof PROC) tproc))
@@ -224,6 +226,11 @@
 (define (proceth? PROC)
   (and (specified? PROC)             ;; FIXME: find a general solution such as when tprocxyz==Void, we don't
        (== (typeof PROC) tproceth))) ;;        have (procxyz? Void)=>True ; (procxyz? Void) should always be False
+
+;; (define)s for consoles
+(define tprocc Void)
+(define (procc? PROC)
+  (inherits? (typeof PROC) tprocc))
 
 ;; (define)s for calls
 (define tcall Void)

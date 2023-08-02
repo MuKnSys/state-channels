@@ -333,9 +333,25 @@
   _CURPROCPH0)
 
 (define (current-procph0! PROC)
-  (if (not (or (nil? PROC) (== (typeof PROC) tprocph0)))
+  (if (not (or (nil? PROC) (== (typeof PROC) tprocph0))) ;; TODO: use (procph0?), here
     (error "current-procph0! : not a procph0" (typeof PROC)))
   (set! _CURPROCPH0 PROC))
+
+(define _ALLSRV Nil)
+(define (all-srv)
+  _ALLSRV)
+
+(define _ALLSRV_SOCKIN Nil)
+(define (all-srv-sockin)
+  _ALLSRV_SOCKIN)
+
+(define (all-srv! LST)
+  (for-each (=> (PROC)
+              (if (not (procph0? PROC))
+                (error "all-srv!")))
+            LST)
+  (set! _ALLSRV LST)
+  (set! _ALLSRV_SOCKIN (map proc-sockin LST)))
 
 ;; Chmsgs
 (define tchmsg (type "chmsg"

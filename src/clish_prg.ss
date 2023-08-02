@@ -34,4 +34,5 @@
 (loadi PROG (car L))
 (if SCRIPT
   (set! SCRIPT (file-read SCRIPT 1)))
-(^ 'run APIMON "> " SCRIPT)
+(^ 'init-stdinout APIMON "> " SCRIPT)
+(main-loop)

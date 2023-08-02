@@ -227,6 +227,7 @@
   (if (not RES)
     (set! RES (account-byUID NAME)))
   (if (or (proceth? PROC)
+          (procc? PROC)
           (account? PROC)) ;; TODO: improve this
     (set! RES PROC)
     (if (and (not RES) (not ISCORE) (empty? OPT)) ;; TODO: populate & test OPT
