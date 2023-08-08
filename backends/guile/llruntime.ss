@@ -43,6 +43,20 @@
     (error "procedure-name"))
   (cadr (string-split (with-output-to-string (lambda () (write F))) #\space)))
 
+;; Files
+(define (file-type FPATH)
+  (define ST (stat FPATH))
+  (string (string-ref (symbol->string (stat:type ST)) 0)))
+
+(define (files FPATH)
+  (define RES '())
+  (define DIR (opendir FPATH))
+  (define FNAME (readdir DIR))
+  (while (not (eof-object? FNAME))
+    (set! RES (cons FNAME RES))
+    (set! FNAME (readdir DIR)))
+  (reverse RES))
+
 ;; Modules
 (define _MODS (make-hash-table))
 

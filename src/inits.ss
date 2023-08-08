@@ -10,6 +10,7 @@
 
 (export #t)
 (import ./rexpr)
+(import ./mods)
 
 ;; Inits
 (define tinits (type "inits" '(FNAME DATA)))
@@ -160,7 +161,7 @@
   RES)
 
 ;; Self path
-(set! SC_PATH (path-dir (path-dir (path-normalize (current-source-file)))))
+(set! SC_PATH (: (mod-by-lpath "mukn/state-channels") 'FPATH))
 
 ;; BOOT.ini
 (init-conf (string+ SC_PATH "/BOOT.ini"))

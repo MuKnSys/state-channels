@@ -165,6 +165,8 @@
     (list-ref L I)
     ALTV))
 
+(define rexpr Void)
+(define := Void) ;; to workaround the cyclic dependencies problem ;; TODO: get rid of it
 (define (command-line-parse . LDC)
   (define RES (rexpr Void '()))
   (define VAR Void)

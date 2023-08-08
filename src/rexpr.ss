@@ -129,7 +129,7 @@
   (eq? (typeof O) '@type))
 
 ;; Rexprs (Record expressions)
-(define (rexpr TYPE L) ;; Creates an rexpr having the type TYPE
+(set! rexpr (=> (TYPE L) ;; Creates an rexpr having the type TYPE
   (define (slots TY)
     (define LS '())
     (while (not (nil? TY))
@@ -165,7 +165,7 @@
   (if (and (not (nil? INSTNO))
            (unspecified? (rexpr-get RES 'ID)))
     (rexpr-set! RES 'ID (sy (string+ (string2 (rexpr-get TYPE 'ID)) "@" (string2 INSTNO)))))
-  RES)
+  RES))
 
 (define (rexpr? O)
   (and (pair? O) (pair? (car O)) (== (caar O) ':TYPE)))
@@ -246,7 +246,7 @@
 
 (define : rexpr-get)
 (define <- rexpr-remove!)
-(define := rexpr-set!) ;; TODO: turn that to a macro, to also cover the case of "set!"
+(set! := rexpr-set!) ;; TODO: turn that to a macro, to also cover the case of "set!"
 (define :? rexpr-set-init!)
 (define :+ rexpr-add!)
 
@@ -475,12 +475,12 @@
   (set! PARM (mvparms F PARM))
   (apply mcall (cons F PARM)))
 
-;(define ^ mcall) ;; TODO: improve this ugly thing
-;(define ^? mcallv)
-(define-macro (^ . PARM) ;; NOTE: temporary s$%t to enable compiling to enable lifting to Gambit ; remove this asap.
-  `(mcall . ,PARM)) ;; TODO: improve this ugly thing
-(define-macro (^? . PARM)
-  `(mcallv ,(car PARM) . ,(cdr PARM)))
+(define ^ mcall) ;; TODO: improve this ugly thing
+(define ^? mcallv)
+;(define-macro (^ . PARM) ;; NOTE: temporary s$%t to enable compiling to enable lifting to Gambit ; remove this asap.
+;  `(mcall . ,PARM)) ;; TODO: improve this ugly thing
+;(define-macro (^? . PARM)
+;  `(mcallv ,(car PARM) . ,(cdr PARM))) ;; TODO: write that in terms of (defsyntax)
 
 ;; CSV-like files
 (define (csv-read FNAME TY SLOT)

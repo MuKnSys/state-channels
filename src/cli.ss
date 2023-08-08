@@ -13,6 +13,7 @@
 (import ./socks)
 (import ./procs)
 (import ./procph)
+(import ./procc)
 
 ;; CLI API & methods
 (define tcli (type "cli" '(API AUTORUN) (empty)))

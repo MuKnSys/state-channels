@@ -25,6 +25,9 @@
 (define (dirname PATH)
   (string-trim-right (path-directory PATH) #\/))
 
+(define (basename PATH)
+  (path-strip-directory PATH))
+
 (define (_getcf) ;; FIXME: not exactly the current source file ; (import) should keep this info updated
   (list-ref (command-line) 0))
 

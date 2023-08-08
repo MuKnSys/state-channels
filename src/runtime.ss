@@ -11,6 +11,7 @@
 (import ./rexpr
         ./socks ./json
         ./inits
+        ./mods
         ./channels
         ./aliases
         ./scheds
@@ -31,6 +32,7 @@
   (import: ./socks)
   (import: ./json)
   (import: ./inits)
+  (import: ./mods)
   (import: ./channels)
   (import: ./aliases)
   (import: ./scheds)

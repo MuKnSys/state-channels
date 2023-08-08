@@ -11,6 +11,7 @@
 (export #t)
 (import ./rexpr)
 (import ./json)
+(import ./channels)
 (import ./scheds)
 (import ./procs)
 (import ./ipc)
@@ -87,11 +88,11 @@
 
 ;; Outputs
 (method! tprocc 'outraw (=> (CON O)
-  (with-output-to-port (outp CON)
+  (with-output-to-port (^ 'outp CON)
     (=> () (outraw O)))))
 
 (method! tprocc 'out (=> (CON O)
-  (with-output-to-port (outp CON)
+  (with-output-to-port (^ 'outp CON)
     (=> () (out O)))))
 
 ;; CLI
@@ -132,4 +133,5 @@
 (set! _STDINOUT
       (procc 'SOCKIN (current-input-port)
              'SOCKOUT (current-output-port)))
-(all-con! `(,(stdinout))) ;; TODO: do this only if the procph is a console ; if not, there are only outputs
+(define (init-procc)
+  (all-con! `(,(stdinout)))) ;; TODO: do this only if the procph is a console ; if not, there are only outputs

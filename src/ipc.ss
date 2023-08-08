@@ -9,7 +9,7 @@
 ;
 
 (export #t)
-(import ./rexpr)
+(import ./rexpr ./json)
 (import ./channels)
 (import ./procs)
 (import ./accounts)
@@ -109,6 +109,7 @@
   (set! _host-send HSEND))
 
 (define (net-post MSG)
+  (define TY Void)
   (set! MSG (json-parse MSG))
   (set! TY (<- MSG 'TYPE))
   (set! MSG (cons `(,(attr 'TYPE) ,TY) (cons '(:ID 1234) MSG)))

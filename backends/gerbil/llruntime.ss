@@ -117,6 +117,14 @@
 (define (procedure-name F)
   (error "procedure-name: !Yet"))
 
+;; Files
+(define (file-type FPATH)
+  (define FTY (file-info-type (file-info FPATH)))
+  (string (string-ref (symbol->string FTY) 0)))
+
+(define (files FPATH)
+  (directory-files (list path: FPATH ignore-hidden: #f)))
+
 ;; Modules
 (define (loadi FNAME . PRGPATH)
   (set! FNAME (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))

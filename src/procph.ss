@@ -10,13 +10,14 @@
 
 (export #t)
 (import ./rexpr)
-(import ./channels)
+(import ./socks ./channels)
 (import ./scheds)
 (import ./procs)
 (import ./ipc)
 (import ./calls)
 (import ./procl)
 (import ./proch)
+(import ./procc)
 
 (export
   (import: ./scheds)
@@ -133,13 +134,13 @@
   SOCK)
 
 ;; Physical input sock
-(define (proc-sockin PR)
+(set! proc-sockin (=> (PR)
   (cond ((procph0? PR)
          (the-srv2 PR))
         ((procc? PR)
          (^ 'inp PR))
         (else
-          Void)))
+          Void))))
 
 (define (by-sockin SOCK L)
   (list-find (=> (PR)
@@ -209,6 +210,8 @@
   (all-srv! `(,(the-procph0)))
 
   (channel-mode! (the-srv-chan) 'Sync)
+
+  (init-procc)
 
   ;; Blocking/nonblocking modes (init)
   (catch True (=> ()

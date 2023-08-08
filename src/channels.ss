@@ -345,6 +345,7 @@
 (define (all-srv-sockin)
   _ALLSRV_SOCKIN)
 
+(define proc-sockin Void) ;; TODO: fix these dependency problems (i.e., see actual defn of proc-sockin in procph.ss)
 (define (all-srv! LST)
   (for-each (=> (PROC)
               (if (not (procph0? PROC))
