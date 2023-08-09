@@ -11,27 +11,32 @@
 (import ./runtime)
 (import ./cli ./apimon)
 
+(define (prog FPATH EXT)
+  (if (unspecified? (path-ext FPATH))
+    (set! FPATH (string+ FPATH "." EXT))
+    (if (!= (path-ext FPATH) EXT)
+      (error (string+ "File " FPATH " must have ." EXT " extension"))))
+  FPATH)
+
 (define L (command-line))
 
 (if (< (list-length L) 2)
   (error "clish <PROG> [SCRIPT] expected"))
 
-(define PROG (string+ "../examples/" (list-ref L 1) ".ss")) ;; FIXME: make that s$&t work in case $1 is a full path ; need a way to substract 2 paths
-(define PROGFP (string+ (path-dir (current-source-file)) "/" PROG))
+(define PROG (list-ref L 1))
+(set! PROG (prog PROG "ss"))
 
 (define SCRIPT False)
 (if (> (list-length L) 2)
-  (set! SCRIPT (if (path-noseps? (list-ref L 2))
-                 (string+ (path-dir (current-source-file)) "/../examples/" (list-ref L 2) ".scsh")
-                 (path-normalize (list-ref L 2)))))
+  (set! SCRIPT (prog (list-ref L 2) "scsh")))
 
-(if (not (fexists? PROGFP))
-  (error "File " PROGFP " not found"))
+(if (not (fexists? PROG))
+  (error "File " (path-normalize PROG) " not found"))
 
 (if (and SCRIPT (not (fexists? SCRIPT)))
   (error "File " SCRIPT " not found"))
 
-(loadi PROG (car L))
+(mod-load PROG)
 (if SCRIPT
   (set! SCRIPT (file-read SCRIPT 1)))
 (^ 'init-stdinout APIMON "> " SCRIPT)

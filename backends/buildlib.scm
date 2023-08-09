@@ -3,7 +3,7 @@
 
 (define (sh-cmd CMD) ;; Code extracted from basics.ss
   (let* ((PORT (open-input-pipe CMD)) ;; FIXME: seems (open-input-pipe) doesn't exists in Gerbil ; find a way
-         (S  (read-line PORT))
+         (S (read-line PORT))
          (RES '()))
     (while (not (eof-object? S))
       (set! RES (cons S RES))
@@ -51,14 +51,18 @@
   (and (not (equal? (destdir FNAME) ""))
        (equal? (stat:type (stat (string-append DIR "/" FNAME))) 'regular)))
 
+(define _DIFF_FULL #f)
 (define (diff FNAME)
+  (define CMD #f)
   (let* ((SRC (string-append DIR "/" FNAME))
          (DEST (string-append "../" (destdir FNAME) "/" FNAME))
         )
     (if (proceed? FNAME) ;; FIXME: crappy way
       (begin
        ;(display (string-append "Diffing " SRC " => " DEST "\n"))
-        (sh-cmd (string-append "diff -q " SRC " " DEST)))
+        (set! CMD (string-append "diff " (if _DIFF_FULL "-U2" "-q") " " SRC " " DEST))
+       ;(display CMD)(newline)
+        (sh-cmd CMD))
       '())))
              
 (define (diff* . LF)
@@ -85,7 +89,11 @@
   (set! RDIFF (filter (lambda (X) (not (null? X))) RDIFF))
   (if (not (null? RDIFF)) ;; TODO: do that only if we know that the currently installed version is the one to build
     (for-each (lambda (X)
-                (display (car X))
+                (if _DIFF_FULL
+                  (for-each (lambda (X)
+                              (display X)
+                              (newline)) X)
+                  (display (car X)))
                 (display "\n")) RDIFF)))
 
 (define (build . LF)

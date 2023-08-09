@@ -81,7 +81,22 @@
     (car _CURFILE)
     #f))
 
+(define __mod-normalize-path #f)
+(define (_mod-normalize-path PATH)
+  (if __mod-normalize-path
+    (set! PATH (__mod-normalize-path PATH)))
+  PATH)
+
+(define __mod-resolve-path #f)
+(define (_mod-resolve-path PATH)
+  (if __mod-resolve-path
+    (set! PATH (__mod-resolve-path PATH)))
+  PATH)
+
 (define (_mod-load DIR MODS)
+  (set! DIR (_mod-normalize-path DIR))
+ ;(display "From ")(display DIR)(newline)
+ ;(display "Try ")(display MODS)(newline)
   (if (pair? MODS)
     (for-each (=> (MOD)
                 (set! MOD (symbol->string MOD))
@@ -89,10 +104,16 @@
                   (if (not (_mod-resolve NAME)) ;; FIXME: doesn't resolves the problem of modules that load themselves
                   (begin
                     (_mod-store NAME)
+                    (if (eq? (string-ref MOD 0) #\:)
+                      (set! MOD (_mod-resolve-path MOD))
                     (if (not (eq? (string-ref MOD 0) #\/))
-                      (set! MOD (string-append DIR MOD)))
-                    (_pushcf (string-append MOD ".ss"))
-                    (load (string-append MOD ".ss"))
+                      (set! MOD (string-append DIR "/" MOD))))
+                    (if (not (equal? (car (reverse (string-split MOD #\.))) "ss"))
+                      (set! MOD (string-append MOD ".ss")))
+                    (_pushcf MOD)
+                    (set! MOD (_mod-normalize-path MOD))
+                   ;(display "Loading ")(display MOD)(newline)
+                    (load MOD)
                     (_popcf)
                    ;(display (string-append " " NAME " loaded ...\n"))
                   ))))
@@ -104,16 +125,16 @@
 (define-macro (import . MODS)
   `(_mod-load (string-append (dirname (_getcf)) "/") (quote ,MODS)))
 
-(define (loadi FNAME . UNUSED)
-  (set! FNAME (string->symbol (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))) ;; TODO: manage the case when the extension is given (in _mod-load, probably)
-  (eval `(import ,FNAME) (interaction-environment)))
-
 (_mod-store "llruntime") ;; Because it can be loaded directly, by means of (load)
 
 (if (pair? (command-line))
   (let* ((CLI (car (command-line))))
     (_pushcf (if (eq? (string-ref CLI 0) #\/) CLI
                                               (string-append (getcwd) "/" CLI)))))
+
+;(display (command-line))(newline)
+;(display (current-filename))(newline)
+(load (string-append (dirname (current-filename)) "/mods0.ss"))
 
 ;; Shell
 (define (shell CMD)

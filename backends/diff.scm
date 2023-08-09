@@ -1,6 +1,8 @@
 (load "buildlib.scm")
 
 (define BACKEND (list-ref (command-line) 1))
+(if (> (length (command-line)) 2)
+  (set! _DIFF_FULL #t))
 
 (if (or (equal? BACKEND "guile")
         (equal? BACKEND "gerbil"))

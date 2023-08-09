@@ -10,39 +10,39 @@ TESTS=$SC_HOME/tests
 #SCORIES=$SC_HOME/scories
 EXAMPLES=$SC_HOME/examples
 
-cd $TESTS
-
 #$BIN/scm $SNIPPETS/tab1.ss > OUT 2> /dev/null
 #diff -q -U2 OUTTAB1 OUT
 
 #$BIN/scm $SCORIES/persons0.ss > OUT 2> /dev/null
 #diff -q -U2 OUTPERSONS0 OUT
 
-#$BIN/scm $SCORIES/eg1.ss > OUT 2> /dev/null
+#$BIN/scm $SCORIES/eg1.ss > OUT 2> /dev/null ==> TODO: fix this one
 #diff -q -U2 OUTEG1 OUT
 
-$BIN/scm $EXAMPLES/mp1_1.ss > OUT 2> /dev/null
-diff -q -U2 OUT1_1.txt OUT
+cd $EXAMPLES
 
-$SRC/clish.ss mp0 mp0_1 > OUT 2> /dev/null
-diff -q -U2 OUT0 OUT
+$BIN/scm mp1_1.ss > $TESTS/OUT 2> /dev/null
+diff -q -U2 $TESTS/OUT1_1.txt $TESTS/OUT
 
-$SRC/clish.ss mp1 mp1_3 > OUT 2> /dev/null
-diff -q -U2 OUT1 OUT
+$BIN/cli mp0 mp0_1 > $TESTS/OUT 2> /dev/null
+diff -q -U2 $TESTS/OUT0 $TESTS/OUT
 
-$SRC/clish.ss mp0 mp0_1_scheduled > OUT 2> /dev/null
-diff -q -U2 OUT0_scheduled OUT
+$BIN/cli mp1 mp1_3 > $TESTS/OUT 2> /dev/null
+diff -q -U2 $TESTS/OUT1 $TESTS/OUT
+
+$BIN/cli mp0 mp0_1_scheduled > $TESTS/OUT 2> /dev/null
+diff -q -U2 $TESTS/OUT0_scheduled $TESTS/OUT
 
 # Following tests done with Guile
 #   due to the behaviour of htables, not exactly the same as Gerbil's output
 #
-$SRC/clish.ss mp1 mp1_3_scheduled > OUT 2> /dev/null
-diff -q -U2 OUT1_scheduled OUT
+$BIN/cli mp1 mp1_3_scheduled > $TESTS/OUT 2> /dev/null
+diff -q -U2 $TESTS/OUT1_scheduled $TESTS/OUT
 
-$SRC/clish.ss mp2 mp2_3_scheduled > OUT 2> /dev/null
-diff -q -U2 OUT2_scheduled OUT
+$BIN/cli mp2 mp2_3_scheduled > $TESTS/OUT 2> /dev/null
+diff -q -U2 $TESTS/OUT2_scheduled $TESTS/OUT
 
-$SRC/clish.ss mp2 mp3_1_scheduled > OUT 2> /dev/null
-diff -q -U2 OUT3_scheduled OUT
+$BIN/cli mp2 mp3_1_scheduled > $TESTS/OUT 2> /dev/null
+diff -q -U2 $TESTS/OUT3_scheduled $TESTS/OUT
 
 rm -f $TESTS/OUT

@@ -161,7 +161,7 @@
   RES)
 
 ;; Self path
-(set! SC_PATH (: (mod-by-lpath "mukn/state-channels") 'FPATH))
+(set! SC_PATH (mod-by-lpath "mukn/state-channels"))
 
 ;; BOOT.ini
 (init-conf (string+ SC_PATH "/BOOT.ini"))

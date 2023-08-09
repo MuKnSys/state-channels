@@ -1,5 +1,6 @@
-#!/usr/bin/guile -s
+#!/usr/bin/env guile
+-s
 !#
 (load "./llruntime.ss")
 
-(loadi "./clish_prg.ss")
+(mod-load ":mukn/state-channels/src/clish_prg.ss")

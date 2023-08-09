@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
 SC_HOME=`dirname $0`/..
-cd $SC_HOME
 
 if [[ "$1" == "" ]]; then
   echo "cli <PROG> [SCRIPT] expected"
 else
-  src/clish.ss $1 $2
+  $SC_HOME/src/clish.ss $1 $2
 fi

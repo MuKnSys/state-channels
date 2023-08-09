@@ -126,23 +126,5 @@
   (directory-files (list path: FPATH ignore-hidden: #f)))
 
 ;; Modules
-(define (loadi FNAME . PRGPATH)
-  (set! FNAME (string-join (reverse (cdr (reverse (string-split FNAME #\.)))) "."))
-  (set! PRGPATH (if (not (null? PRGPATH)) (car PRGPATH) #f))
-  (if PRGPATH
-  (begin
-    (set! PRGPATH (path-normalize PRGPATH))
-    (set! FNAME (path-normalize (string-append (dirname PRGPATH) "/" FNAME)))
-    (set! FNAME (string-split FNAME #\/))
-    (set! PRGPATH (string-split PRGPATH #\/))
-    (while (equal? (car FNAME) (car PRGPATH))
-    (begin
-      (set! FNAME (cdr FNAME))
-      (set! PRGPATH (cdr PRGPATH))))
-    (while (> (length PRGPATH) 1)
-    (begin
-      (set! FNAME (cons ".." FNAME))
-      (set! PRGPATH (cdr PRGPATH))))
-    (set! FNAME (string-join FNAME "/"))))
-  (set! FNAME (string->symbol FNAME))
-  (eval `(import ,FNAME) (interaction-environment)))
+(define __mod-normalize-path #f) ;; Unused, but necessary inside mods0.ss
+(define __mod-resolve-path #f)   ;; Idem

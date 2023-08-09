@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 SC_HOME=`dirname $0`/..
-guile --no-auto-compile --debug $SC_HOME/backends/diff.scm $1
+guile --no-auto-compile --debug $SC_HOME/backends/diff.scm $1 $2
