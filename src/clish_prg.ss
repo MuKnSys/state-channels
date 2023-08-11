@@ -1,6 +1,6 @@
 ; clish_prg.ss
 ;
-;  Copyright (C) 2022, MUKN
+;  Copyright (C) 2022, MUKN 
 ;
 ;  Authors: Henri Lesourd (August 2022)
 ;
