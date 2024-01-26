@@ -10,17 +10,8 @@
 
 (export #t)
 (import ./llruntime)
+(import ./mods0)
 (import ./basics)
-
-;; Env
-(define (env-get VAR)
-  (define RES Void)
-  (catch True
-    (=> ()
-      (set! RES (getenv VAR)))
-    (=> (E)
-      Void))
-  RES)
 
 ;; Current source file
 (define (current-source-file)
@@ -86,55 +77,10 @@
     (cadr L)
     Void))
 
-(define (path-abs? FPATH)
-  (and (> (string-length FPATH) 1) (== (string-ref FPATH 0) #\/)))
-
 (define (path-noseps? FPATH)
   (define L (string->list FPATH))
   (and (not (list-in? #\. L))
        (not (list-in? #\/ L))))
-
-(define (path-normalize FPATH)
-  (define (p2l PATH)
-    (set! PATH (string-split PATH #\/))
-    (filter (=> (S)
-              (!= S "")) PATH))
-  (define (evp L)
-    (define RES '())
-    (define (push X)
-      (set! RES (cons X RES)))
-    (define (pop)
-      (set! RES (cdr RES)))
-    (while (not (empty? L))
-      (cond ((== (car L) ".")
-             (noop))
-            ((== (car L) "..")
-             (pop))
-            (else
-             (push (car L))))
-      (set! L (cdr L)))
-    (string+ "/" (string-join (reverse RES) "/")))
-  (define FPATH0 Void)
-  (define HOME (p2l (env-get "HOME")))
-  (define CWD (p2l (current-working-directory)))
-  (define ABS Void)
-  (set! FPATH (string-trim FPATH #\space))
-  (set! FPATH0 FPATH)
-  (set! ABS (path-abs? FPATH))
-  (if (== FPATH "")
-    (set! FPATH "."))
-  (set! FPATH (p2l FPATH))
-  (cond ((empty? FPATH)
-         "/")
-        ((or (== (car FPATH) ".") (== (car FPATH) ".."))
-         (evp (list-add CWD FPATH)))
-        ((== (car FPATH) "~")
-         (evp (list-add HOME (cdr FPATH))))
-        (else
-         (set! FPATH (evp FPATH))
-         (if (and (not ABS) (path-abs? FPATH) (!= FPATH0 "/"))
-           (set! FPATH (substring FPATH 1 (string-length FPATH))))
-         FPATH)))
 
 ;; Shell
 (define _SH_CMD_LOG False)

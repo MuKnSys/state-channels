@@ -42,18 +42,18 @@
 ;  [ ] Implement continuations/coroutines [later] ;
 
 (export #t)
-(import ./runtime)
+(import ./rexpr)
 
 ;; Basic datatypes
 (define tobject Void)
-(define tclass Void)
+;(define tclass Void)
 (define tmodule Void)
 (define tfunction Void)
 (define tboolean Void)
 (define tnumber Void)
 (define tstring Void)
 (define tlist Void)
-(define tinstr Void)
+;(define tinstr Void)
 
 ;; Basic datastructure (addresses)
 (define taddr (type "addr"
