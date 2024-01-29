@@ -35,6 +35,32 @@
          .
          ,(cddr L))))
 
+(defsyntax (foreach LS)
+  (let* ((L (cdr (map syntax->list (syntax->list LS))))
+         (I (car L)))
+   `(for-each (lambda
+                (,(car I))
+                .
+                ,(cdr L))
+            ,(cadr I))))
+
+(defsyntax (foreach-number LS)
+  (let* ((L (cdr (map syntax->list (syntax->list LS))))
+         (I (car L))
+         (D (AST-e (AST-e (caddr I))))
+        )
+   `(do ((,(car I) ,(cadr I)
+         (,(if (or (eq? D '>) (eq? D '>=)) '- '+) ,(car I) 1)))
+        ((,(if (eq? D '>)
+               '<=
+               (if (eq? D '<)
+                   '>=
+                   (if (eq? D '>=) '< '>)))
+         ,(car I) ,(cadddr I))
+        ,(car I))
+        .
+        ,(cdr L))))
+
 (define (defined? SYMB) ;; SYMB exists in the current namespace
   #f)
 
