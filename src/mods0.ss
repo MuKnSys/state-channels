@@ -207,14 +207,16 @@
 
 ;; Loading modules
 (define (mod-load PATH . LDC)
+  (define PATH_ #f)
   (if (path-naked? PATH)
     (set! PATH (string-append "./" PATH)))
+  (set! PATH_ PATH)
   (if (not (path-nsmod? PATH))
     (begin
       (set! PATH (path-normalize PATH))
       (set! PATH (mod-resolve-fpath PATH))))
  ;(display "Loading ")(write PATH)(newline)
-  (set-command-line (filter (lambda (X) (not (equal? X ""))) LDC))
+  (set-command-line (cons PATH_ (filter (lambda (X) (not (equal? X ""))) LDC)))
   (if PATH
     (eval `(import ,(string->symbol PATH)) (interaction-environment))))
 
