@@ -3,5 +3,5 @@
 if [[ "$1" == "" ]]; then
   echo "scm <PROG> expected"
 else
-  gxi -e '(import :mukn/state-channels/src/mods0)(mod-load "'"$1"'")'
+  gxi -e '(import :mukn/state-channels/src/mods0)(mod-load "'"$1"'" "'"$2"'" "'"$3"'" "'"$4"'" "'"$5"'" "'"$6"'" "'"$7"'")'
 fi

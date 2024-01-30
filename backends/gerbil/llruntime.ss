@@ -151,6 +151,14 @@
 (define (files FPATH)
   (directory-files (list path: FPATH ignore-hidden: #f)))
 
+;; Command line (poor man's one, only to work with bin/scm ; not with compiled Gerbil)
+(define _LDC #f)
+(define (set-command-line LDC)
+  (set! _LDC LDC))
+
+(define (command-line)
+  _LDC)
+
 ;; Modules
 (define __mod-normalize-path #f) ;; Unused, but necessary inside mods0.ss
 (define __mod-resolve-path #f)   ;; Idem
