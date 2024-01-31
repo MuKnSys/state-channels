@@ -13,7 +13,6 @@
   (build "llioruntime.ss"
          "llruntime.ss"
          "socks.ss"
-         "clish.ss"
          "scm"))
 
 (if (equal? BACKEND "filesocks_unix")

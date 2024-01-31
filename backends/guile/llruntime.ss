@@ -132,6 +132,9 @@
     (_pushcf (if (eq? (string-ref CLI 0) #\/) CLI
                                               (string-append (getcwd) "/" CLI)))))
 
+;; Command line (poor man's one, stub here)
+(define (set-command-line LDC) #f)
+
 ;(display (command-line))(newline)
 ;(display (current-filename))(newline)
 (load (string-append (dirname (current-filename)) "/mods0.ss"))

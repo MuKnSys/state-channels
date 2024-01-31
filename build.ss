@@ -20,7 +20,6 @@
       (let ((f (car fs)))
         (displayln "f:" f (equal? f "clish_prg.ss"))
         (if (and (equal? (path-extension f) ".ss")
-                 (not (equal? f "clish.ss"))
                  (not (equal? f "scm2js.ss"))
                  (not (equal? f "clish_prg.ss")))
           (set! lib-build-spec

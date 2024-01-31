@@ -120,6 +120,6 @@
 (method! tcli 'init-stdinout (=> (CLI PROMPT . SCRIPT)
   (:= (stdinout) 'CLI CLI)
   (:= (stdinout) 'PROMPT PROMPT)
-  (if (not (empty? SCRIPT))
+  (if (and (not (empty? SCRIPT)) (car SCRIPT))
     (^ 'inbuf+* (stdinout) (car SCRIPT)))
   (outraw PROMPT)))

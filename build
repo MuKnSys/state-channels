@@ -18,7 +18,6 @@ case $1 in
     chmod 755 backends/build
     chmod 755 backends/diff
     chmod 755 backends/$SCM/scm
-    chmod 755 backends/$SCM/clish.ss
     backends/build $SCM
     backends/build filesocks_unix
     backends/build geth_dev # we are importing eth.ss anyway

@@ -2,8 +2,8 @@
 
 SC_HOME=`dirname $0`/..
 
-if [[ "$1" == "" ]]; then
-  echo "cli <PROG> [SCRIPT] expected"
-else
-  $SC_HOME/src/clish.ss $1 $2
-fi
+#if [[ "$1" == "" ]]; then
+#  echo "cli <PROG> [SCRIPT] expected"
+#else
+  $SC_HOME/bin/scm $SC_HOME/src/clish_prg.ss $1 $2
+#fi

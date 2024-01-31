@@ -9,7 +9,6 @@
   (diff*! "llioruntime.ss" ;; TODO: read that directly from DIR's contents
           "llruntime.ss"
           "socks.ss"
-          "clish.ss"     ;; TODO: for commands, have the launcher automatically generated
           "scm"))
 
 (if (equal? BACKEND "filesocks_unix")
