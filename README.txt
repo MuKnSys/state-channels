@@ -1,5 +1,5 @@
   State Channels Library
-  (C) MUKN  2022, 2023
+  (C) MuKn, Inc. 2023
 
 
 1) Initial build
